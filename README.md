@@ -1,42 +1,51 @@
-# Aetherfall — version iPhone sans Mac
+# Myeloma Lab — Virtual Patient Simulator
 
-Cette version est une PWA (Progressive Web App) en HTML/CSS/JavaScript pur.
-Elle ne dépend d'aucune bibliothèque externe.
+PWA de simulation médicale éducative en HTML/CSS/JavaScript, pensée pour iPhone.
 
 ## Contenu
-- 4 zones explorables
-- joystick tactile
-- attaque, esquive, interaction, potions
-- ennemis et projectiles
-- boss final
-- quêtes et dialogues
-- coffres et butin
-- XP, niveaux, PV, attaque
-- inventaire et carte
-- sauvegarde automatique dans le navigateur
-- Service Worker pour fonctionnement hors ligne après installation
+- cohorte de jusqu'à 6 patients virtuels avec changement de dossier
+- profils aléatoires, risque standard, haut risque, atteinte rénale
+- biologie : NFS, créatinine/DFG, calcium, albumine, β2M, LDH, pic monoclonal, FLC, CRP
+- myélogramme et plasmocytose
+- MRD NGS simulée 10^-5 et 10^-6
+- imagerie corps entier schématique avec lésions osseuses
+- cytogénétique de risque
+- induction Isa-KRd inspirée de MIDAS
+- mobilisation / recueil de cellules souches
+- branches de consolidation A/B/C/D inspirées de MIDAS
+- ASCT et tandem ASCT
+- maintenance lénalidomide ou isatuximab + iberdomide
+- toxicités et événements indésirables simulés
+- soins de support
+- progression, rémission profonde durable, complications
+- score
+- mode recherche / bac à sable pour tester des décisions hors séquence sur le patient virtuel
+- historique clinique
+- sauvegarde locale automatique
+- fonctionnement hors ligne après premier chargement
 
-## Fichiers
+## Important
+Ce projet est un jeu / simulateur pédagogique. Les probabilités et mécanismes sont volontairement simplifiés.
+Il ne doit jamais être utilisé comme protocole, dispositif médical ou aide à la décision pour un vrai patient.
+
+## Remplacer le projet GitHub Pages existant
+Remplace les anciens fichiers par :
 - index.html
-- style.css
 - game.js
+- style.css
 - manifest.json
 - sw.js
-- icon-192.png / icon-512.png
+- icon-192.png
+- icon-512.png
 
-## Installation sur iPhone seulement
-Une PWA doit d'abord être servie par un site HTTPS pour que l'installation et le cache hors ligne fonctionnent correctement.
-Le moyen gratuit le plus simple est GitHub Pages.
+`index.html` doit rester à la racine du dépôt.
 
-1. Depuis Safari, créer un compte GitHub si nécessaire.
-2. Créer un nouveau dépôt public nommé `aetherfall`.
-3. Ajouter à la racine du dépôt tous les fichiers de ce dossier.
-4. Dans le dépôt : Settings > Pages.
-5. Dans Build and deployment, choisir `Deploy from a branch`.
-6. Branch : `main`, dossier : `/ (root)`, puis Save.
-7. Ouvrir l'adresse GitHub Pages fournie par GitHub.
-8. Dans Safari : Partager > Sur l'écran d'accueil > activer `Ouvrir comme app web` > Ajouter.
-9. Lancer Aetherfall depuis son icône. Après le premier chargement complet, les fichiers sont mis en cache pour un usage hors ligne.
+## Inspiration scientifique publique
+- MIDAS / IFM 2020-02 — NCT04934475
+- stratégie MRD-adaptée après 6 cycles d'Isa-KRd
+- MRD post-induction à 10^-5
+- consolidation adaptée avec Isa-KRd / ASCT / tandem ASCT
+- MRD pré-maintenance à 10^-6
+- maintenance selon la branche
 
-## Sauvegarde
-La progression est enregistrée dans `localStorage` sur l'iPhone toutes les 8 secondes, ainsi qu'à la fermeture/masquage de l'app.
+Le moteur du jeu ne reproduit pas les données individuelles de MIDAS et ne cherche pas à prédire le résultat d'un vrai patient.

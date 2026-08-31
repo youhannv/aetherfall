@@ -1,22 +1,44 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
-  <meta name="theme-color" content="#0b1020" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Aetherfall" />
-  <link rel="manifest" href="manifest.json" />
-  <link rel="apple-touch-icon" href="icon-192.png" />
-  <link rel="stylesheet" href="style.css" />
-  <title>Aetherfall</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#08111f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Myeloma Lab">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <title>Myeloma Lab — Patient Simulator</title>
 </head>
 <body>
   <div id="app">
-    <canvas id="game" aria-label="Aetherfall"></canvas>
-    <div id="rotate">Tourne ton iPhone en mode paysage pour jouer.</div>
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">ML</div>
+        <div>
+          <h1>MYELOMA LAB</h1>
+          <p>Virtual Patient Simulator</p>
+        </div>
+      </div>
+      <button id="helpBtn" class="icon-btn" aria-label="Informations">?</button>
+    </header>
+
+    <main id="main"></main>
+
+    <nav class="bottom-nav" aria-label="Navigation">
+      <button data-tab="patient" class="nav-btn active"><span>👤</span><small>Patient</small></button>
+      <button data-tab="labs" class="nav-btn"><span>🧪</span><small>Biologie</small></button>
+      <button data-tab="imaging" class="nav-btn"><span>🩻</span><small>Imagerie</small></button>
+      <button data-tab="treatment" class="nav-btn"><span>💊</span><small>Traitement</small></button>
+      <button data-tab="history" class="nav-btn"><span>📋</span><small>Historique</small></button>
+    </nav>
+
+    <div id="modal" class="modal hidden" role="dialog" aria-modal="true"></div>
+    <div id="toast" class="toast hidden" aria-live="polite"></div>
   </div>
+
   <script src="game.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
