@@ -1,0 +1,8 @@
+:root { color-scheme: dark; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin:0; width:100%; height:100%; overflow:hidden; background:#050914; touch-action:none; overscroll-behavior:none; }
+body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif; }
+#app { width:100%; height:100%; position:relative; background:radial-gradient(circle at 50% 40%, #15203a, #050914 70%); }
+#game { display:block; width:100%; height:100%; }
+#rotate { display:none; position:absolute; inset:0; align-items:center; justify-content:center; text-align:center; padding:40px; font-weight:800; font-size:22px; color:white; background:#070b16; z-index:5; }
+@media (orientation:portrait) and (max-width:900px) { #rotate { display:flex; } }
