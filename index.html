@@ -4,13 +4,46 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#071019">
+
+<script>
+(() => {
+  const stop = e => e.preventDefault();
+  document.addEventListener('gesturestart', stop, {passive:false});
+  document.addEventListener('gesturechange', stop, {passive:false});
+  document.addEventListener('gestureend', stop, {passive:false});
+  document.addEventListener('dblclick', stop, {passive:false});
+  document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, {passive:false});
+  document.addEventListener('touchstart', e => { if (e.touches.length > 1) e.preventDefault(); }, {passive:false});
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, {passive:false});
+  let lastEnd = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastEnd < 340) e.preventDefault();
+    lastEnd = now;
+  }, {passive:false});
+
+  const lockViewport = () => {
+    const meta = document.querySelector('meta[name="viewport"]');
+    if (meta) meta.setAttribute('content',
+      'width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover');
+    window.scrollTo(0,0);
+  };
+  window.addEventListener('pageshow', lockViewport);
+  window.addEventListener('orientationchange', lockViewport);
+  if (window.visualViewport) {
+    visualViewport.addEventListener('resize', lockViewport);
+    visualViewport.addEventListener('scroll', () => window.scrollTo(0,0));
+  }
+})();
+</script>
+
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V6">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V7">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V6</title>
+<title>StreetQuest 3D V7</title>
 </head>
 <body>
 <div id="app">

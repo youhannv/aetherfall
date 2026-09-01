@@ -144,3 +144,38 @@ Le jeu marche mieux si tu l’ouvres depuis l’écran d’accueil en mode PWA. 
 - pathing PNJ/policiers amélioré contre les murs
 - ennemis encore un peu moins nombreux
 - panneau et zone CHEZ TOI visibles dans le chunk de départ
+
+
+# V7 — Living City
+## Correctifs structurants
+- verrouillage anti-zoom iPhone renforcé dès le `<head>`
+- blocage pinch, double tap, gesture events et zoom clavier
+- correction mathématique du sens des visages des PNJ
+- correction mathématique du sens des phares/avant des voitures
+- trottoirs des deux côtés de chaque axe routier
+- bordures de trottoir
+- passages piétons zebra très visibles
+- lignes STOP
+- feux de circulation
+- voitures qui s'arrêtent aux feux rouges
+
+## Pathfinding
+- les civils reçoivent désormais un axe de trottoir à leur création
+- ils ne choisissent plus une direction arbitraire vers les immeubles
+- limites de trajet par segment de trottoir
+- collisions PNJ/police/ennemis contre bâtiments
+
+## Base
+- maison niveau 1, 2 et 3
+- 8 / 12 / 16 emplacements
+- apparence extérieure qui évolue avec le niveau
+- coffre à argent protégé
+- stockage de medkits
+- repos à domicile : PV restaurés et recherche réduite
+- artefacts exposés automatiquement comme trophées
+- Maison & Co pour le mobilier
+
+## Gameplay
+- réputation gagnée avec les missions PNJ
+- réputation = remises en boutique jusqu'à 15 %
+- cônes de vision policiers sur la mini-carte quand tu es recherché ou en train de voler

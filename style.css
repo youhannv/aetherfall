@@ -40,3 +40,10 @@ body{position:fixed;width:100%;height:100%;inset:0}
 
 .homeHint{margin-top:6px;padding:7px 9px;border:1px dashed #446b84;border-radius:12px;background:#0b1925cc;color:#cae4f4;font-size:12px}
 .placeGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+html,body{width:100%;height:100%;max-width:100%;max-height:100%;overflow:hidden!important}
+body{position:fixed!important;inset:0!important;touch-action:none!important;-webkit-text-size-adjust:100%!important;text-size-adjust:100%!important}
+#app{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:100vw!important;transform:none!important;zoom:1!important}
+#viewport,#threeHost,#threeHost canvas{touch-action:none!important;overscroll-behavior:none!important}
+button,.joystick,.knob,.actionCircle,.nav{touch-action:none!important}
+.reputationBadge{display:inline-block;padding:4px 7px;border-radius:999px;background:#142b23;border:1px solid #356b55;color:#9df0c7;font-size:9px}

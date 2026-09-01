@@ -62,9 +62,13 @@ const HOME_ITEMS={
  wardrobe:{id:'wardrobe',name:'Armoire',icon:'🧰'}
 };
 const HOME_SLOTS=[
- {x:-5.2,z:-3.6},{x:-2.3,z:-2.6},{x:1.2,z:-2.9},{x:4.5,z:-3.2},{x:-4.5,z:1.1},{x:-.5,z:.9},{x:3.8,z:1.0},{x:0,z:-5.25,rot:Math.PI/2}
+ {x:-5.5,z:-4.2},{x:-2.1,z:-4.0},{x:1.3,z:-4.0},{x:4.8,z:-4.0},
+ {x:-5.2,z:-.6},{x:-1.8,z:-.8},{x:1.7,z:-.8},{x:5.0,z:-.8},
+ {x:-5.0,z:2.8},{x:-1.6,z:2.7},{x:1.8,z:2.8},{x:5.1,z:2.7},
+ {x:-5.2,z:5.4},{x:-1.6,z:5.4},{x:1.8,z:5.4},{x:5.2,z:5.4}
 ];
 const HOME_PLOT_PRICE=850;
+const HOME_UPGRADE_COST={2:650,3:1450};
 const QUESTS=[
  {id:'welcome',title:'Premiers pas',text:'Récupère 50 crédits en faisant les poches des passants.',goal:'stolenCoins',target:50,reward:100},
  {id:'helper',title:'Bon voisin',text:'Accomplis une mission donnée par un PNJ.',goal:'npcMissions',target:1,reward:140},
@@ -78,11 +82,11 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[]
+ landOwned:false,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0
 };
 let state=loadState();
-function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v6')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v6',JSON.stringify(state))}
+function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v7')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
+function save(){localStorage.setItem('sq3d-v7',JSON.stringify(state))}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
@@ -103,7 +107,7 @@ function progress(goal){if(goal==='stolenCoins')return state.stolenCoins;if(goal
 function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.id))||{id:'free',title:'Légende urbaine',text:'Explore librement, collectionne les artefacts et sécurise les quartiers.',goal:'districtsOwned',target:999}}
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
-let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],clouds=[];
+let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],clouds=[];
 let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight;
 
 async function init(){
@@ -168,24 +172,61 @@ function updateAtmosphere(dt){
 }
 
 function makeRoad(g,x0,z0){
- const roadM=new THREE.MeshStandardMaterial({map:textures.asphalt,roughness:state.weather==='rain'?.62:.95,metalness:state.weather==='rain'?.12:0}),paveM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:.96});
+ const roadM=new THREE.MeshStandardMaterial({map:textures.asphalt,roughness:state.weather==='rain'?.58:.95,metalness:state.weather==='rain'?.14:0});
+ const paveM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:.98});
  const roadW=11,walk=3;
+
+ // Roads run along the west/south edge of each chunk.
  let a=new THREE.Mesh(new THREE.PlaneGeometry(roadW,CHUNK),roadM);a.rotation.x=-Math.PI/2;a.position.set(x0+roadW/2,.01,z0+CHUNK/2);g.add(a);
  a=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,roadW),roadM);a.rotation.x=-Math.PI/2;a.position.set(x0+CHUNK/2,.012,z0+roadW/2);g.add(a);
- a=new THREE.Mesh(new THREE.PlaneGeometry(walk,CHUNK-roadW),paveM);a.rotation.x=-Math.PI/2;a.position.set(x0+roadW+walk/2,.045,z0+(CHUNK+roadW)/2);g.add(a);
- a=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK-roadW,walk),paveM);a.rotation.x=-Math.PI/2;a.position.set(x0+(CHUNK+roadW)/2,.046,z0+roadW+walk/2);g.add(a);
 
- const curbM=new THREE.MeshStandardMaterial({color:0xbcb9ae,roughness:1});
- let curb=new THREE.Mesh(new THREE.BoxGeometry(.18,.16,CHUNK-roadW),curbM);curb.position.set(x0+roadW+.08,.08,z0+(CHUNK+roadW)/2);g.add(curb);
- curb=new THREE.Mesh(new THREE.BoxGeometry(CHUNK-roadW,.16,.18),curbM);curb.position.set(x0+(CHUNK+roadW)/2,.08,z0+roadW+.08);g.add(curb);
+ // Sidewalks on BOTH sides of each road. Far-edge sidewalks border the next chunk road.
+ const sidewalks=[
+   [x0+roadW+walk/2,z0+(CHUNK+roadW)/2,walk,CHUNK-roadW],
+   [x0+CHUNK-walk/2,z0+(CHUNK+roadW)/2,walk,CHUNK-roadW],
+   [x0+(CHUNK+roadW)/2,z0+roadW+walk/2,CHUNK-roadW,walk],
+   [x0+(CHUNK+roadW)/2,z0+CHUNK-walk/2,CHUNK-roadW,walk]
+ ];
+ for(const s of sidewalks){const m=new THREE.Mesh(new THREE.PlaneGeometry(s[2],s[3]),paveM);m.rotation.x=-Math.PI/2;m.position.set(s[0],.052,s[1]);g.add(m)}
 
- const white=new THREE.MeshBasicMaterial({color:0xeee8d4});
- for(let i=0;i<6;i++){let m=new THREE.Mesh(new THREE.PlaneGeometry(.16,4),white);m.rotation.x=-Math.PI/2;m.position.set(x0+roadW/2,.028,z0+17+i*9);g.add(m);m=new THREE.Mesh(new THREE.PlaneGeometry(4,.16),white);m.rotation.x=-Math.PI/2;m.position.set(x0+17+i*9,.029,z0+roadW/2);g.add(m)}
- for(let k=0;k<6;k++){let s=new THREE.Mesh(new THREE.PlaneGeometry(.62,5),white);s.rotation.x=-Math.PI/2;s.position.set(x0+12.2+k*1.3,.03,z0+7.7);g.add(s);let t=new THREE.Mesh(new THREE.PlaneGeometry(5,.62),white);t.rotation.x=-Math.PI/2;t.position.set(x0+7.7,.031,z0+12.2+k*1.3);g.add(t)}
+ const curbM=new THREE.MeshStandardMaterial({color:0xc7c4b8,roughness:1});
+ const curbs=[
+  [x0+roadW+.08,z0+(CHUNK+roadW)/2,.18,CHUNK-roadW],
+  [x0+CHUNK-.08,z0+(CHUNK+roadW)/2,.18,CHUNK-roadW],
+  [x0+(CHUNK+roadW)/2,z0+roadW+.08,CHUNK-roadW,.18],
+  [x0+(CHUNK+roadW)/2,z0+CHUNK-.08,CHUNK-roadW,.18]
+ ];
+ for(const c of curbs){const m=new THREE.Mesh(new THREE.BoxGeometry(c[2],.16,c[3]),curbM);m.position.set(c[0],.08,c[1]);g.add(m)}
 
- // lamp posts and a bench
- for(const [lx,lz] of [[15,17],[15,55],[40,15],[62,15]])addLamp(g,x0+lx,z0+lz);
- if((Math.abs(x0/CHUNK)+Math.abs(z0/CHUNK))%2<1)addBench(g,x0+17,z0+19)
+ // Lane markings.
+ const white=new THREE.MeshBasicMaterial({color:0xf4efda});
+ for(let i=0;i<6;i++){
+   let m=new THREE.Mesh(new THREE.PlaneGeometry(.16,4.2),white);m.rotation.x=-Math.PI/2;m.position.set(x0+roadW/2,.028,z0+20+i*8.5);g.add(m);
+   m=new THREE.Mesh(new THREE.PlaneGeometry(4.2,.16),white);m.rotation.x=-Math.PI/2;m.position.set(x0+20+i*8.5,.029,z0+roadW/2);g.add(m)
+ }
+
+ // Very visible zebra crossings on BOTH approaches of the intersection.
+ const zebra=new THREE.MeshBasicMaterial({color:0xffffff});
+ for(let k=0;k<7;k++){
+   let s=new THREE.Mesh(new THREE.PlaneGeometry(roadW-.8,.58),zebra);s.rotation.x=-Math.PI/2;s.position.set(x0+roadW/2,.036,z0+13.0+k*.92);g.add(s);
+   let t=new THREE.Mesh(new THREE.PlaneGeometry(.58,roadW-.8),zebra);t.rotation.x=-Math.PI/2;t.position.set(x0+13.0+k*.92,.037,z0+roadW/2);g.add(t)
+ }
+ // Stop lines.
+ let stop=new THREE.Mesh(new THREE.PlaneGeometry(roadW-.6,.26),white);stop.rotation.x=-Math.PI/2;stop.position.set(x0+roadW/2,.038,z0+12.0);g.add(stop);
+ stop=new THREE.Mesh(new THREE.PlaneGeometry(.26,roadW-.6),white);stop.rotation.x=-Math.PI/2;stop.position.set(x0+12.0,.039,z0+roadW/2);g.add(stop);
+
+ for(const [lx,lz] of [[15,20],[15,55],[40,15],[60,15],[69,38],[38,69]])addLamp(g,x0+lx,z0+lz);
+ addBench(g,x0+18,z0+20);
+ addTrafficLight(g,x0+13.2,z0+13.2,'vertical');
+ addTrafficLight(g,x0+16.2,z0+13.2,'horizontal')
+}
+function addTrafficLight(g,x,z,axis){
+ const group=new THREE.Group();
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.065,.085,2.8,8),new THREE.MeshStandardMaterial({color:0x252d32,metalness:.55}));pole.position.y=1.4;group.add(pole);
+ const box=new THREE.Mesh(new THREE.BoxGeometry(.38,.92,.32),new THREE.MeshStandardMaterial({color:0x1a2024}));box.position.y=2.55;group.add(box);
+ const red=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),new THREE.MeshBasicMaterial({color:0x52151b}));red.position.set(0,2.82,-.17);group.add(red);
+ const green=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),new THREE.MeshBasicMaterial({color:0x16462b}));green.position.set(0,2.30,-.17);group.add(green);
+ group.position.set(x,0,z);g.add(group);trafficLights.push({group,red,green,axis})
 }
 function createChunk(cx,cz){
  const key=ck(cx,cz);if(chunks.has(key))return;const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
@@ -193,39 +234,47 @@ function createChunk(cx,cz){
  grass.rotation.x=-Math.PI/2;grass.position.set(x0+CHUNK/2,-.04,z0+CHUNK/2);g.add(grass);makeRoad(g,x0,z0);
  const id=districtId(cx,cz);if(!state.seenDistricts.includes(id))state.seenDistricts.push(id);
 
- const lots=[[28,28],[54,28],[28,54],[54,54]];
+ // Building centers are well inside the block: no overlap with roads or sidewalks.
+ const lots=[[30,30],[55,30],[30,55],[55,55]];
  const startChunk=cx===0&&cz===0;
  lots.forEach((p,i)=>{
    if(startChunk&&i===0){addShop(g,key,x0+p[0],z0+p[1],r,'corner');return}
    if(startChunk&&i===1){addShop(g,key,x0+p[0],z0+p[1],r,'home');return}
    if(startChunk&&i===2){addHomePlot(g,key,x0+p[0],z0+p[1]);return}
-   if(r()<.16){addPark(g,x0+p[0],z0+p[1],r,key);return}
-   const w=10+r()*4.2,dep=10+r()*4.2,h=(d.style==='central'?15:9)+r()*(d.style==='central'?22:15);
-   const x=x0+p[0]+(r()-.5)*.8,z=z0+p[1]+(r()-.5)*.8;
+   if(r()<.18){addPark(g,x0+p[0],z0+p[1],r,key);return}
+   const w=9.5+r()*3.2,dep=9.5+r()*3.2,h=(d.style==='central'?14:8)+r()*(d.style==='central'?22:15);
+   const x=x0+p[0]+(r()-.5)*.5,z=z0+p[1]+(r()-.5)*.5;
    const texChoice=d.style==='old'?textures.brick:(d.style==='harbor'?textures.stone:(r()<.55?textures.modern:textures.brick));
    const mat=new THREE.MeshStandardMaterial({map:texChoice,roughness:.86,metalness:d.style==='harbor'?.05:0});
    const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),mat);b.position.set(x,h/2,z);g.add(b);
    addBuildingDetails(g,x,z,w,dep,h,r,d);
-   colliders.push({key,minX:x-w/2-.35,maxX:x+w/2+.35,minZ:z-dep/2-.35,maxZ:z+dep/2+.35,type:'building'});
-   if(i===3&&r()<.48)addApartmentDoor(g,key,x,z,dep)
+   colliders.push({key,minX:x-w/2-.38,maxX:x+w/2+.38,minZ:z-dep/2-.38,maxZ:z+dep/2+.38,type:'building'});
+   if(i===3&&r()<.5)addApartmentDoor(g,key,x,z,dep)
  });
 
- const trees=4+Math.floor(r()*(d.style==='green'?8:4));for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);addTree(g,p.x,p.z,r)}
- for(let i=0;i<(d.style==='green'?5:2);i++){const p=randomGreenPoint(x0,z0,r);addBush(g,key,p.x,p.z,r)}
+ const trees=4+Math.floor(r()*(d.style==='green'?9:4));for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);addTree(g,p.x,p.z,r)}
+ for(let i=0;i<(d.style==='green'?6:2);i++){const p=randomGreenPoint(x0,z0,r);addBush(g,key,p.x,p.z,r)}
 
  const cont=1+Math.floor(r()*3);for(let i=0;i<cont;i++){const p=randomSidewalk(x0,z0,r),type=r()<.72?'bin':'chest',idc=`${key}:container:${i}`;if(!state.collected.includes(idc))addContainer(g,key,idc,p.x,p.z,type)}
  const lootN=1+Math.floor(r()*3);for(let i=0;i<lootN;i++){const p=randomSidewalk(x0,z0,r),type=r()<.67?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
  if(!state.artifacts.includes(state.cityId)&&((Math.abs(cx)+Math.abs(cz)>1&&r()<.055)||(cx===3&&cz===-2))){const p=randomSidewalk(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')}
 
- const npcN=3+Math.floor(r()*4);for(let i=0;i<npcN;i++){const p=randomSidewalk(x0,z0,r);addNPC(g,key,p.x,p.z,r)}
- if(r()<.06){const p=randomSidewalk(x0,z0,r);addEnemy(g,key,p.x,p.z,r)}
- if(r()<.11){const p=randomSidewalk(x0,z0,r);addPolice(g,key,p.x,p.z,r)}
+ const npcN=4+Math.floor(r()*3);
+ for(let i=0;i<npcN;i++){const p=randomSidewalk(x0,z0,r);addNPC(g,key,p.x,p.z,r,p)}
+ if(r()<.055){const p=randomSidewalk(x0,z0,r);addEnemy(g,key,p.x,p.z,r,p)}
+ if(r()<.12){const p=randomSidewalk(x0,z0,r);addPolice(g,key,p.x,p.z,r,p)}
 
  const carN=1+Math.floor(r()*2);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
- if(r()<.45)addParkedCar(g,key,x0,z0,r)
+ if(r()<.48)addParkedCar(g,key,x0,z0,r)
 }
-function randomSidewalk(x0,z0,r){return r()<.5?{x:x0+14.2,z:z0+17+r()*(CHUNK-22)}:{x:x0+17+r()*(CHUNK-22),z:z0+14.2}}
-function randomGreenPoint(x0,z0,r){return{x:x0+19+r()*(CHUNK-24),z:z0+19+r()*(CHUNK-24)}}
+function randomSidewalk(x0,z0,r){
+ const side=Math.floor(r()*4);
+ if(side===0)return{x:x0+12.5,z:z0+19+r()*(CHUNK-24),axis:'z',min:z0+17,max:z0+CHUNK-5};
+ if(side===1)return{x:x0+CHUNK-1.5,z:z0+19+r()*(CHUNK-24),axis:'z',min:z0+17,max:z0+CHUNK-5};
+ if(side===2)return{x:x0+19+r()*(CHUNK-24),z:z0+12.5,axis:'x',min:x0+17,max:x0+CHUNK-5};
+ return{x:x0+19+r()*(CHUNK-24),z:z0+CHUNK-1.5,axis:'x',min:x0+17,max:x0+CHUNK-5}
+}
+function randomGreenPoint(x0,z0,r){return{x:x0+22+r()*(CHUNK-31),z:z0+22+r()*(CHUNK-31)}}
 function addPark(g,x,z,r,key){
  const m=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));m.rotation.x=-Math.PI/2;m.position.set(x,.026,z);g.add(m);
  for(let i=0;i<4;i++)addTree(g,x+(r()-.5)*15,z+(r()-.5)*15,r);
@@ -259,21 +308,23 @@ function addBuildingDetails(g,x,z,w,d,h,r,dist){
  if(dist.style==='old'&&h>12){for(let fy=4;fy<h-2;fy+=5){const balcony=new THREE.Mesh(new THREE.BoxGeometry(w*.38,.12,.85),new THREE.MeshStandardMaterial({color:0x4b5052,metalness:.25}));balcony.position.set(x,fy,z-d/2-.43);g.add(balcony)}}
 }
 function addParkedCar(g,key,x0,z0,r){
- const group=createCarVisual(choice([0x2d506d,0x7c4242,0x4b4f55,0x657954]));group.scale.set(.9,.9,.9);group.position.set(x0+16+r()*36,0,z0+15.4);group.rotation.y=Math.PI/2;g.add(group)
+ const group=createCarVisual(choice([0x2d506d,0x7c4242,0x4b4f55,0x657954]));group.scale.set(.9,.9,.9);group.position.set(x0+18+r()*32,0,z0+15.4);group.rotation.y=-Math.PI/2;g.add(group)
 }
 function addHomePlot(g,key,x,z){
  const plot=new THREE.Group();
- const grass=new THREE.Mesh(new THREE.PlaneGeometry(15,13),new THREE.MeshStandardMaterial({color:0x4e744a,roughness:1}));grass.rotation.x=-Math.PI/2;grass.position.set(0,.03,0);plot.add(grass);
- const path=new THREE.Mesh(new THREE.PlaneGeometry(2.1,4),new THREE.MeshStandardMaterial({color:0xc8bea7,roughness:1}));path.rotation.x=-Math.PI/2;path.position.set(0,.04,4.4);plot.add(path);
+ const grass=new THREE.Mesh(new THREE.PlaneGeometry(16,14),new THREE.MeshStandardMaterial({color:0x4e744a,roughness:1}));grass.rotation.x=-Math.PI/2;grass.position.set(0,.03,0);plot.add(grass);
+ const path=new THREE.Mesh(new THREE.PlaneGeometry(2.3,5),new THREE.MeshStandardMaterial({color:0xc8bea7,roughness:1}));path.rotation.x=-Math.PI/2;path.position.set(0,.04,-4.5);plot.add(path);
  const fenceM=new THREE.MeshStandardMaterial({color:0x8a6547,roughness:.95});
- [[0,.55,-6.5,15,.28],[0,.55,6.5,15,.28],[-7.5,.55,0,.28,13],[7.5,.55,0,.28,13]].forEach(f=>{const m=new THREE.Mesh(new THREE.BoxGeometry(f[3],1.1,f[4]),fenceM);m.position.set(f[0],f[1],f[2]);plot.add(m)});
- const sign=makeSign(state.landOwned?'🏠 CHEZ TOI':`🏡 TERRAIN ${HOME_PLOT_PRICE}`,'#9ef1ff');sign.position.set(0,3.3,-5.8);plot.add(sign);
+ [[0,.55,-7,16,.28],[0,.55,7,16,.28],[-8,.55,0,.28,14],[8,.55,0,.28,14]].forEach(f=>{const m=new THREE.Mesh(new THREE.BoxGeometry(f[3],1.1,f[4]),fenceM);m.position.set(f[0],f[1],f[2]);plot.add(m)});
+ const sign=makeSign(state.landOwned?`🏠 CHEZ TOI N.${state.homeLevel}`:`🏡 TERRAIN ${HOME_PLOT_PRICE}`,'#9ef1ff');sign.position.set(0,3.3,-6.25);plot.add(sign);
  if(state.landOwned){
-   const shed=new THREE.Mesh(new THREE.BoxGeometry(4.5,3.2,4.6),new THREE.MeshStandardMaterial({map:textures.stone,roughness:.95}));shed.position.set(0,1.6,-.4);plot.add(shed);
-   const roof=new THREE.Mesh(new THREE.BoxGeometry(4.9,.28,5.1),new THREE.MeshStandardMaterial({color:0x464d52,roughness:.9}));roof.position.set(0,3.35,-.4);plot.add(roof)
+   const lv=state.homeLevel||1,w=lv===1?5:lv===2?7:9,d=lv===1?5:lv===2?6.5:8,h=lv===1?3.2:lv===2?4.2:5.0;
+   const house=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({map:lv===1?textures.stone:textures.brick,roughness:.92}));house.position.set(0,h/2,.2);plot.add(house);
+   const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*.72,1.25,4),new THREE.MeshStandardMaterial({color:0x4a4f53,roughness:.9}));roof.rotation.y=Math.PI/4;roof.position.set(0,h+.62,.2);plot.add(roof);
+   const door=new THREE.Mesh(new THREE.PlaneGeometry(1.15,2.05),new THREE.MeshStandardMaterial({color:0x513a29}));door.position.set(0,1.05,-d/2-.012);door.rotation.y=Math.PI;plot.add(door);
+   if(lv>=2){for(const sx of [-2,2]){const win=new THREE.Mesh(new THREE.PlaneGeometry(1.15,.9),new THREE.MeshStandardMaterial({color:0x8fc8df,metalness:.2,roughness:.2}));win.position.set(sx,2.2,-d/2-.018);win.rotation.y=Math.PI;plot.add(win)}}
  }
- plot.position.set(x,0,z);g.add(plot);
- homePlots.push({key,x,z,price:HOME_PLOT_PRICE})
+ plot.position.set(x,0,z);g.add(plot);homePlots.push({key,x,z,price:HOME_PLOT_PRICE})
 }
 function makeSign(text,color='#ffdb77'){const c=document.createElement('canvas');c.width=512;c.height=128;const q=c.getContext('2d');q.fillStyle='#10222a';q.fillRect(0,0,512,128);q.fillStyle=color;q.font='bold 44px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(text,256,64);const t=new THREE.CanvasTexture(c),s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.scale.set(5.2,1.3,1);return s}
 function addShop(g,key,x,z,r,forcedType=null){
@@ -293,10 +344,10 @@ function addApartmentDoor(g,key,x,z,dep){
 }
 function addContainer(g,key,id,x,z,type){const mesh=new THREE.Mesh(type==='bin'?new THREE.CylinderGeometry(.42,.48,.9,10):new THREE.BoxGeometry(.9,.55,.65),new THREE.MeshStandardMaterial({color:type==='bin'?0x335d45:0x74572e}));mesh.position.set(x,type==='bin'?.45:.28,z);mesh.userData={key,id,type};g.add(mesh);containers.push(mesh)}
 function addPickup(g,key,id,x,z,type){const color={coins:0xffd15b,medkit:0x62e3a4,rare:0xa68cff,artifact:0x60d8ff}[type],geo=type==='artifact'?new THREE.OctahedronGeometry(.65):type==='coins'?new THREE.CylinderGeometry(.34,.34,.12,16):new THREE.BoxGeometry(.6,.6,.6),m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,emissive:type==='artifact'?0x15536a:0x000000,emissiveIntensity:1}));m.position.set(x,type==='artifact'?.72:.43,z);m.userData={key,id,type};g.add(m);pickups.push(m)}
-function addNPC(g,key,x,z,r){const n=createPerson('civilian',key,x,z,r);g.add(n.group);npcs.push(n)}
-function addEnemy(g,key,x,z,r){const n=createPerson('hostile',key,x,z,r);n.speed*=1.08;g.add(n.group);enemies.push(n)}
-function addPolice(g,key,x,z,r){const n=createPerson('police',key,x,z,r);n.speed=.72+r()*.28;g.add(n.group);police.push(n)}
-function createPerson(role,key,x,z,r){
+function addNPC(g,key,x,z,r,path){const n=createPerson('civilian',key,x,z,r,path);g.add(n.group);npcs.push(n)}
+function addEnemy(g,key,x,z,r,path){const n=createPerson('hostile',key,x,z,r,path);n.speed*=1.08;g.add(n.group);enemies.push(n)}
+function addPolice(g,key,x,z,r,path){const n=createPerson('police',key,x,z,r,path);n.speed=.72+r()*.28;g.add(n.group);police.push(n)}
+function createPerson(role,key,x,z,r,path=null){
  const hostile=role==='hostile',isPolice=role==='police',group=new THREE.Group();
  const cloth=new THREE.MeshStandardMaterial({color:isPolice?0x1f4f83:(hostile?0x6d2434:choice([0x315f7b,0x486d45,0x6a4e75,0x785f42,0xa05d43])),roughness:.82});
  const skin=new THREE.MeshStandardMaterial({color:choice([0xd5a47c,0xc38e68,0xe0b18d])});
@@ -307,14 +358,15 @@ function createPerson(role,key,x,z,r){
  const mouthMat=new THREE.MeshBasicMaterial({color:hostile?0x5a1720:0x8e4c52});
  const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.022,8,8),eyeMat);eyeL.position.set(-.07,1.74,-.21);group.add(eyeL);
  const eyeR=eyeL.clone();eyeR.position.x=.07;group.add(eyeR);
- const mouth=new THREE.Mesh(new THREE.BoxGeometry(.09,.018,.01),mouthMat);mouth.position.set(0,1.64,-.225);group.add(mouth);
+ const mouth=new THREE.Mesh(new THREE.BoxGeometry(.09,.018,.012),mouthMat);mouth.position.set(0,1.64,-.226);group.add(mouth);
+ const nose=new THREE.Mesh(new THREE.ConeGeometry(.026,.07,7),skin);nose.rotation.x=-Math.PI/2;nose.position.set(0,1.69,-.245);group.add(nose);
  if(isPolice){
    const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.09,10),new THREE.MeshStandardMaterial({color:0x153b63}));cap.position.y=1.96;group.add(cap);
    const badge=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.025),new THREE.MeshBasicMaterial({color:0xffd260}));badge.position.set(.12,1.25,-.27);group.add(badge)
  }
  const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);
  const hasCash=r()<.58;
- const n={key,group,role,hostile,isPolice,axis:r()<.5?'x':'z',speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:hasCash?(7+Math.floor(r()*48)):0,legs:[l1,l2],phase:r()*6.2,name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0};
+ const n={key,group,role,hostile,isPolice,axis:path?.axis||(r()<.5?'x':'z'),pathMin:path?.min??null,pathMax:path?.max??null,speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:hasCash?(7+Math.floor(r()*48)):0,legs:[l1,l2],phase:r()*6.2,name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0};
  group.traverse(o=>{o.userData.person=n});return n
 }
 function createCarVisual(color){
@@ -335,7 +387,7 @@ function unload(key){
  const g=chunks.get(key);if(!g)return;
  if(selectedNPC?.key===key)clearTarget();
  scene.remove(g);chunks.delete(key);
- colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key);homePlots=homePlots.filter(x=>x.key!==key)
+ colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key);homePlots=homePlots.filter(x=>x.key!==key);trafficLights=trafficLights.filter(x=>x.group.parent!==g)
 }
 function ensureChunks(force=false){if(state.interior)return;const {cx,cz}=currentChunk();for(let x=cx-LOAD;x<=cx+LOAD;x++)for(let z=cz-LOAD;z<=cz+LOAD;z++)createChunk(x,z);for(const[k,g]of chunks){if(Math.abs(g.userData.cx-cx)>UNLOAD||Math.abs(g.userData.cz-cz)>UNLOAD)unload(k)}if(force)drawMap()}
 function collides(x,z){if(state.interior)return Math.abs(x)>8.5||z<-8.5||z>8.5;return colliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ)}
@@ -359,10 +411,33 @@ function updateWorldLight(dt){
  const sky=new THREE.Color().setRGB(.035+.47*day*cloudDim,.055+.61*day*cloudDim,.09+.68*day*cloudDim);scene.background.copy(sky);scene.fog.color.copy(sky);
  if(performance.now()-lastWeatherTick>42000){lastWeatherTick=performance.now();const r=Math.random();state.weather=r<.66?'clear':r<.84?'cloudy':'rain'}
 }
+function updateTrafficLights(t){
+ const phase=(Math.floor(t/6500)%2)===0; // true: vertical traffic gets green
+ for(const l of trafficLights){
+   const green=(l.axis==='vertical')===phase;
+   l.green.material.color.setHex(green?0x39e47b:0x163f28);
+   l.red.material.color.setHex(green?0x48171b:0xff4055)
+ }
+ return phase
+}
 function updateCars(dt,t){
+ const verticalGreen=updateTrafficLights(t);
  for(const c of cars){
-   if(c.vertical){c.group.position.z+=c.dir*c.speed*dt;if(c.group.position.z<c.z0+8||c.group.position.z>c.z0+CHUNK-6)c.dir*=-1;c.group.rotation.y=c.dir>0?0:Math.PI}
-   else{c.group.position.x+=c.dir*c.speed*dt;if(c.group.position.x<c.x0+8||c.group.position.x>c.x0+CHUNK-6)c.dir*=-1;c.group.rotation.y=c.dir>0?Math.PI/2:-Math.PI/2}
+   const approaching=c.vertical
+      ? Math.abs((c.group.position.z-c.z0)-11.5)<5
+      : Math.abs((c.group.position.x-c.x0)-11.5)<5;
+   const hasGreen=c.vertical?verticalGreen:!verticalGreen;
+   const speed=(approaching&&!hasGreen)?0:c.speed;
+   if(c.vertical){
+     c.group.position.z+=c.dir*speed*dt;
+     if(c.group.position.z<c.z0+8||c.group.position.z>c.z0+CHUNK-6)c.dir*=-1;
+     // Car local front/headlights point to -Z.
+     c.group.rotation.y=c.dir>0?Math.PI:0
+   }else{
+     c.group.position.x+=c.dir*speed*dt;
+     if(c.group.position.x<c.x0+8||c.group.position.x>c.x0+CHUNK-6)c.dir*=-1;
+     c.group.rotation.y=c.dir>0?-Math.PI/2:Math.PI/2
+   }
    if(!state.interior&&t-c.lastHit>1250){
      const dx=Math.abs(state.pos.x-c.group.position.x),dz=Math.abs(state.pos.z-c.group.position.z);
      const hit=c.vertical?(dx<1.15&&dz<2.15):(dx<2.15&&dz<1.15);
@@ -379,12 +454,19 @@ function hitByCar(c){
 }
 function setHeading(n,dx,dz){
  if(Math.abs(dx)+Math.abs(dz)<.001)return;
- n.heading=Math.atan2(dx,-dz);n.group.rotation.y=n.heading
+ // Local face points toward -Z. This converts a movement vector to that exact orientation.
+ n.heading=Math.atan2(-dx,-dz);n.group.rotation.y=n.heading
 }
 function patrolPerson(n,dt){
- const off=n.axis==='x'?n.group.position.x-n.home.x:n.group.position.z-n.home.z;if(Math.abs(off)>19)n.dir*=-1;
+ const current=n.axis==='x'?n.group.position.x:n.group.position.z;
+ if(n.pathMin!=null&&n.pathMax!=null){
+   if(current<n.pathMin+.3)n.dir=1;
+   if(current>n.pathMax-.3)n.dir=-1
+ }else{
+   const off=n.axis==='x'?n.group.position.x-n.home.x:n.group.position.z-n.home.z;if(Math.abs(off)>19)n.dir*=-1
+ }
  const dx=n.axis==='x'?n.dir*n.speed*dt:0,dz=n.axis==='z'?n.dir*n.speed*dt:0;
- if(moveEntity(n,dx,dz,.28))setHeading(n,dx,dz)
+ if(moveEntity(n,dx,dz,.3))setHeading(n,dx,dz)
 }
 function updatePeople(dt,t){
  policeSeeing=false;
@@ -528,7 +610,7 @@ function showNpcChoices(n){
 }
 function assignNpcMission(n){const opts=[{kind:'pockets',text:'récupère 30 crédits sur des passants',target:30,start:state.stolenCoins,reward:90},{kind:'container',text:'fouille 2 caches ou poubelles',target:2,start:state.containersOpened,reward:110},{kind:'explore',text:'découvre 2 nouveaux quartiers',target:2,start:state.seenDistricts.length,reward:120}];state.activeNpcMission={...choice(opts),giver:n.name};save()}
 function npcMissionProgress(){const m=state.activeNpcMission;if(!m)return null;const now=m.kind==='pockets'?state.stolenCoins:m.kind==='container'?state.containersOpened:state.seenDistricts.length;return now-m.start}
-function maybeCompleteNpcMission(){const m=state.activeNpcMission;if(!m)return;if(npcMissionProgress()>=m.target){state.coins+=m.reward;state.npcMissions++;toast(`Mission de ${m.giver} terminée +${m.reward}`);state.activeNpcMission=null;checkQuests();save()}}
+function maybeCompleteNpcMission(){const m=state.activeNpcMission;if(!m)return;if(npcMissionProgress()>=m.target){state.coins+=m.reward;state.npcMissions++;state.reputation=(state.reputation||0)+2;toast(`Mission de ${m.giver} terminée +${m.reward}`);state.activeNpcMission=null;checkQuests();save()}}
 function selectTarget(n){
  if(!n||n.hostile||n.isPolice)return;
  clearTarget(false);selectedNPC=n;
@@ -541,7 +623,7 @@ function clearTarget(show=true){
 }
 function isBehindTarget(n){
  const vx=state.pos.x-n.group.position.x,vz=state.pos.z-n.group.position.z,d=Math.hypot(vx,vz)||1;
- const fx=Math.sin(n.heading),fz=-Math.cos(n.heading);
+ const fx=-Math.sin(n.heading),fz=-Math.cos(n.heading);
  return (fx*(vx/d)+fz*(vz/d))<-.38
 }
 function startTailTheft(n){
@@ -651,41 +733,53 @@ function makeHomeProp(id){
  return g
 }
 function buildHomeInterior(){
- const sign=makeSign('🏠 TA BASE','#8fe8ff');sign.position.set(0,3.2,-8.45);interiorGroup.add(sign);
+ const sign=makeSign(`🏠 TA BASE — NIVEAU ${state.homeLevel||1}`,'#8fe8ff');sign.position.set(0,3.2,-8.45);interiorGroup.add(sign);
  const desk=new THREE.Mesh(new THREE.BoxGeometry(4.1,1,1.1),new THREE.MeshStandardMaterial({color:0x56422f}));desk.position.set(0,.5,-6.2);interiorGroup.add(desk);
  const rug=new THREE.Mesh(new THREE.PlaneGeometry(5.4,3.5),new THREE.MeshStandardMaterial({color:0x31576c,roughness:1}));rug.rotation.x=-Math.PI/2;rug.position.set(0,.02,-1);interiorGroup.add(rug);
- state.homePlaced.slice(0,HOME_SLOTS.length).forEach((id,i)=>{const slot=HOME_SLOTS[i],p=makeHomeProp(id);p.position.set(slot.x,0,slot.z);if(slot.rot)p.rotation.y=slot.rot;interiorGroup.add(p)})
+ const maxSlots=state.homeLevel===1?8:state.homeLevel===2?12:16;
+ state.homePlaced.slice(0,maxSlots).forEach((id,i)=>{const slot=HOME_SLOTS[i],p=makeHomeProp(id);p.position.set(slot.x,0,slot.z);if(slot.rot)p.rotation.y=slot.rot;interiorGroup.add(p)});
+ if(state.artifacts.length){
+   const shelf=new THREE.Mesh(new THREE.BoxGeometry(5,.16,.65),new THREE.MeshStandardMaterial({color:0x66482f}));shelf.position.set(0,1.25,7.9);interiorGroup.add(shelf);
+   state.artifacts.slice(0,5).forEach((id,i)=>{const art=new THREE.Mesh(new THREE.OctahedronGeometry(.32),new THREE.MeshStandardMaterial({color:0x61d7ff,emissive:0x15546c,emissiveIntensity:.9}));art.position.set(-2+i,1.65,7.85);interiorGroup.add(art)})
+ }
 }
 function exitInterior(){leaveInterior()}
 function leaveInterior(){if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}for(const[,g]of chunks)g.visible=true;state.interior=null;state.pos=state.returnPos||{x:2,z:8};state.returnPos=null;save();hidePrompt()}
-function physicalShopHTML(){const s=SHOPS[state.interior.shopType];return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits disponibles.</p></div><div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price} crédits</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir de la boutique</button>`}
-function buy(id,price){if(state.coins<price)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');state.coins-=price;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(id==='snack'){state.hp=clamp(state.hp+15,0,state.maxHp)}if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;if(HOME_ITEMS[id])addHomeItem(id);save();updateHUD();toast('Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
+function physicalShopHTML(){const s=SHOPS[state.interior.shopType];return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits disponibles. ${state.reputation?`Réputation ${state.reputation} : remise jusqu’à ${Math.min(15,state.reputation)}%.`:''}</p></div><div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price} crédits</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir de la boutique</button>`}
+function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),finalPrice=Math.max(1,Math.round(price*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(id==='snack'){state.hp=clamp(state.hp+15,0,state.maxHp)}if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;if(HOME_ITEMS[id])addHomeItem(id);save();updateHUD();toast('Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
 function bindShop(){$$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));$('#leaveShop').onclick=()=>{closeSheet();leaveInterior()}}
 
 function buyLand(){if(state.landOwned)return enterInterior('home',{});if(state.coins<HOME_PLOT_PRICE)return toast('Pas assez de crédits pour acheter ce terrain');state.coins-=HOME_PLOT_PRICE;state.landOwned=true;toast('Terrain acheté ! Tu as maintenant une base.');save();for(const[k] of [...chunks]){unload(k)}ensureChunks(true)}
 function homeHTML(){
  if(!state.landOwned)return `<div class="card"><h3>Terrain personnel</h3><p class="sub">Dans le quartier de départ, un terrain est en vente. Achète-le pour créer ta base, sécuriser tes gains et aménager ton propre chez-toi.</p><button class="menuBtn green" id="buyLandBtn" style="width:100%">🏡 Acheter le terrain — ${HOME_PLOT_PRICE} crédits</button></div>`;
+ const maxSlots=state.homeLevel===1?8:state.homeLevel===2?12:16;
  const placeable=state.homeStock.length?state.homeStock.map(it=>`<div class="item"><div class="itemIcon">${HOME_ITEMS[it.id].icon}</div><div class="itemMain"><b>${HOME_ITEMS[it.id].name}</b><small>En stock ×${it.qty}</small></div><button class="menuBtn placeHome" data-id="${it.id}">Placer</button></div>`).join(''):'<p class="sub">Aucun meuble en stock. Va chez Maison & Co.</p>';
  const placed=state.homePlaced.length?state.homePlaced.map((id,i)=>`<div class="item"><div class="itemIcon">${HOME_ITEMS[id].icon}</div><div class="itemMain"><b>${HOME_ITEMS[id].name}</b><small>Emplacement ${i+1}</small></div></div>`).join(''):'<p class="sub">Ta base est encore vide.</p>';
  const canSecure=hasPlaced('safe')||hasPlaced('chest');
- return `<div class="card"><h3>🏠 Ta base</h3><p class="sub">Crédits sur toi : ${state.coins} • Crédits sécurisés : ${state.homeBank} • Medkits dans le coffre : ${state.homeStorage.medkit||0}</p><div class="homeHint">Terrain acheté. Retrouve-le dans le chunk de départ : un terrain clôturé avec un panneau CHEZ TOI.</div></div>
- <div class="card"><h3>🧱 Aménagement</h3><p class="sub">${state.homePlaced.length}/${HOME_SLOTS.length} emplacements utilisés.</p>${placed}<div class="placeGrid"><button class="menuBtn" id="storeAllHome">Tout ranger</button><button class="menuBtn" id="enterHomeBtn">Entrer dans la base</button></div></div>
+ const nextLevel=(state.homeLevel||1)+1,nextCost=HOME_UPGRADE_COST[nextLevel];
+ return `<div class="card"><h3>🏠 Ta base — niveau ${state.homeLevel}</h3><span class="reputationBadge">🤝 Réputation ${state.reputation||0}</span><p class="sub">Crédits sur toi : ${state.coins} • Crédits sécurisés : ${state.homeBank} • Medkits : ${state.homeStorage.medkit||0}</p>
+ ${nextCost?`<button class="menuBtn primary" id="upgradeHome" style="width:100%;margin-top:8px">🔨 Agrandir la maison — ${nextCost} crédits<small>${nextLevel===2?'12 emplacements et maison plus grande':'16 emplacements et grande maison'}</small></button>`:'<p class="sub">✅ Maison au niveau maximum.</p>'}</div>
+ <div class="card"><h3>🧱 Aménagement ${state.homePlaced.length}/${maxSlots}</h3>${placed}<div class="placeGrid"><button class="menuBtn" id="storeAllHome">Tout ranger</button><button class="menuBtn" id="enterHomeBtn">Entrer dans la base</button></div></div>
  <div class="card"><h3>📦 Stock maison</h3>${placeable}</div>
- <div class="card"><h3>🗄️ Sécurité</h3><p class="sub">${canSecure?'Place un coffre ou un coffre sécurisé pour utiliser ce stockage.':'Aucun coffre posé pour l’instant.'}</p>
- <div class="placeGrid">
-  <button class="menuBtn deposit50" ${canSecure?'':'disabled'}>Déposer 50 crédits</button>
-  <button class="menuBtn withdraw50" ${canSecure?'':'disabled'}>Retirer 50 crédits</button>
-  <button class="menuBtn depositMed" ${canSecure&&stackCount(state.inventory,'medkit')>0?'':'disabled'}>Déposer 1 medkit</button>
-  <button class="menuBtn withdrawMed" ${(canSecure&&(state.homeStorage.medkit||0)>0)?'':'disabled'}>Retirer 1 medkit</button>
- </div></div>`
+ <div class="card"><h3>🗄️ Coffre</h3><p class="sub">${canSecure?'Ton argent déposé ici est protégé des amendes de police.':'Place un coffre ou coffre sécurisé pour activer le stockage.'}</p>
+ <div class="placeGrid"><button class="menuBtn deposit50" ${canSecure?'':'disabled'}>Déposer 50</button><button class="menuBtn withdraw50" ${canSecure?'':'disabled'}>Retirer 50</button><button class="menuBtn depositMed" ${canSecure&&stackCount(state.inventory,'medkit')>0?'':'disabled'}>Déposer medkit</button><button class="menuBtn withdrawMed" ${(canSecure&&(state.homeStorage.medkit||0)>0)?'':'disabled'}>Retirer medkit</button></div></div>
+ <div class="card"><h3>🛏️ Repos</h3><p class="sub">Dormir restaure tous tes PV, fait avancer le temps et réduit la recherche policière.</p><button class="menuBtn green" id="restHome" style="width:100%">Dormir à la maison</button></div>
+ <div class="card"><h3>🏆 Collection</h3><p class="sub">${state.artifacts.length}/${CITIES.length} artefacts exposés automatiquement dans ta base.</p></div>`
 }
 function placeHomeItem(id){
  if(!state.landOwned)return toast('Achète d’abord le terrain');
- if(state.homePlaced.length>=HOME_SLOTS.length)return toast('Base pleine : range d’abord un objet');
+ const maxSlots=state.homeLevel===1?8:state.homeLevel===2?12:16;if(state.homePlaced.length>=maxSlots)return toast('Base pleine : agrandis la maison ou range un objet');
  if(!removeStack(state.homeStock,id,1))return toast('Objet indisponible');
  state.homePlaced.push(id);save();toast(`${HOME_ITEMS[id].name} placé dans la base`);openSheet('home')
 }
 function storeAllHome(){for(const id of state.homePlaced)addHomeItem(id,1);state.homePlaced=[];save();toast('Tous les objets ont été rangés');openSheet('home')}
+function upgradeHome(){
+ const next=(state.homeLevel||1)+1,cost=HOME_UPGRADE_COST[next];if(!cost)return toast('Maison déjà au niveau maximum');if(state.coins<cost)return toast('Pas assez de crédits');
+ state.coins-=cost;state.homeLevel=next;save();toast(`Maison améliorée au niveau ${next}`);for(const[k]of[...chunks])unload(k);ensureChunks(true);openSheet('home')
+}
+function restAtHome(){
+ if(!state.landOwned)return;state.hp=state.maxHp;state.wanted=Math.max(0,state.wanted-2);state.timeOfDay=7.5;state.restCount=(state.restCount||0)+1;save();toast('Tu as dormi : PV restaurés et recherche réduite');openSheet('home')
+}
 function depositCoins(amount=50){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(state.coins<amount)return toast('Pas assez de crédits sur toi');state.coins-=amount;state.homeBank+=amount;save();openSheet('home')}
 function withdrawCoins(amount=50){if(state.homeBank<amount)return toast('Pas assez dans le coffre');state.homeBank-=amount;state.coins+=amount;save();openSheet('home')}
 function depositMedkit(){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(!removeStack(state.inventory,'medkit',1))return toast('Aucun medkit à déposer');state.homeStorage.medkit=(state.homeStorage.medkit||0)+1;save();openSheet('home')}
@@ -718,7 +812,15 @@ function drawMap(){
  q.fillStyle='#63e2b0';for(const s of shops){const dx=(s.x-state.pos.x)*S,dz=(s.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,5,0,Math.PI*2);q.fill()}}
  q.fillStyle='#f0cf63';for(const h of homePlots){const dx=(h.x-state.pos.x)*S,dz=(h.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.fillRect(dx-4,dz-4,8,8)}}
  q.fillStyle='#ff6c7e';for(const e of enemies){const dx=(e.group.position.x-state.pos.x)*S,dz=(e.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,3,0,Math.PI*2);q.fill()}}
- q.fillStyle='#4ea8ff';for(const p of police){const dx=(p.group.position.x-state.pos.x)*S,dz=(p.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,3.5,0,Math.PI*2);q.fill()}}
+ q.fillStyle='#4ea8ff';for(const p of police){
+   const dx=(p.group.position.x-state.pos.x)*S,dz=(p.group.position.z-state.pos.z)*S;
+   if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){
+     if(state.wanted>0||tailTheft?.active){
+       const ang=p.heading-Math.PI/2,len=20*S;q.fillStyle='rgba(78,168,255,.12)';q.beginPath();q.moveTo(dx,dz);q.arc(dx,dz,len,ang-.34,ang+.34);q.closePath();q.fill();q.fillStyle='#4ea8ff'
+     }
+     q.beginPath();q.arc(dx,dz,3.5,0,Math.PI*2);q.fill()
+   }
+ }
  q.fillStyle='#7ccf9c';for(const n of npcs){const dx=(n.group.position.x-state.pos.x)*S,dz=(n.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,2.3,0,Math.PI*2);q.fill()}}
  if(selectedNPC?.group?.parent){const dx=(selectedNPC.group.position.x-state.pos.x)*S,dz=(selectedNPC.group.position.z-state.pos.z)*S;q.strokeStyle='#8ee8ff';q.lineWidth=2;q.beginPath();q.arc(dx,dz,6,0,Math.PI*2);q.stroke()}
  q.rotate(state.yaw);q.fillStyle='#fff';q.beginPath();q.moveTo(0,-8);q.lineTo(5,6);q.lineTo(0,3);q.lineTo(-5,6);q.closePath();q.fill();q.restore()
@@ -760,20 +862,22 @@ function worldHTML(){return `<div class="card"><h3>Exploration chill</h3><p clas
 function bagHTML(){const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join(''),meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';return `<div class="card"><h3>Armes</h3>${ws}</div><div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div><div class="card"><h3>Discrétion</h3><p class="sub">${state.pickpockets} vols réussis • ${state.stolenCoins} crédits récupérés dans les poches • niveau de recherche ${state.wanted}/5 • ${state.policeCaught||0} arrestations.</p><p class="sub">Coffre maison : ${state.homeBank||0} crédits • ${state.homeStorage.medkit||0} medkits.</p></div>`}
 function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
 function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. Ta base te permet de sécuriser tes gains pendant l’aventure.</p></div>`}
-function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div><div class="warning">V6 ajoute une vraie base : terrain achetable, meubles plaçables, coffre sécurisé, trafic amélioré et meilleurs placements d’immeubles.</div>`}
+function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div><div class="warning">V7 corrige l’orientation des visages et phares, ajoute trottoirs bilatéraux, passages piétons, feux, trajectoires PNJ de trottoir, base améliorable et verrouillage anti-zoom renforcé.</div>`}
 function bindSheet(panel){
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
  if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
  if(panel==='home'){
    const buyBtn=$('#buyLandBtn'); if(buyBtn)buyBtn.onclick=buyLand;
    const enterBtn=$('#enterHomeBtn'); if(enterBtn)enterBtn.onclick=()=>{closeSheet();enterInterior('home',{})};
+   const up=$('#upgradeHome'); if(up)up.onclick=upgradeHome;
+   const rest=$('#restHome'); if(rest)rest.onclick=restAtHome;
    $$('.placeHome').forEach(b=>b.onclick=()=>placeHomeItem(b.dataset.id));
    const storeBtn=$('#storeAllHome'); if(storeBtn)storeBtn.onclick=storeAllHome;
    $$('.deposit50').forEach(b=>b.onclick=()=>depositCoins(50));$$('.withdraw50').forEach(b=>b.onclick=()=>withdrawCoins(50));
    $$('.depositMed').forEach(b=>b.onclick=depositMedkit);$$('.withdrawMed').forEach(b=>b.onclick=withdrawMedkit)
  }
  if(panel==='districts'){const x=$('#secureDistrict'); if(x)x.onclick=secureDistrict}
- if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v6');location.reload()}};
+ if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v7');location.reload()}};
  if(panel==='physicalShop')bindShop()
 }
 function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
@@ -784,6 +888,6 @@ let toastTimer;function toast(m){const t=$('#toast');t.textContent=m;t.classList
 
 
 $('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
-document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('touchmove',e=>{if(e.scale&&e.scale!==1)e.preventDefault()},{passive:false});let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTouch<320)e.preventDefault();lastTouch=n},{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
 init();
