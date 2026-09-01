@@ -67,3 +67,11 @@ button,.joystick,.knob,.actionCircle,.nav{touch-action:none!important}
 .updateBtn.updateReady{border-color:#65e4a8;background:#123d2d;box-shadow:0 0 0 3px #65e4a822}
 .updateBtn.checking{opacity:.7}
 .mapLegend{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:#bdd2e2}
+
+.needsHud{position:absolute;z-index:29;top:calc(91px + var(--safe-top));left:8px;display:flex;gap:5px}
+.need{width:70px;height:24px;background:#07131dcc;border:1px solid #29445a;border-radius:999px;display:grid;grid-template-columns:20px 1fr 18px;align-items:center;padding:2px 5px;gap:3px;backdrop-filter:blur(8px)}
+.need span{font-size:11px}.need i{height:5px;border-radius:99px;background:#182936;overflow:hidden}.need i b{display:block;height:100%;width:70%;background:#72dba7;border-radius:99px}.need small{font-size:7px;text-align:right;color:#d5e6f2}
+.missionCard{top:calc(122px + var(--safe-top))!important}
+.housingStep{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #1e3244}.housingStep:last-child{border-bottom:0}.housingStep.done{opacity:.72}.housingNum{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#163047;border:1px solid #3d6b88;font-size:11px;font-weight:900}
+.facadeLabel{pointer-events:none}
+@media(max-width:380px){.need{width:62px}.needsHud{gap:3px}}

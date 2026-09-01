@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V10">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V11">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V10</title>
+<title>StreetQuest 3D V11</title>
 </head>
 <body>
 <div id="app">
@@ -60,6 +60,13 @@
    <span>🪙 <b id="coins">100</b></span>
    <span>⭐ <b id="level">1</b></span>
    <span>🚨 <b id="wanted">0</b></span>
+  </div>
+
+
+  <div class="needsHud">
+   <div class="need"><span>🍗</span><i><b id="hungerBar"></b></i><small id="hungerVal">70</small></div>
+   <div class="need"><span>💧</span><i><b id="thirstBar"></b></i><small id="thirstVal">70</small></div>
+   <div class="need"><span>🧼</span><i><b id="hygieneBar"></b></i><small id="hygieneVal">60</small></div>
   </div>
 
   <div class="mapWrap"><canvas id="minimap" width="200" height="200"></canvas><button id="mapExpandBtn" class="mapExpandBtn">🗺️</button></div>

@@ -283,3 +283,49 @@ sq3d-v9
 - grande carte beaucoup plus large
 - boutiques découvertes mémorisées
 - noms des boutiques affichés sur la grande carte
+
+
+# V11 — From Nothing
+
+## Corrections visuelles
+- enseignes de magasins : vrais panneaux 3D fixés aux façades, plus de sprites qui flottent face à la caméra
+- feux : quatre poteaux distincts placés sur les quatre coins d’intersection
+- tête de feu simplifiée pour éviter les bras/panneaux mal orientés
+- visage PNJ : matériau double face + rotation corrigée + nez 3D de secours
+
+## Survie
+- faim
+- soif
+- propreté
+- faim et soif diminuent progressivement
+- à zéro, perte progressive de PV
+- faim/soif très basses réduisent la vitesse
+- propreté influence la confiance des PNJ
+
+## Épicerie
+- bouteilles d’eau
+- sandwichs
+- repas complets
+- sodas
+- kits d’hygiène
+- medkits
+
+## Nouvelle progression
+La partie démarre avec 0 crédit et aucun logement.
+1. Sans logement
+2. Louer un studio — 180 crédits
+3. Acheter un appartement — 850 crédits
+4. Acheter un terrain — 1800 crédits
+5. Construire/améliorer la maison
+
+- dormir dehors reste possible au départ avec des pénalités
+- studio/appartement : dormir, se doucher, épargner
+- maison : meubles et améliorations en plus
+
+## Agence Habitat
+- nouvelle boutique physique garantie dans le quartier de départ
+- progression logement accessible dans l’agence et dans l’onglet Base
+
+## PNJ
+- l’option « Suis-moi » est maintenant toujours visible dans le menu de dialogue
+- les missions sont un choix séparé

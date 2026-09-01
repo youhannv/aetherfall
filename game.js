@@ -24,6 +24,15 @@ const WEAPONS={
  relic:{id:'relic',name:'Lame relique',icon:'🗡️',damage:55,price:1450}
 };
 
+
+const CONSUMABLES={
+ water:{id:'water',name:"Bouteille d’eau",icon:'💧',price:10,thirst:38,hunger:0,hygiene:0,desc:'+38 soif'},
+ sandwich:{id:'sandwich',name:'Sandwich',icon:'🥪',price:18,thirst:0,hunger:32,hygiene:0,desc:'+32 faim'},
+ meal:{id:'meal',name:'Repas complet',icon:'🍲',price:34,thirst:6,hunger:58,hygiene:0,desc:'+58 faim'},
+ soda:{id:'soda',name:'Soda',icon:'🥤',price:14,thirst:25,hunger:5,hygiene:0,desc:'+25 soif'},
+ hygieneKit:{id:'hygieneKit',name:"Kit d’hygiène",icon:'🧼',price:24,thirst:0,hunger:0,hygiene:35,desc:'+35 propreté'}
+};
+
 const STREET_ITEMS={
  phone:{id:'phone',name:'Téléphone',icon:'📱',value:95},
  watch:{id:'watch',name:'Montre',icon:'⌚',value:80},
@@ -35,13 +44,16 @@ const STREET_ITEMS={
  walletItem:{id:'walletItem',name:'Portefeuille',icon:'👛',value:35}
 };
 const STREET_ITEM_IDS=Object.keys(STREET_ITEMS);
-function itemInfo(id){return id==='medkit'?{id:'medkit',name:'Kit de soin',icon:'🩹',value:0}:STREET_ITEMS[id]||{id,name:id,icon:'📦',value:0}}
+function itemInfo(id){return id==='medkit'?{id:'medkit',name:'Kit de soin',icon:'🩹',value:0}:CONSUMABLES[id]||STREET_ITEMS[id]||{id,name:id,icon:'📦',value:0}}
 
 const SHOPS={
- corner:{name:'Épicerie Nova',icon:'🥤',stock:[
-  {id:'medkit',name:'Kit de soin',icon:'🩹',price:55,desc:'+40 PV'},
-  {id:'snack',name:'Snack énergétique',icon:'🥪',price:22,desc:'+15 PV'},
-  {id:'bag',name:'Sac renforcé',icon:'🎒',price:240,desc:'+5 places'}
+ corner:{name:'Épicerie Nova',icon:'🛒',stock:[
+  {id:'water',name:"Bouteille d’eau",icon:'💧',price:10,desc:'+38 soif'},
+  {id:'sandwich',name:'Sandwich',icon:'🥪',price:18,desc:'+32 faim'},
+  {id:'meal',name:'Repas complet',icon:'🍲',price:34,desc:'+58 faim'},
+  {id:'soda',name:'Soda',icon:'🥤',price:14,desc:'+25 soif'},
+  {id:'hygieneKit',name:"Kit d’hygiène",icon:'🧼',price:24,desc:'+35 propreté'},
+  {id:'medkit',name:'Kit de soin',icon:'🩹',price:55,desc:'+40 PV'}
  ]},
  gear:{name:'Atelier Horizon',icon:'🧰',stock:[
   {id:'armor',name:'Plaque d’armure',icon:'🛡️',price:85,desc:'+30 armure'},
@@ -55,6 +67,7 @@ const SHOPS={
   {id:'map',name:'Scanner longue portée',icon:'📡',price:600,desc:'Scanner amélioré'}
  ]}
 };
+SHOPS.housing={name:'Agence Habitat',icon:'🔑',stock:[]};
 SHOPS.pawn={name:'Comptoir Seconde Main',icon:'🏪',stock:[
   {id:'medkit',name:'Kit de soin',icon:'🩹',price:60,desc:'+40 PV'},
   {id:'bag',name:'Sac renforcé',icon:'🎒',price:260,desc:'+5 places'}
@@ -85,26 +98,29 @@ const HOME_SLOTS=[
  {x:-5.0,z:2.8},{x:-1.6,z:2.7},{x:1.8,z:2.8},{x:5.1,z:2.7},
  {x:-5.2,z:5.4},{x:-1.6,z:5.4},{x:1.8,z:5.4},{x:5.2,z:5.4}
 ];
-const HOME_PLOT_PRICE=850;
+const RENT_STUDIO_PRICE=180;
+const BUY_APARTMENT_PRICE=850;
+const HOME_PLOT_PRICE=1800;
 const HOME_UPGRADE_COST={2:650,3:1450};
 const QUESTS=[
- {id:'welcome',title:'Premiers pas',text:'Récupère 50 crédits en faisant les poches des passants.',goal:'stolenCoins',target:50,reward:100},
+ {id:'welcome',title:'Premier billet',text:'Gagne ou récupère 100 crédits.',goal:'coinsEarned',target:100,reward:60},
+ {id:'roof',title:'Un toit',text:'Loue ton premier studio.',goal:'housingStage',target:1,reward:100},
  {id:'helper',title:'Bon voisin',text:'Accomplis une mission donnée par un PNJ.',goal:'npcMissions',target:1,reward:140},
  {id:'explorer',title:'Explorateur',text:'Découvre 6 quartiers.',goal:'districtsSeen',target:6,reward:180},
  {id:'treasure',title:'Chasseur de caches',text:'Ouvre 5 coffres ou poubelles.',goal:'containersOpened',target:5,reward:160},
  {id:'conquer',title:'Conquête tranquille',text:'Sécurise 3 quartiers en réalisant leurs objectifs.',goal:'districtsOwned',target:3,reward:350}
 ];
 const base={
- cityId:'paris',hp:100,maxHp:100,armor:0,coins:120,level:1,xp:0,wanted:0,
+ cityId:'paris',hp:100,maxHp:100,armor:0,coins:0,level:1,xp:0,wanted:0,
  pos:{x:2,z:8},yaw:0,pitch:0,inventory:[],bagMax:20,ownedWeapons:['fists'],equipped:'fists',
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[]
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60
 };
 let state=loadState();
-function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v10')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v10',JSON.stringify(state))}
+function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v11')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
+function save(){localStorage.setItem('sq3d-v11',JSON.stringify(state))}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
@@ -121,7 +137,7 @@ function ck(cx,cz){return `${state.cityId}:${cx}:${cz}`}
 function currentChunk(){return{cx:Math.floor(state.pos.x/CHUNK),cz:Math.floor(state.pos.z/CHUNK)}}
 function districtFor(cx,cz){const idx=Math.abs((cx*7+cz*11)%DISTRICTS.length);return DISTRICTS[idx]}
 function districtId(cx,cz){return `${state.cityId}:${cx}:${cz}`}
-function progress(goal){if(goal==='stolenCoins')return state.stolenCoins;if(goal==='coinsEarned')return state.coinsEarned;if(goal==='npcMissions')return state.npcMissions;if(goal==='districtsSeen')return state.seenDistricts.length;if(goal==='containersOpened')return state.containersOpened;if(goal==='districtsOwned')return state.ownedDistricts.length;return 0}
+function progress(goal){if(goal==='stolenCoins')return state.stolenCoins;if(goal==='coinsEarned')return state.coinsEarned;if(goal==='npcMissions')return state.npcMissions;if(goal==='districtsSeen')return state.seenDistricts.length;if(goal==='containersOpened')return state.containersOpened;if(goal==='districtsOwned')return state.ownedDistricts.length;if(goal==='housingStage')return state.housingStage||0;return 0}
 function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.id))||{id:'free',title:'Légende urbaine',text:'Explore librement, collectionne les artefacts et sécurise les quartiers.',goal:'districtsOwned',target:999}}
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
@@ -231,23 +247,23 @@ function makeRoad(g,x0,z0){
  for(const [lx,lz] of [[15,21],[15,53],[42,15],[61,15],[69,38],[38,69]])addLamp(g,x0+lx,z0+lz);
  addBench(g,x0+18,z0+20);
 
- // V9 : 4 feux distincts par intersection, un sur chacun des 4 coins.
- // Les deux feux "vertical" commandent les deux sens de l'axe vertical.
- // Les deux feux "horizontal" commandent les deux sens de l'axe horizontal.
- addTrafficLight(g,x0+12.55,z0+12.55,'vertical',Math.PI);
- addTrafficLight(g,x0-1.55,z0-1.55,'vertical',0);
- addTrafficLight(g,x0-1.55,z0+12.55,'horizontal',-Math.PI/2);
- addTrafficLight(g,x0+12.55,z0-1.55,'horizontal',Math.PI/2)
+ // V11 : quatre poteaux fixes, chacun placé derrière la bordure du passage piéton.
+ addTrafficLight(g,x0+13.15,z0+13.15,'vertical',Math.PI);
+ addTrafficLight(g,x0-2.15,z0+13.15,'vertical',0);
+ addTrafficLight(g,x0+13.15,z0-2.15,'horizontal',Math.PI/2);
+ addTrafficLight(g,x0-2.15,z0-2.15,'horizontal',-Math.PI/2)
 }
 function addTrafficLight(g,x,z,axis,rot=0){
- const group=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x252d32,metalness:.58,roughness:.48});
- const pole=new THREE.Mesh(new THREE.CylinderGeometry(.065,.085,2.9,8),metal);pole.position.y=1.45;group.add(pole);
- const arm=new THREE.Mesh(new THREE.BoxGeometry(.86,.075,.075),metal);arm.position.set(.37,2.86,0);group.add(arm);
- const box=new THREE.Mesh(new THREE.BoxGeometry(.40,.98,.36),new THREE.MeshStandardMaterial({color:0x11171a,roughness:.65}));box.position.set(.73,2.56,0);group.add(box);
- const shade1=new THREE.Mesh(new THREE.BoxGeometry(.31,.12,.18),metal);shade1.position.set(.73,2.84,.19);group.add(shade1);
- const shade2=shade1.clone();shade2.position.y=2.31;group.add(shade2);
- const red=new THREE.Mesh(new THREE.SphereGeometry(.095,10,8),new THREE.MeshBasicMaterial({color:0x52151b}));red.position.set(.73,2.82,.20);group.add(red);
- const green=new THREE.Mesh(new THREE.SphereGeometry(.095,10,8),new THREE.MeshBasicMaterial({color:0x16462b}));green.position.set(.73,2.30,.20);group.add(green);
+ const group=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x242b30,metalness:.48,roughness:.55});
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.06,.08,2.75,8),metal);pole.position.y=1.375;group.add(pole);
+ const box=new THREE.Mesh(new THREE.BoxGeometry(.42,.92,.34),new THREE.MeshStandardMaterial({color:0x111719,roughness:.7}));box.position.set(0,2.48,0);group.add(box);
+ const mkLens=(y,col,zoff)=>{
+   const m=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.045,12),new THREE.MeshBasicMaterial({color:col}));
+   m.rotation.x=Math.PI/2;m.position.set(0,y,zoff);group.add(m);return m
+ };
+ const red=mkLens(2.70,0x4d151a,.19),green=mkLens(2.28,0x143d25,.19);
+ // Rear lenses make the signal readable from either side without moving the pole.
+ mkLens(2.70,0x4d151a,-.19);mkLens(2.28,0x143d25,-.19);
  group.position.set(x,0,z);group.rotation.y=rot;g.add(group);trafficLights.push({group,red,green,axis})
 }
 function createChunk(cx,cz){
@@ -270,6 +286,7 @@ function createChunk(cx,cz){
    if(startChunk&&i===0){addShop(g,key,x0+p[0],z0+p[1],r,'corner');made++;return}
    if(startChunk&&i===2){addShop(g,key,x0+p[0],z0+p[1],r,'home');made++;return}
    if(startChunk&&i===3){addShop(g,key,x0+p[0],z0+p[1],r,'pawn');made++;return}
+   if(startChunk&&i===4){addShop(g,key,x0+p[0],z0+p[1],r,'housing');made++;return}
    if(startChunk&&i===8){addHomePlot(g,key,x0+p[0],z0+p[1]);made++;return}
    if(d.style==='green'&&r()<.11){addPocketGarden(g,key,x0+p[0],z0+p[1],r);return}
    if(r()<.08&&made>5)return;
@@ -430,13 +447,26 @@ function addHomePlot(g,key,x,z){
  homePlots.push({key,x,z:state.landOwned?doorZ:z-7.55,centerX:x,centerZ:z,price:HOME_PLOT_PRICE})
 }
 function makeSign(text,color='#ffdb77'){const c=document.createElement('canvas');c.width=512;c.height=128;const q=c.getContext('2d');q.fillStyle='#10222a';q.fillRect(0,0,512,128);q.fillStyle=color;q.font='bold 44px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(text,256,64);const t=new THREE.CanvasTexture(c),s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.scale.set(5.2,1.3,1);return s}
+
+function makeFacadeSign(text,color='#ffdb77'){
+ const c=document.createElement('canvas');c.width=768;c.height=144;const q=c.getContext('2d');
+ q.fillStyle='#153040';q.fillRect(0,0,c.width,c.height);
+ q.fillStyle=color;q.font='700 46px system-ui';q.textAlign='center';q.textBaseline='middle';
+ q.fillText(text,c.width/2,c.height/2);
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(6.3,1.18),new THREE.MeshBasicMaterial({map:t,side:THREE.DoubleSide}));
+ m.rotation.y=Math.PI;
+ return m
+}
+
 function addShop(g,key,x,z,r,forcedType=null){
  const pool=Object.keys(SHOPS),type=forcedType||choice(pool),shop=SHOPS[type],group=new THREE.Group();
- const body=new THREE.Mesh(new THREE.BoxGeometry(10,5.4,9),new THREE.MeshStandardMaterial({color:type==='corner'?0x456e58:type==='gear'?0x56636e:0x685072,roughness:.72}));body.position.y=2.7;group.add(body);
+ const shopColor={corner:0x315f45,gear:0x4d5863,rare:0x57436a,pawn:0x315a67,home:0x5e4d69,housing:0x63563f}[type]||0x4f5964;const body=new THREE.Mesh(new THREE.BoxGeometry(10,5.4,9),new THREE.MeshStandardMaterial({color:shopColor,roughness:.78}));body.position.y=2.7;group.add(body);
  const frame=new THREE.Mesh(new THREE.BoxGeometry(5.2,3.1,.18),new THREE.MeshStandardMaterial({color:0x202c34,metalness:.3}));frame.position.set(0,1.75,-4.56);group.add(frame);
  const glass=new THREE.Mesh(new THREE.PlaneGeometry(4.5,2.6),new THREE.MeshStandardMaterial({color:0x8ed5ee,transparent:true,opacity:.44,metalness:.25,roughness:.18}));glass.position.set(0,1.75,-4.66);glass.rotation.y=Math.PI;group.add(glass);
  const awning=new THREE.Mesh(new THREE.BoxGeometry(6.2,.28,1.1),new THREE.MeshStandardMaterial({color:type==='corner'?0xe4bd55:type==='gear'?0xd46a53:0x9c77d2}));awning.position.set(0,3.35,-4.85);group.add(awning);
- const sign=makeSign(`${shop.icon} ${shop.name}`);sign.position.set(0,4.72,-4.72);group.add(sign);group.position.set(x,0,z);g.add(group);
+ const sign=makeFacadeSign(`${shop.icon} ${shop.name}`);sign.position.set(0,4.45,-4.525);group.add(sign);
+ group.position.set(x,0,z);g.add(group);
  colliders.push({key,minX:x-5.2,maxX:x+5.2,minZ:z-4.7,maxZ:z+4.7,type:'shop'});
  shops.push({key,x,z,type,group,door:{x,z:z-5.05}});
  const sid=`${state.cityId}:${Math.round(x)}:${Math.round(z)}:${type}`;
@@ -467,8 +497,10 @@ function createPerson(role,key,x,z,r,path=null){
  f.clearRect(0,0,96,96);f.fillStyle='#14181c';f.beginPath();f.arc(31,39,5,0,Math.PI*2);f.arc(65,39,5,0,Math.PI*2);f.fill();
  f.strokeStyle=hostile?'#6b1e29':'#7e4047';f.lineWidth=5;f.lineCap='round';f.beginPath();f.moveTo(36,66);f.quadraticCurveTo(48,72,60,66);f.stroke();
  const ft=new THREE.CanvasTexture(fc);ft.colorSpace=THREE.SRGBColorSpace;
- const face=new THREE.Mesh(new THREE.PlaneGeometry(.235,.235),new THREE.MeshBasicMaterial({map:ft,transparent:true,depthWrite:false,alphaTest:.08}));
- face.position.set(0,1.71,-.242);face.renderOrder=5;group.add(face);
+ const face=new THREE.Mesh(new THREE.PlaneGeometry(.235,.235),new THREE.MeshBasicMaterial({map:ft,transparent:true,depthWrite:false,alphaTest:.04,side:THREE.DoubleSide}));
+ face.position.set(0,1.71,-.247);face.rotation.y=Math.PI;face.renderOrder=10;group.add(face);
+ // 3D nose fallback makes the face direction obvious even if the texture is tiny.
+ const nose=new THREE.Mesh(new THREE.ConeGeometry(.022,.065,7),skin);nose.rotation.x=-Math.PI/2;nose.position.set(0,1.69,-.265);group.add(nose);
 
  if(isPolice){
    const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.09,10),new THREE.MeshStandardMaterial({color:0x153b63}));cap.position.y=1.96;group.add(cap);
@@ -689,7 +721,7 @@ function isInAlley(x,z){
 function askFollow(n){
  if(n.following)return toast(`${n.name} te suit déjà.`);
  const doubt=clamp(n.followDoubt+state.wanted*.12-(state.reputation||0)*.015,0,.95);
- const chance=clamp(n.trust-doubt+.28,.08,.92);
+ const hygieneBonus=(state.hygiene-50)/180;const chance=clamp(n.trust-doubt+.28+hygieneBonus,.05,.92);
  closeSheet();
  if(Math.random()<chance){
    n.following=true;n.route=null;n.caught=false;
@@ -803,16 +835,38 @@ function policeCatch(){
  if(tailTheft)stopTailTheft('La police t’a attrapé.',true);
  clearTarget();state.pos={x:2,z:8};toast(`👮 Attrapé : -${fine} crédits${seized?` • ${seized} confisqué`:''}`);save()
 }function animatePickups(dt,t){for(const p of pickups){if(!p.parent)continue;p.rotation.y+=dt;p.position.y=(p.userData.type==='artifact'?.72:.43)+Math.sin(t/450+p.position.x)*.07}}
+
+function needsSpeedMultiplier(){
+ const low=Math.min(state.hunger,state.thirst);
+ return low<10?.68:low<25?.82:1
+}
+function updateNeeds(dt){
+ if(state.interior&&state.interior.type==='shop')return;
+ state.hunger=clamp(state.hunger-dt*.030,0,100);
+ state.thirst=clamp(state.thirst-dt*.046,0,100);
+ state.hygiene=clamp(state.hygiene-dt*.018,0,100);
+ if(state.hunger<=0||state.thirst<=0){
+   state.hp=Math.max(1,state.hp-dt*(state.thirst<=0?1.35:.65))
+ }
+}
+function useConsumable(id){
+ const c=CONSUMABLES[id];if(!c||!removeStack(state.inventory,id,1))return;
+ state.hunger=clamp(state.hunger+(c.hunger||0),0,100);
+ state.thirst=clamp(state.thirst+(c.thirst||0),0,100);
+ state.hygiene=clamp(state.hygiene+(c.hygiene||0),0,100);
+ toast(`${c.icon} ${c.name} utilisé`);save();openSheet('bag')
+}
+
 function animate(){
  if(!renderer)return;requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta()),t=performance.now();
  const keyForward=(keys['ArrowUp']?1:0)-(keys['ArrowDown']?1:0);
  const keyStrafe=(keys['ArrowRight']?1:0)-(keys['ArrowLeft']?1:0);
  const forward=clamp(-moveStick.y+keyForward,-1,1),strafe=clamp(moveStick.x+keyStrafe,-1,1);
  const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);
- movePlayer((fx*forward+rx*strafe)*4.8*dt,(fz*forward+rz*strafe)*4.8*dt);
+ const moveSpeed=4.8*needsSpeedMultiplier();movePlayer((fx*forward+rx*strafe)*moveSpeed*dt,(fz*forward+rz*strafe)*moveSpeed*dt);
  state.yaw+=lookStick.x*1.8*dt;
  state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)
- updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();renderer.render(scene,camera)
+ updateNeeds(dt);updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();renderer.render(scene,camera)
 }
 
 function entityPos(x){
@@ -907,22 +961,28 @@ function openContainer(m){
 }
 
 function talkNPC(n){
- const lines=[`Salut ! ${city().name} est tranquille si tu prends le temps de l’explorer.`,`J’ai entendu parler d’une cache dans le quartier.`,`Les commerces changent selon les secteurs.`,`Évite les rôdeurs, ils sont rares mais parfois coriaces.`];
- showDialogue(n.name,choice(lines),()=>{
-  if(!n.missionGiven&&Math.random()<.55){n.missionGiven=true;assignNpcMission(n);showDialogue(n.name,`J’ai un service à te demander : ${state.activeNpcMission.text}`,hideDialogue)}
-  else showDialogue(n.name,'Bonne balade !',()=>showNpcChoices(n))
- })
+ const dirty=state.hygiene<25;
+ const lines=dirty
+   ?['Tu as l’air de sortir d’une longue journée…','Tout va bien ? Tu devrais peut-être te laver un peu.']
+   :[`Salut ! ${city().name} est tranquille aujourd’hui.`,`Je connais quelques ruelles et commerces dans le quartier.`,`On trouve toujours quelque chose à faire ici.`];
+ showDialogue(n.name,choice(lines),()=>showNpcChoices(n))
 }
 function showNpcChoices(n){
  $('#dialogue').classList.add('hidden');
  openSheet('npc');$('#sheetTitle').textContent=n.name;
  $('#sheetBody').innerHTML=`<div class="card"><div class="grid2">
  <button class="menuBtn primary" id="talkAgain">💬 Discuter</button>
- <button class="menuBtn" id="askFollow" ${n.caught?'disabled':''}>🚶 Suis-moi<small>${n.following?'Te suit déjà':'Peut accepter ou se méfier'}</small></button>
- <button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Faire les poches<small>${n.pickpocketed?'Déjà fouillé':n.caught?'Sur ses gardes':'Suis-le/la discrètement'}</small></button>
+ <button class="menuBtn" id="askFollow" ${n.caught?'disabled':''}>🚶 Suis-moi<small>${n.following?'Te suit déjà':'L’emmener avec toi'}</small></button>
+ <button class="menuBtn" id="askMission">📋 Petit boulot<small>${n.missionGiven?'Déjà proposé':'Demander une mission'}</small></button>
+ <button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Cibler<small>${n.pickpocketed?'Déjà fouillé':'Le/la suivre discrètement'}</small></button>
  </div></div>`;
- $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'On se croise peut-être plus loin.',hideDialogue)};
+ $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'Bonne route.',hideDialogue)};
  const af=$('#askFollow');if(af)af.onclick=()=>askFollow(n);
+ const am=$('#askMission');if(am)am.onclick=()=>{
+   closeSheet();
+   if(n.missionGiven)return toast('Cette personne t’a déjà proposé quelque chose.');
+   n.missionGiven=true;assignNpcMission(n);showDialogue(n.name,`J’ai un petit boulot : ${state.activeNpcMission.text}`,hideDialogue)
+ };
  const pp=$('#pickpocket');if(pp)pp.onclick=()=>{closeSheet();selectTarget(n);toast('Cible sélectionnée.')}
 }
 function assignNpcMission(n){const opts=[{kind:'pockets',text:'récupère 30 crédits sur des passants',target:30,start:state.stolenCoins,reward:90},{kind:'container',text:'fouille 2 caches ou poubelles',target:2,start:state.containersOpened,reward:110},{kind:'explore',text:'découvre 2 nouveaux quartiers',target:2,start:state.seenDistricts.length,reward:120}];state.activeNpcMission={...choice(opts),giver:n.name};save()}
@@ -1065,7 +1125,15 @@ function makeHomeProp(id){
  return g
 }
 function buildHomeInterior(){
- const sign=makeSign(`🏠 TA BASE — NIVEAU ${state.homeLevel||1}`,'#8fe8ff');sign.position.set(0,3.2,-8.45);interiorGroup.add(sign);
+ const stage=state.housingStage||0;
+ const title=stage===1?'🔑 STUDIO':stage===2?'🏢 APPARTEMENT':`🏠 MAISON NIVEAU ${state.homeLevel||1}`;
+ const sign=makeSign(title,'#8fe8ff');sign.position.set(0,3.2,-8.45);interiorGroup.add(sign);
+ if(stage===1||stage===2){
+   const bed=new THREE.Mesh(new THREE.BoxGeometry(stage===1?2.2:2.8,.5,1.3),new THREE.MeshStandardMaterial({color:0x586c7a}));bed.position.set(-4,.3,-2);interiorGroup.add(bed);interiorColliders.push({minX:-5.5,maxX:-2.5,minZ:-2.9,maxZ:-1.1});
+   const table=new THREE.Mesh(new THREE.BoxGeometry(1.5,.75,1.0),new THREE.MeshStandardMaterial({color:0x765438}));table.position.set(2,.4,-2);interiorGroup.add(table);interiorColliders.push({minX:1.1,maxX:2.9,minZ:-2.65,maxZ:-1.35});
+   if(stage===2){const sofa=new THREE.Mesh(new THREE.BoxGeometry(2.8,.75,1.1),new THREE.MeshStandardMaterial({color:0x4e6578}));sofa.position.set(3,.42,2);interiorGroup.add(sofa);interiorColliders.push({minX:1.5,maxX:4.5,minZ:1.3,maxZ:2.7})}
+   return
+ }
  const desk=new THREE.Mesh(new THREE.BoxGeometry(4.1,1,1.1),new THREE.MeshStandardMaterial({color:0x56422f}));desk.position.set(0,.5,-6.2);interiorGroup.add(desk);
  const rug=new THREE.Mesh(new THREE.PlaneGeometry(5.4,3.5),new THREE.MeshStandardMaterial({color:0x31576c,roughness:1}));rug.rotation.x=-Math.PI/2;rug.position.set(0,.02,-1);interiorGroup.add(rug);
  const maxSlots=state.homeLevel===1?8:state.homeLevel===2?12:16;
@@ -1083,6 +1151,7 @@ function exitInterior(){leaveInterior()}
 function leaveInterior(){if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}interiorColliders=[];for(const[,g]of chunks)g.visible=true;state.interior=null;state.pos=state.returnPos||{x:2,z:8};state.returnPos=null;save();hidePrompt()}
 function physicalShopHTML(){
  const s=SHOPS[state.interior.shopType],arts=[...new Set(state.artifactBag)];
+ if(state.interior.shopType==='housing')return `<div class="card"><h3>🔑 Agence Habitat</h3><p class="sub">Commence petit, puis deviens propriétaire.</p></div>${housingPanelHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
  const valuables=state.inventory.filter(i=>STREET_ITEMS[i.id]&&i.qty>0);
  const resale=state.interior.shopType==='pawn'
    ?`<div class="card"><h3>📦 Revente d’objets</h3>${valuables.length?valuables.map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty} • ${info.value} crédits pièce</small></div><button class="menuBtn sellLoot" data-id="${i.id}">Vendre</button></div>`}).join(''):'<p class="sub">Aucun objet revendable.</p>'}</div>`
@@ -1093,40 +1162,65 @@ function physicalShopHTML(){
  <div class="card"><h3>💎 Artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • 500 crédits</small></div><button class="menuBtn sellArtifact" data-id="${id}">Vendre</button></div>`).join(''):'<p class="sub">Aucun artefact.</p>'}</div>
  <button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`
 }
-function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),finalPrice=Math.max(1,Math.round(price*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(id==='snack'){state.hp=clamp(state.hp+15,0,state.maxHp)}if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;if(HOME_ITEMS[id])addHomeItem(id);save();updateHUD();toast('Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
+function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),finalPrice=Math.max(1,Math.round(price*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(CONSUMABLES[id])addInv(id);if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;if(HOME_ITEMS[id])addHomeItem(id);save();updateHUD();toast('Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
 function sellLoot(id){
  const info=STREET_ITEMS[id];if(!info||!removeStack(state.inventory,id,1))return;
  state.coins+=info.value;save();toast(`${info.name} vendu : +${info.value}`);
  $('#sheetBody').innerHTML=physicalShopHTML();bindShop()
 }
 function bindShop(){
+ bindHousingButtons();
  $$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));
  $$('.sellLoot').forEach(b=>b.onclick=()=>sellLoot(b.dataset.id));
  $$('.sellArtifact').forEach(b=>b.onclick=()=>sellArtifact(b.dataset.id));
  $('#leaveShop').onclick=()=>{closeSheet();leaveInterior()}
 }
 
-function buyLand(){if(state.landOwned)return enterInterior('home',{});if(state.coins<HOME_PLOT_PRICE)return toast('Pas assez de crédits pour acheter ce terrain');state.coins-=HOME_PLOT_PRICE;state.landOwned=true;toast('Terrain acheté ! Tu as maintenant une base.');save();for(const[k] of [...chunks]){unload(k)}ensureChunks(true)}
-function homeHTML(){
- if(!state.landOwned)return `<div class="card"><h3>Terrain personnel</h3><p class="sub">Dans le quartier de départ, un terrain est en vente. Achète-le pour créer ta base, sécuriser tes gains et aménager ton propre chez-toi.</p><button class="menuBtn green" id="buyLandBtn" style="width:100%">🏡 Acheter le terrain — ${HOME_PLOT_PRICE} crédits</button></div>`;
- const maxSlots=state.homeLevel===1?8:state.homeLevel===2?12:16;
- const placeable=state.homeStock.length?state.homeStock.map(it=>`<div class="item"><div class="itemIcon">${HOME_ITEMS[it.id].icon}</div><div class="itemMain"><b>${HOME_ITEMS[it.id].name}</b><small>En stock ×${it.qty}</small></div><button class="menuBtn placeHome" data-id="${it.id}">Placer</button></div>`).join(''):'<p class="sub">Aucun meuble en stock. Va chez Maison & Co.</p>';
- const placed=state.homePlaced.length?state.homePlaced.map((id,i)=>`<div class="item"><div class="itemIcon">${HOME_ITEMS[id].icon}</div><div class="itemMain"><b>${HOME_ITEMS[id].name}</b><small>Emplacement ${i+1}</small></div></div>`).join(''):'<p class="sub">Ta base est encore vide.</p>';
- const canSecure=hasPlaced('safe')||hasPlaced('chest');
- const nextLevel=(state.homeLevel||1)+1,nextCost=HOME_UPGRADE_COST[nextLevel];
- return `<div class="card"><h3>🏠 Ta base — niveau ${state.homeLevel}</h3><span class="reputationBadge">🤝 Réputation ${state.reputation||0}</span><p class="sub">Crédits sur toi : ${state.coins} • Crédits sécurisés : ${state.homeBank} • Medkits : ${state.homeStorage.medkit||0}</p>
- ${nextCost?`<button class="menuBtn primary" id="upgradeHome" style="width:100%;margin-top:8px">🔨 Agrandir la maison — ${nextCost} crédits<small>${nextLevel===2?'12 emplacements et maison plus grande':'16 emplacements et grande maison'}</small></button>`:'<p class="sub">✅ Maison au niveau maximum.</p>'}</div>
- <div class="card"><h3>🧱 Aménagement ${state.homePlaced.length}/${maxSlots}</h3>${placed}<div class="placeGrid"><button class="menuBtn" id="storeAllHome">Tout ranger</button><button class="menuBtn" id="enterHomeBtn">Entrer dans la base</button></div></div>
- <div class="card"><h3>📦 Stock maison</h3>${placeable}</div>
- <div class="card"><h3>🗄️ Coffre</h3><p class="sub">${canSecure?'Ton argent déposé ici est protégé des amendes de police.':'Place un coffre ou coffre sécurisé pour activer le stockage.'}</p>
- <div class="placeGrid"><button class="menuBtn deposit50" ${canSecure?'':'disabled'}>Déposer 50</button><button class="menuBtn withdraw50" ${canSecure?'':'disabled'}>Retirer 50</button><button class="menuBtn depositMed" ${canSecure&&stackCount(state.inventory,'medkit')>0?'':'disabled'}>Déposer medkit</button><button class="menuBtn withdrawMed" ${(canSecure&&(state.homeStorage.medkit||0)>0)?'':'disabled'}>Retirer medkit</button></div></div>
- <div class="card"><h3>🛏️ Repos</h3><p class="sub">Dormir restaure tous tes PV, fait avancer le temps et réduit la recherche policière.</p><button class="menuBtn green" id="restHome" style="width:100%">Dormir à la maison</button></div>
- <div class="card"><h3>📦 Objets de valeur</h3>
- ${state.inventory.filter(i=>STREET_ITEMS[i.id]).map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>Sur toi ×${i.qty}</small></div><button class="menuBtn depositLoot" data-id="${i.id}">Déposer</button></div>`}).join('')||'<p class="sub">Aucun objet de valeur sur toi.</p>'}
- ${Object.entries(state.homeStorage).filter(([id,qty])=>STREET_ITEMS[id]&&qty>0).map(([id,qty])=>{const info=itemInfo(id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>Au coffre ×${qty}</small></div><button class="menuBtn withdrawLoot" data-id="${id}">Retirer</button></div>`}).join('')}
- </div>
- <div class="card"><h3>🏆 Collection</h3><p class="sub">${state.artifacts.length}/${CITIES.length} artefacts exposés automatiquement dans ta base.</p></div>`
+
+function housingName(){
+ return ['Sans logement','Studio loué','Appartement propriétaire','Maison sur terrain'][state.housingStage||0]
 }
+function rentStudio(){
+ if((state.housingStage||0)>=1)return toast('Tu as déjà un logement.');
+ if(state.coins<RENT_STUDIO_PRICE)return toast(`Il te manque ${RENT_STUDIO_PRICE-state.coins} crédits.`);
+ state.coins-=RENT_STUDIO_PRICE;state.housingStage=1;checkQuests();save();toast('🔑 Studio loué !');openSheet('home')
+}
+function buyApartment(){
+ if((state.housingStage||0)<1)return toast('Loue d’abord un studio.');
+ if((state.housingStage||0)>=2)return toast('Appartement déjà acquis.');
+ if(state.coins<BUY_APARTMENT_PRICE)return toast(`Il te manque ${BUY_APARTMENT_PRICE-state.coins} crédits.`);
+ state.coins-=BUY_APARTMENT_PRICE;state.housingStage=2;save();toast('🏢 Appartement acheté !');openSheet('home')
+}
+function buyLandProgression(){
+ if((state.housingStage||0)<2)return toast('Achète d’abord ton appartement.');
+ if(state.landOwned)return toast('Terrain déjà acheté.');
+ if(state.coins<HOME_PLOT_PRICE)return toast(`Il te manque ${HOME_PLOT_PRICE-state.coins} crédits.`);
+ state.coins-=HOME_PLOT_PRICE;state.housingStage=3;state.landOwned=true;save();toast('🏡 Terrain acheté !');
+ for(const[k]of[...chunks])unload(k);ensureChunks(true);openSheet('home')
+}
+function sleepRough(){
+ if((state.housingStage||0)>0)return;
+ state.hp=clamp(state.hp+22,0,state.maxHp);state.hygiene=clamp(state.hygiene-12,0,100);state.hunger=clamp(state.hunger-7,0,100);state.thirst=clamp(state.thirst-10,0,100);state.timeOfDay=7.2;save();toast('Tu as dormi dehors.');openSheet('home')
+}
+function showerAtHome(){
+ if((state.housingStage||0)<1)return toast('Tu n’as pas de douche.');
+ state.hygiene=100;save();toast('🚿 Propreté restaurée.');openSheet('home')
+}
+function housingPanelHTML(){
+ const s=state.housingStage||0;
+ return `<div class="card"><h3>🏘️ Parcours logement</h3>
+ <div class="housingStep ${s>=1?'done':''}"><div class="housingNum">${s>=1?'✓':'1'}</div><div class="itemMain"><b>Louer un studio</b><small>${RENT_STUDIO_PRICE} crédits</small></div>${s<1?'<button class="menuBtn rentStudio">Louer</button>':''}</div>
+ <div class="housingStep ${s>=2?'done':''}"><div class="housingNum">${s>=2?'✓':'2'}</div><div class="itemMain"><b>Acheter un appartement</b><small>${BUY_APARTMENT_PRICE} crédits</small></div>${s===1?'<button class="menuBtn buyApartment">Acheter</button>':''}</div>
+ <div class="housingStep ${s>=3?'done':''}"><div class="housingNum">${s>=3?'✓':'3'}</div><div class="itemMain"><b>Acheter un terrain</b><small>${HOME_PLOT_PRICE} crédits</small></div>${s===2?'<button class="menuBtn buyLandProgress">Acheter</button>':''}</div>
+ </div>`
+}
+function bindHousingButtons(){
+ $$('.rentStudio').forEach(b=>b.onclick=rentStudio);
+ $$('.buyApartment').forEach(b=>b.onclick=buyApartment);
+ $$('.buyLandProgress').forEach(b=>b.onclick=buyLandProgression)
+}
+
+function buyLand(){buyLandProgression()}
 function placeHomeItem(id){
  if(!state.landOwned)return toast('Achète d’abord le terrain');
  const maxSlots=state.homeLevel===1?8:state.homeLevel===2?12:16;if(state.homePlaced.length>=maxSlots)return toast('Base pleine : agrandis la maison ou range un objet');
@@ -1139,9 +1233,11 @@ function upgradeHome(){
  state.coins-=cost;state.homeLevel=next;save();toast(`Maison améliorée au niveau ${next}`);for(const[k]of[...chunks])unload(k);ensureChunks(true);openSheet('home')
 }
 function restAtHome(){
- if(!state.landOwned)return;state.hp=state.maxHp;state.wanted=Math.max(0,state.wanted-2);state.timeOfDay=7.5;state.restCount=(state.restCount||0)+1;save();toast('Tu as dormi : PV restaurés et recherche réduite');openSheet('home')
+ if((state.housingStage||0)<1)return toast('Tu n’as pas de logement.');
+ state.hp=state.maxHp;state.wanted=Math.max(0,state.wanted-2);state.timeOfDay=7.5;
+ state.hunger=clamp(state.hunger-8,0,100);state.thirst=clamp(state.thirst-10,0,100);state.restCount=(state.restCount||0)+1;save();toast('Tu as dormi.');openSheet('home')
 }
-function depositCoins(amount=50){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(state.coins<amount)return toast('Pas assez de crédits sur toi');state.coins-=amount;state.homeBank+=amount;save();openSheet('home')}
+function depositCoins(amount=50){if((state.housingStage||0)<1)return toast('Aucun endroit sûr.');if(state.coins<amount)return toast('Pas assez de crédits sur toi');state.coins-=amount;state.homeBank+=amount;save();openSheet('home')}
 function withdrawCoins(amount=50){if(state.homeBank<amount)return toast('Pas assez dans le coffre');state.homeBank-=amount;state.coins+=amount;save();openSheet('home')}
 function depositValuable(id){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(!removeStack(state.inventory,id,1))return;state.homeStorage[id]=(state.homeStorage[id]||0)+1;save();openSheet('home')}
 function withdrawValuable(id){if((state.homeStorage[id]||0)<=0)return;if(invCount()>=state.bagMax)return toast('Sac plein');state.homeStorage[id]--;addInv(id);save();openSheet('home')}
@@ -1201,6 +1297,8 @@ function renderMapTo(canvas,zoom=2.0){
 function drawMap(){renderMapTo($('#minimap'),1.15);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),.62)}
 function updateHUD(){
  const {cx,cz}=currentChunk(),d=districtFor(cx,cz),aq=activeQuest(),prog=Math.min(aq.target,progress(aq.goal));$('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;$('#level').textContent=state.level;$('#wanted').textContent=state.wanted;
+ $('#hungerVal').textContent=Math.round(state.hunger);$('#thirstVal').textContent=Math.round(state.thirst);$('#hygieneVal').textContent=Math.round(state.hygiene);
+ $('#hungerBar').style.width=`${state.hunger}%`;$('#thirstBar').style.width=`${state.thirst}%`;$('#hygieneBar').style.width=`${state.hygiene}%`;
  $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
  const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️',period=state.timeOfDay<6||state.timeOfDay>20?'NUIT':state.timeOfDay<9?'MATIN':state.timeOfDay>17?'SOIR':'JOUR';$('#weatherChip').textContent=`${icon} ${period}`;
  maybeCompleteNpcMission();updateTargetHUD()
@@ -1254,22 +1352,29 @@ function openSheet(panel){
 function worldHTML(){return `<div class="card"><h3>Exploration chill</h3><p class="sub">Explore sans chronomètre. Les quartiers se chargent au fur et à mesure, avec voitures, habitants, boutiques, appartements, parcs, terrain personnel et secrets.</p></div><div class="card"><h3>Voyager</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div>`}
 function bagHTML(){
  const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join('');
- const inv=state.inventory.length?state.inventory.map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty}${info.value?` • revente ${info.value}`:''}</small></div>${i.id==='medkit'?'<button class="menuBtn useMed">Utiliser</button>':''}</div>`}).join(''):'<p class="sub">Sac vide.</p>';
+ const inv=state.inventory.length?state.inventory.map(i=>{
+   const info=itemInfo(i.id),use=CONSUMABLES[i.id]?`<button class="menuBtn useConsumable" data-id="${i.id}">Utiliser</button>`:i.id==='medkit'?'<button class="menuBtn useMed">Utiliser</button>':'';
+   return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty}${info.value?` • revente ${info.value}`:''}</small></div>${use}</div>`
+ }).join(''):'<p class="sub">Sac vide.</p>';
  const arts=[...new Set(state.artifactBag)];
- return `<div class="card"><h3>Armes</h3>${ws}</div>
+ return `<div class="card"><h3>État</h3><p class="sub">🍗 ${Math.round(state.hunger)} • 💧 ${Math.round(state.thirst)} • 🧼 ${Math.round(state.hygiene)}</p></div>
+ <div class="card"><h3>Armes</h3>${ws}</div>
  <div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${inv}</div>
- <div class="card"><h3>Artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • 500 crédits</small></div></div>`).join(''):'<p class="sub">Aucun artefact.</p>'}</div>
- <div class="card"><h3>Progression</h3><p class="sub">${state.pickpockets} vols réussis • ${state.wanted}/5 recherche • coffre maison ${state.homeBank||0} crédits.</p></div>`
+ <div class="card"><h3>Artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • 500 crédits</small></div></div>`).join(''):'<p class="sub">Aucun artefact.</p>'}</div>`
 }
 function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
 function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. Ta base te permet de sécuriser tes gains pendant l’aventure.</p></div>`}
-function settingsHTML(){return `<div class="card"><h3>Version V10</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Rechercher et installer la dernière version</button><p class="sub">Les pages utilisent maintenant le réseau en priorité. Le cache sert seulement de secours hors connexion.</p></div>
-<div class="card"><h3>Commandes PC</h3><p class="sub">Flèches = déplacement • joystick REGARDER à la souris = caméra • E = interagir • M = carte • I = sac.</p></div>
+function settingsHTML(){return `<div class="card"><h3>StreetQuest V11</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>
+<div class="card"><h3>Survie</h3><p class="sub">🍗 faim • 💧 soif • 🧼 propreté. Quand faim ou soif tombent à zéro, tes PV commencent à diminuer.</p></div>
+<div class="card"><h3>Progression logement</h3><p class="sub">Sans logement → studio loué → appartement acheté → terrain + maison.</p></div>
 <div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
 function bindSheet(panel){
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
- if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
+ if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed);$$('.useConsumable').forEach(b=>b.onclick=()=>useConsumable(b.dataset.id))}
  if(panel==='home'){
+   bindHousingButtons();
+   const rough=$('#sleepRough');if(rough)rough.onclick=sleepRough;
+   const shower=$('#showerHome');if(shower)shower.onclick=showerAtHome;
    const buyBtn=$('#buyLandBtn'); if(buyBtn)buyBtn.onclick=buyLand;
    const enterBtn=$('#enterHomeBtn'); if(enterBtn)enterBtn.onclick=()=>{closeSheet();enterInterior('home',{})};
    const up=$('#upgradeHome'); if(up)up.onclick=upgradeHome;
@@ -1280,7 +1385,7 @@ function bindSheet(panel){
    $$('.depositMed').forEach(b=>b.onclick=depositMedkit);$$('.withdrawMed').forEach(b=>b.onclick=withdrawMedkit);$$('.depositLoot').forEach(b=>b.onclick=()=>depositValuable(b.dataset.id));$$('.withdrawLoot').forEach(b=>b.onclick=()=>withdrawValuable(b.dataset.id))
  }
  if(panel==='districts'){const x=$('#secureDistrict'); if(x)x.onclick=secureDistrict}
- if(panel==='settings'){const u=$('#forceUpdate');if(u)u.onclick=()=>window.streetQuestUpdate?.();$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v10');location.reload()}}};
+ if(panel==='settings'){const u=$('#forceUpdate');if(u)u.onclick=()=>window.streetQuestUpdate?.();$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v11');location.reload()}}};
  if(panel==='physicalShop')bindShop()
 }
 function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
