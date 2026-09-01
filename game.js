@@ -2,7 +2,7 @@ const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.j
 let THREE=null;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),choice=a=>a[Math.floor(Math.random()*a.length)];
-const CHUNK=72,LOAD=2,UNLOAD=3,RADIUS=.34;
+const CHUNK=72,LOAD=1,UNLOAD=2,RADIUS=.34;
 const DISTRICTS=[
  {id:'central',name:'Centre',style:'urban',bonus:'Commerces fréquents'},
  {id:'garden',name:'Quartier des Jardins',style:'green',bonus:'Plus de caches et de PNJ amicaux'},
@@ -53,11 +53,11 @@ const base={
  pos:{x:2,z:8},yaw:0,pitch:0,inventory:[],bagMax:20,ownedWeapons:['fists'],equipped:'fists',
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
- activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null
+ activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0
 };
 let state=loadState();
-function loadState(){try{return {...structuredClone(base),...JSON.parse(localStorage.getItem('sq3d-v4-1')||'{}')}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v4-1',JSON.stringify(state))}
+function loadState(){try{return {...structuredClone(base),...JSON.parse(localStorage.getItem('sq3d-v5')||'{}')}}catch{return structuredClone(base)}}
+function save(){localStorage.setItem('sq3d-v5',JSON.stringify(state))}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
@@ -72,27 +72,34 @@ function progress(goal){if(goal==='stolenCoins')return state.stolenCoins;if(goal
 function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.id))||{id:'free',title:'Légende urbaine',text:'Explore librement, collectionne les artefacts et sécurise les quartiers.',goal:'districtsOwned',target:999}}
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
-let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],cars=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0;
+let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],clouds=[];
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null;
 
 async function init(){
  try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
  const host=$('#threeHost');scene=new THREE.Scene();scene.background=new THREE.Color(0x8facbd);scene.fog=new THREE.Fog(0x8facbd,70,220);
  camera=new THREE.PerspectiveCamera(72,host.clientWidth/host.clientHeight,.06,260);
- renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(host.clientWidth,host.clientHeight);host.appendChild(renderer.domElement);clock=new THREE.Clock();
- scene.add(new THREE.HemisphereLight(0xd8eeff,0x334030,2.1));const sun=new THREE.DirectionalLight(0xfff0ce,1.9);sun.name='sun';sun.position.set(50,80,30);scene.add(sun);
+ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(host.clientWidth,host.clientHeight);
+ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
+ host.appendChild(renderer.domElement);clock=new THREE.Clock();raycaster=new THREE.Raycaster();
+ scene.add(new THREE.HemisphereLight(0xd8eeff,0x334030,2.15));
+ const sun=new THREE.DirectionalLight(0xffefd0,2.0);sun.name='sun';sun.position.set(45,75,28);scene.add(sun);
+ const fill=new THREE.DirectionalLight(0x8dc8ff,.32);fill.position.set(-35,30,-25);scene.add(fill);
  textures=createTextures();weaponRig=createWeaponRig();camera.add(weaponRig);scene.add(camera);
+ createAtmosphere();setupWorldTap();
  ensureChunks(true);updateHUD();animate();
  addEventListener('resize',()=>{camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight)});
 }
 function tex(draw,rx=4,ry=4){const c=document.createElement('canvas');c.width=c.height=256;const q=c.getContext('2d');draw(q,256,256);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);return t}
 function createTextures(){
- const asphalt=tex(q=>{q.fillStyle='#30363a';q.fillRect(0,0,256,256);for(let i=0;i<1800;i++){const g=40+Math.random()*35;q.fillStyle=`rgb(${g},${g},${g})`;q.fillRect(Math.random()*256,Math.random()*256,1,1)}},5,5);
- const pave=tex(q=>{q.fillStyle='#a39f95';q.fillRect(0,0,256,256);q.strokeStyle='#77736b';q.lineWidth=2;for(let i=0;i<9;i++){q.beginPath();q.moveTo(i*32,0);q.lineTo(i*32,256);q.stroke();q.beginPath();q.moveTo(0,i*32);q.lineTo(256,i*32);q.stroke()}},6,6);
- const grass=tex(q=>{q.fillStyle='#416a48';q.fillRect(0,0,256,256);for(let i=0;i<1700;i++){q.fillStyle=Math.random()>.5?'#527b55':'#345c3d';q.fillRect(Math.random()*256,Math.random()*256,1,3)}},7,7);
- const brick=tex(q=>{q.fillStyle='#7c5f57';q.fillRect(0,0,256,256);q.strokeStyle='#523e39';for(let y=0;y<256;y+=22){q.beginPath();q.moveTo(0,y);q.lineTo(256,y);q.stroke();for(let x=(y/22)%2?16:0;x<256;x+=32){q.beginPath();q.moveTo(x,y);q.lineTo(x,y+22);q.stroke()}}for(let y=10;y<250;y+=44)for(let x=10;x<245;x+=42){q.fillStyle='#92b6c8';q.fillRect(x,y,18,20)}},3,4);
- const modern=tex(q=>{q.fillStyle='#657584';q.fillRect(0,0,256,256);for(let y=8;y<250;y+=34)for(let x=8;x<250;x+=30){q.fillStyle=Math.random()>.2?'#9fc5d9':'#2e3b48';q.fillRect(x,y,17,20);q.fillStyle='#d7e5ec44';q.fillRect(x+2,y+2,13,3)}},3,4);
- return{asphalt,pave,grass,brick,modern}
+ const asphalt=tex(q=>{q.fillStyle='#2c3236';q.fillRect(0,0,256,256);for(let i=0;i<2300;i++){const g=30+Math.random()*45;q.fillStyle=`rgba(${g},${g},${g},${.18+Math.random()*.3})`;q.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*2,1+Math.random()*2)}for(let i=0;i<18;i++){q.strokeStyle='#15191c55';q.beginPath();q.moveTo(Math.random()*256,Math.random()*256);q.lineTo(Math.random()*256,Math.random()*256);q.stroke()}},5,5);
+ const pave=tex(q=>{q.fillStyle='#aaa69c';q.fillRect(0,0,256,256);q.strokeStyle='#757168';q.lineWidth=2;for(let y=0;y<=256;y+=32){q.beginPath();q.moveTo(0,y);q.lineTo(256,y);q.stroke()}for(let x=0;x<=256;x+=32){q.beginPath();q.moveTo(x,0);q.lineTo(x,256);q.stroke()}for(let i=0;i<220;i++){q.fillStyle='#ffffff10';q.fillRect(Math.random()*256,Math.random()*256,2,2)}},6,6);
+ const grass=tex(q=>{q.fillStyle='#3e6847';q.fillRect(0,0,256,256);for(let i=0;i<2500;i++){q.fillStyle=Math.random()>.5?'#57835c':'#2d5739';q.fillRect(Math.random()*256,Math.random()*256,1,2+Math.random()*3)}},7,7);
+ const brick=tex(q=>{q.fillStyle='#77584f';q.fillRect(0,0,256,256);q.strokeStyle='#4e3934';for(let y=0;y<256;y+=20){q.beginPath();q.moveTo(0,y);q.lineTo(256,y);q.stroke();for(let x=(y/20)%2?15:0;x<256;x+=30){q.beginPath();q.moveTo(x,y);q.lineTo(x,y+20);q.stroke()}}for(let y=8;y<250;y+=42)for(let x=8;x<248;x+=38){const on=Math.random()>.42;q.fillStyle=on?'#e7c67a':'#6fa0b9';q.fillRect(x,y,16,19);q.fillStyle='#1d2a31';q.fillRect(x+2,y+2,12,2)}},3,4);
+ const modern=tex(q=>{const gr=q.createLinearGradient(0,0,256,0);gr.addColorStop(0,'#526879');gr.addColorStop(.5,'#718594');gr.addColorStop(1,'#4b6172');q.fillStyle=gr;q.fillRect(0,0,256,256);for(let y=7;y<250;y+=31)for(let x=7;x<250;x+=27){q.fillStyle=Math.random()>.3?'#9cc5dc':'#253746';q.fillRect(x,y,17,19);q.fillStyle='#d7f0ff44';q.fillRect(x+2,y+2,12,3)}},3,4);
+ const stone=tex(q=>{q.fillStyle='#b1aa9d';q.fillRect(0,0,256,256);for(let y=0;y<256;y+=26){q.strokeStyle='#817b70';q.beginPath();q.moveTo(0,y);q.lineTo(256,y);q.stroke()}for(let x=0;x<256;x+=52){q.beginPath();q.moveTo(x,0);q.lineTo(x,256);q.stroke()}},3,4);
+ return{asphalt,pave,grass,brick,modern,stone}
 }
 function createWeaponRig(){
  const g=new THREE.Group();const mat=new THREE.MeshStandardMaterial({color:0x38424d,metalness:.6,roughness:.35});
@@ -100,80 +107,268 @@ function createWeaponRig(){
  const grip=new THREE.Mesh(new THREE.BoxGeometry(.12,.32,.13),new THREE.MeshStandardMaterial({color:0x171b20}));grip.position.set(.31,-.39,-.53);grip.rotation.x=-.3;g.add(grip);g.visible=state.equipped!=='fists';return g
 }
 
+function createAtmosphere(){
+ // lightweight clouds
+ for(let i=0;i<9;i++){
+   const gr=new THREE.Group();
+   const mat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.18,depthWrite:false});
+   for(let j=0;j<4;j++){const s=new THREE.Mesh(new THREE.SphereGeometry(4+Math.random()*3,8,6),mat);s.scale.y=.45;s.position.set((j-1.5)*4+Math.random()*2,Math.random()*1.2,Math.random()*2);gr.add(s)}
+   gr.position.set((Math.random()-.5)*160,32+Math.random()*13,(Math.random()-.5)*160);scene.add(gr);clouds.push(gr)
+ }
+ // rain points are shown only during rain
+ const count=420,pos=new Float32Array(count*3);
+ for(let i=0;i<count;i++){pos[i*3]=(Math.random()-.5)*50;pos[i*3+1]=Math.random()*25;pos[i*3+2]=(Math.random()-.5)*50}
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+ rainSystem=new THREE.Points(geo,new THREE.PointsMaterial({color:0xc8e8ff,size:.065,transparent:true,opacity:.55}));
+ rainSystem.visible=false;scene.add(rainSystem)
+}
+function updateAtmosphere(dt){
+ for(const c of clouds){c.position.x+=dt*.55;if(c.position.x-state.pos.x>100)c.position.x-=200;c.position.z+=(state.weather==='cloudy'?.04:.015)}
+ if(rainSystem){
+   rainSystem.visible=state.weather==='rain'&&!state.interior;
+   rainSystem.position.set(state.pos.x,0,state.pos.z);
+   if(rainSystem.visible){const a=rainSystem.geometry.attributes.position.array;for(let i=0;i<a.length;i+=3){a[i+1]-=dt*18;if(a[i+1]<0)a[i+1]=25}rainSystem.geometry.attributes.position.needsUpdate=true}
+ }
+}
+
 function makeRoad(g,x0,z0){
- const roadM=new THREE.MeshStandardMaterial({map:textures.asphalt,roughness:1}),paveM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:1});
+ const roadM=new THREE.MeshStandardMaterial({map:textures.asphalt,roughness:state.weather==='rain'?.62:.95,metalness:state.weather==='rain'?.12:0}),paveM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:.96});
  const roadW=11,walk=3;
  let a=new THREE.Mesh(new THREE.PlaneGeometry(roadW,CHUNK),roadM);a.rotation.x=-Math.PI/2;a.position.set(x0+roadW/2,.01,z0+CHUNK/2);g.add(a);
  a=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,roadW),roadM);a.rotation.x=-Math.PI/2;a.position.set(x0+CHUNK/2,.012,z0+roadW/2);g.add(a);
- a=new THREE.Mesh(new THREE.PlaneGeometry(walk,CHUNK-roadW),paveM);a.rotation.x=-Math.PI/2;a.position.set(x0+roadW+walk/2,.02,z0+(CHUNK+roadW)/2);g.add(a);
- a=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK-roadW,walk),paveM);a.rotation.x=-Math.PI/2;a.position.set(x0+(CHUNK+roadW)/2,.021,z0+roadW+walk/2);g.add(a);
- const white=new THREE.MeshBasicMaterial({color:0xe9e4d0});
- for(let i=0;i<6;i++){let m=new THREE.Mesh(new THREE.PlaneGeometry(.16,4),white);m.rotation.x=-Math.PI/2;m.position.set(x0+roadW/2,.025,z0+17+i*9);g.add(m);m=new THREE.Mesh(new THREE.PlaneGeometry(4,.16),white);m.rotation.x=-Math.PI/2;m.position.set(x0+17+i*9,.026,z0+roadW/2);g.add(m)}
- // crosswalks
- for(let k=0;k<5;k++){let s=new THREE.Mesh(new THREE.PlaneGeometry(.7,4.7),white);s.rotation.x=-Math.PI/2;s.position.set(x0+13+k*1.4,.027,z0+7.6);g.add(s);let t=new THREE.Mesh(new THREE.PlaneGeometry(4.7,.7),white);t.rotation.x=-Math.PI/2;t.position.set(x0+7.6,.028,z0+13+k*1.4);g.add(t)}
+ a=new THREE.Mesh(new THREE.PlaneGeometry(walk,CHUNK-roadW),paveM);a.rotation.x=-Math.PI/2;a.position.set(x0+roadW+walk/2,.045,z0+(CHUNK+roadW)/2);g.add(a);
+ a=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK-roadW,walk),paveM);a.rotation.x=-Math.PI/2;a.position.set(x0+(CHUNK+roadW)/2,.046,z0+roadW+walk/2);g.add(a);
+
+ const curbM=new THREE.MeshStandardMaterial({color:0xbcb9ae,roughness:1});
+ let curb=new THREE.Mesh(new THREE.BoxGeometry(.18,.16,CHUNK-roadW),curbM);curb.position.set(x0+roadW+.08,.08,z0+(CHUNK+roadW)/2);g.add(curb);
+ curb=new THREE.Mesh(new THREE.BoxGeometry(CHUNK-roadW,.16,.18),curbM);curb.position.set(x0+(CHUNK+roadW)/2,.08,z0+roadW+.08);g.add(curb);
+
+ const white=new THREE.MeshBasicMaterial({color:0xeee8d4});
+ for(let i=0;i<6;i++){let m=new THREE.Mesh(new THREE.PlaneGeometry(.16,4),white);m.rotation.x=-Math.PI/2;m.position.set(x0+roadW/2,.028,z0+17+i*9);g.add(m);m=new THREE.Mesh(new THREE.PlaneGeometry(4,.16),white);m.rotation.x=-Math.PI/2;m.position.set(x0+17+i*9,.029,z0+roadW/2);g.add(m)}
+ for(let k=0;k<6;k++){let s=new THREE.Mesh(new THREE.PlaneGeometry(.62,5),white);s.rotation.x=-Math.PI/2;s.position.set(x0+12.2+k*1.3,.03,z0+7.7);g.add(s);let t=new THREE.Mesh(new THREE.PlaneGeometry(5,.62),white);t.rotation.x=-Math.PI/2;t.position.set(x0+7.7,.031,z0+12.2+k*1.3);g.add(t)}
+
+ // lamp posts and a bench
+ for(const [lx,lz] of [[15,17],[15,55],[40,15],[62,15]])addLamp(g,x0+lx,z0+lz);
+ if((Math.abs(x0/CHUNK)+Math.abs(z0/CHUNK))%2<1)addBench(g,x0+17,z0+19)
 }
 function createChunk(cx,cz){
  const key=ck(cx,cz);if(chunks.has(key))return;const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
- const x0=cx*CHUNK,z0=cz*CHUNK,d=districtFor(cx,cz),grass=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));grass.rotation.x=-Math.PI/2;grass.position.set(x0+CHUNK/2,-.04,z0+CHUNK/2);g.add(grass);makeRoad(g,x0,z0);
+ const x0=cx*CHUNK,z0=cz*CHUNK,d=districtFor(cx,cz),grass=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));
+ grass.rotation.x=-Math.PI/2;grass.position.set(x0+CHUNK/2,-.04,z0+CHUNK/2);g.add(grass);makeRoad(g,x0,z0);
  const id=districtId(cx,cz);if(!state.seenDistricts.includes(id))state.seenDistricts.push(id);
 
- // building lots are always INSIDE blocks, never roads or sidewalks
- const lots=[[25,25],[51,25],[25,51],[51,51]];
+ const shopPlanned=(cx===0&&cz===0)||r()<.24;
+ const lots=[[25,22],[51,22],[25,50],[51,50]];
  lots.forEach((p,i)=>{
-   if(r()<.19){addPark(g,x0+p[0],z0+p[1],r);return}
-   const w=14+r()*6,dep=14+r()*6,h=(d.style==='central'?16:8)+r()*(d.style==='central'?24:18);
-   const x=x0+p[0]+(r()-.5)*2,z=z0+p[1]+(r()-.5)*2;
-   const mat=new THREE.MeshStandardMaterial({map:d.style==='old'?textures.brick:(r()<.5?textures.modern:textures.brick),roughness:.87});
-   const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),mat);b.position.set(x,h/2,z);g.add(b);colliders.push({key,minX:x-w/2-.35,maxX:x+w/2+.35,minZ:z-dep/2-.35,maxZ:z+dep/2+.35,type:'building'});
-   if(i===0&&r()<.34)addApartmentDoor(g,key,x,z,dep);
+   if(i===0&&shopPlanned){addShop(g,key,x0+p[0],z0+p[1],r);return}
+   if(r()<.18){addPark(g,x0+p[0],z0+p[1],r,key);return}
+   const w=13+r()*6,dep=13+r()*6,h=(d.style==='central'?16:9)+r()*(d.style==='central'?24:17);
+   const x=x0+p[0]+(r()-.5)*1.4,z=z0+p[1]+(r()-.5)*1.4;
+   const texChoice=d.style==='old'?textures.brick:(d.style==='harbor'?textures.stone:(r()<.55?textures.modern:textures.brick));
+   const mat=new THREE.MeshStandardMaterial({map:texChoice,roughness:.86,metalness:d.style==='harbor'?.05:0});
+   const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),mat);b.position.set(x,h/2,z);g.add(b);
+   addBuildingDetails(g,x,z,w,dep,h,r,d);
+   colliders.push({key,minX:x-w/2-.35,maxX:x+w/2+.35,minZ:z-dep/2-.35,maxZ:z+dep/2+.35,type:'building'});
+   if(i===1&&r()<.42)addApartmentDoor(g,key,x,z,dep)
  });
- // shops are separate storefronts placed in reserved lot edge, not sidewalks/roads
- if((cx===0&&cz===0)||r()<.25)addShop(g,key,x0+19,z0+20,r);
- // vegetation
- const trees=3+Math.floor(r()*(d.style==='green'?10:5));for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);addTree(g,p.x,p.z,r)}
- // bins / chests
+
+ const trees=3+Math.floor(r()*(d.style==='green'?8:4));for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);addTree(g,p.x,p.z,r)}
+ for(let i=0;i<(d.style==='green'?5:2);i++){const p=randomGreenPoint(x0,z0,r);addBush(g,key,p.x,p.z,r)}
+
  const cont=1+Math.floor(r()*3);for(let i=0;i<cont;i++){const p=randomSidewalk(x0,z0,r),type=r()<.72?'bin':'chest',idc=`${key}:container:${i}`;if(!state.collected.includes(idc))addContainer(g,key,idc,p.x,p.z,type)}
- // loot
- const lootN=2+Math.floor(r()*4);for(let i=0;i<lootN;i++){const p=randomSidewalk(x0,z0,r),type=r()<.68?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
- // artifact, sparse, across city
+ const lootN=1+Math.floor(r()*3);for(let i=0;i<lootN;i++){const p=randomSidewalk(x0,z0,r),type=r()<.67?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
  if(!state.artifacts.includes(state.cityId)&&((Math.abs(cx)+Math.abs(cz)>1&&r()<.055)||(cx===3&&cz===-2))){const p=randomSidewalk(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')}
- // NPCs, more civilians, much fewer enemies
+
  const npcN=3+Math.floor(r()*4);for(let i=0;i<npcN;i++){const p=randomSidewalk(x0,z0,r);addNPC(g,key,p.x,p.z,r)}
- if(r()<.10){const p=randomSidewalk(x0,z0,r);addEnemy(g,key,p.x,p.z,r)}
- // traffic
+ if(r()<.075){const p=randomSidewalk(x0,z0,r);addEnemy(g,key,p.x,p.z,r)}
+ if(r()<.12){const p=randomSidewalk(x0,z0,r);addPolice(g,key,p.x,p.z,r)}
+
  const carN=1+Math.floor(r()*2);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
+ if(r()<.45)addParkedCar(g,key,x0,z0,r);
 }
 function randomSidewalk(x0,z0,r){return r()<.5?{x:x0+14.2,z:z0+17+r()*(CHUNK-22)}:{x:x0+17+r()*(CHUNK-22),z:z0+14.2}}
 function randomGreenPoint(x0,z0,r){return{x:x0+19+r()*(CHUNK-24),z:z0+19+r()*(CHUNK-24)}}
-function addPark(g,x,z,r){const m=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));m.rotation.x=-Math.PI/2;m.position.set(x,.025,z);g.add(m);for(let i=0;i<4;i++)addTree(g,x+(r()-.5)*15,z+(r()-.5)*15,r)}
-function addTree(g,x,z,r){const tree=new THREE.Group(),trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.24,2.4,8),new THREE.MeshStandardMaterial({color:0x684834}));trunk.position.y=1.2;tree.add(trunk);const crown=new THREE.Mesh(new THREE.SphereGeometry(1.15+r()*.6,10,8),new THREE.MeshStandardMaterial({color:choice([0x3f7c4c,0x4d8b57,0x356a43])}));crown.position.y=2.8;tree.add(crown);tree.position.set(x,0,z);g.add(tree)}
+function addPark(g,x,z,r,key){
+ const m=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));m.rotation.x=-Math.PI/2;m.position.set(x,.026,z);g.add(m);
+ for(let i=0;i<4;i++)addTree(g,x+(r()-.5)*15,z+(r()-.5)*15,r);
+ for(let i=0;i<3;i++)addBush(g,key,x+(r()-.5)*13,z+(r()-.5)*13,r);
+ addBench(g,x-4,z+4);addBench(g,x+4,z-4)
+}
+function addTree(g,x,z,r){
+ const tree=new THREE.Group(),trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.25,2.5,8),new THREE.MeshStandardMaterial({color:0x654632,roughness:1}));trunk.position.y=1.25;tree.add(trunk);
+ const crownMat=new THREE.MeshStandardMaterial({color:choice([0x3c7b49,0x4d8e58,0x346a41]),roughness:.92});
+ for(let i=0;i<3;i++){const crown=new THREE.Mesh(new THREE.SphereGeometry(.85+r()*.45,9,7),crownMat);crown.position.set((i-1)*.55,2.7+Math.random()*.35,(i%2-.5)*.35);tree.add(crown)}
+ tree.position.set(x,0,z);g.add(tree)
+}
+function addBush(g,key,x,z,r){
+ const bush=new THREE.Group(),mat=new THREE.MeshStandardMaterial({color:choice([0x326b42,0x3f7e4c,0x4a8954]),roughness:1});
+ for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.55+r()*.22,8,6),mat);m.scale.y=.7;m.position.set((i-1)*.45,.48,(i%2)*.25);bush.add(m)}
+ bush.position.set(x,0,z);g.add(bush);hidingZones.push({key,x,z,radius:1.25})
+}
+function addLamp(g,x,z){
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.055,.08,3.25,7),new THREE.MeshStandardMaterial({color:0x303943,metalness:.5,roughness:.5}));pole.position.set(x,1.63,z);g.add(pole);
+ const glow=new THREE.Mesh(new THREE.SphereGeometry(.13,8,6),new THREE.MeshBasicMaterial({color:0xffe8a0}));glow.position.set(x,3.18,z);g.add(glow)
+}
+function addBench(g,x,z){
+ const mat=new THREE.MeshStandardMaterial({color:0x604a36,roughness:.9}),metal=new THREE.MeshStandardMaterial({color:0x292f33,metalness:.5});
+ const seat=new THREE.Mesh(new THREE.BoxGeometry(1.7,.12,.5),mat);seat.position.set(x,.55,z);g.add(seat);
+ const back=new THREE.Mesh(new THREE.BoxGeometry(1.7,.55,.1),mat);back.position.set(x,.86,z+.22);g.add(back);
+ for(const dx of [-.65,.65]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.09,.55,.09),metal);leg.position.set(x+dx,.28,z);g.add(leg)}
+}
+function addBuildingDetails(g,x,z,w,d,h,r,dist){
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(w*.34,.8,d*.3),new THREE.MeshStandardMaterial({color:0x4d5357,roughness:.85}));roof.position.set(x,h+.4,z);g.add(roof);
+ const cornice=new THREE.Mesh(new THREE.BoxGeometry(w+.18,.22,d+.18),new THREE.MeshStandardMaterial({color:0x77736d,roughness:.9}));cornice.position.set(x,h-.1,z);g.add(cornice);
+ if(dist.style==='old'&&h>12){for(let fy=4;fy<h-2;fy+=5){const balcony=new THREE.Mesh(new THREE.BoxGeometry(w*.38,.12,.85),new THREE.MeshStandardMaterial({color:0x4b5052,metalness:.25}));balcony.position.set(x,fy,z-d/2-.43);g.add(balcony)}}
+}
+function addParkedCar(g,key,x0,z0,r){
+ const group=createCarVisual(choice([0x2d506d,0x7c4242,0x4b4f55,0x657954]));group.scale.set(.9,.9,.9);group.position.set(x0+16+r()*36,0,z0+15.4);group.rotation.y=Math.PI/2;g.add(group)
+}
 function makeSign(text,color='#ffdb77'){const c=document.createElement('canvas');c.width=512;c.height=128;const q=c.getContext('2d');q.fillStyle='#10222a';q.fillRect(0,0,512,128);q.fillStyle=color;q.font='bold 44px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(text,256,64);const t=new THREE.CanvasTexture(c),s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.scale.set(5.2,1.3,1);return s}
-function addShop(g,key,x,z,r){const type=choice(Object.keys(SHOPS)),shop=SHOPS[type],group=new THREE.Group(),body=new THREE.Mesh(new THREE.BoxGeometry(9,5,8),new THREE.MeshStandardMaterial({color:type==='corner'?0x3d6e57:type==='gear'?0x4f5964:0x5c4768,roughness:.75}));body.position.y=2.5;group.add(body);const glass=new THREE.Mesh(new THREE.PlaneGeometry(4,2.5),new THREE.MeshBasicMaterial({color:0x8ed5ee,transparent:true,opacity:.5}));glass.position.set(0,1.8,4.01);group.add(glass);const sign=makeSign(`${shop.icon} ${shop.name}`);sign.position.set(0,4.6,4.12);group.add(sign);group.position.set(x,0,z);g.add(group);colliders.push({key,minX:x-4.6,maxX:x+4.6,minZ:z-4.2,maxZ:z+4.2,type:'shop'});shops.push({key,x,z,type,group,door:{x,z:z+4.7}})}
-function addApartmentDoor(g,key,x,z,dep){const door=new THREE.Mesh(new THREE.PlaneGeometry(1.5,2.5),new THREE.MeshBasicMaterial({color:0x35271f}));door.position.set(x,1.35,z+dep/2+.011);g.add(door);apartments.push({key,x,z:z+dep/2+.9,id:`${key}:apt`})}
+function addShop(g,key,x,z,r){
+ const type=choice(Object.keys(SHOPS)),shop=SHOPS[type],group=new THREE.Group();
+ const body=new THREE.Mesh(new THREE.BoxGeometry(10,5.4,9),new THREE.MeshStandardMaterial({color:type==='corner'?0x456e58:type==='gear'?0x56636e:0x685072,roughness:.72}));body.position.y=2.7;group.add(body);
+ const frame=new THREE.Mesh(new THREE.BoxGeometry(5.2,3.1,.18),new THREE.MeshStandardMaterial({color:0x202c34,metalness:.3}));frame.position.set(0,1.75,-4.56);group.add(frame);
+ const glass=new THREE.Mesh(new THREE.PlaneGeometry(4.5,2.6),new THREE.MeshStandardMaterial({color:0x8ed5ee,transparent:true,opacity:.44,metalness:.25,roughness:.18}));glass.position.set(0,1.75,-4.66);glass.rotation.y=Math.PI;group.add(glass);
+ const awning=new THREE.Mesh(new THREE.BoxGeometry(6.2,.28,1.1),new THREE.MeshStandardMaterial({color:type==='corner'?0xe4bd55:type==='gear'?0xd46a53:0x9c77d2}));awning.position.set(0,3.35,-4.85);group.add(awning);
+ const sign=makeSign(`${shop.icon} ${shop.name}`);sign.position.set(0,4.72,-4.72);group.add(sign);group.position.set(x,0,z);g.add(group);
+ colliders.push({key,minX:x-5.2,maxX:x+5.2,minZ:z-4.7,maxZ:z+4.7,type:'shop'});
+ shops.push({key,x,z,type,group,door:{x,z:z-5.05}})
+}
+function addApartmentDoor(g,key,x,z,dep){
+ const door=new THREE.Mesh(new THREE.PlaneGeometry(1.6,2.6),new THREE.MeshStandardMaterial({color:0x49362b,roughness:.75}));door.position.set(x,1.4,z-dep/2-.012);door.rotation.y=Math.PI;g.add(door);
+ const light=new THREE.Mesh(new THREE.SphereGeometry(.09,7,6),new THREE.MeshBasicMaterial({color:0xffe4a6}));light.position.set(x+1.1,2.35,z-dep/2-.08);g.add(light);
+ apartments.push({key,x,z:z-dep/2-.85,id:`${key}:apt`})
+}
 function addContainer(g,key,id,x,z,type){const mesh=new THREE.Mesh(type==='bin'?new THREE.CylinderGeometry(.42,.48,.9,10):new THREE.BoxGeometry(.9,.55,.65),new THREE.MeshStandardMaterial({color:type==='bin'?0x335d45:0x74572e}));mesh.position.set(x,type==='bin'?.45:.28,z);mesh.userData={key,id,type};g.add(mesh);containers.push(mesh)}
 function addPickup(g,key,id,x,z,type){const color={coins:0xffd15b,medkit:0x62e3a4,rare:0xa68cff,artifact:0x60d8ff}[type],geo=type==='artifact'?new THREE.OctahedronGeometry(.65):type==='coins'?new THREE.CylinderGeometry(.34,.34,.12,16):new THREE.BoxGeometry(.6,.6,.6),m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,emissive:type==='artifact'?0x15536a:0x000000,emissiveIntensity:1}));m.position.set(x,type==='artifact'?.72:.43,z);m.userData={key,id,type};g.add(m);pickups.push(m)}
-function addNPC(g,key,x,z,r){const n=createPerson(false,key,x,z,r);g.add(n.group);npcs.push(n)}
-function addEnemy(g,key,x,z,r){const n=createPerson(true,key,x,z,r);n.speed*=1.1;g.add(n.group);enemies.push(n)}
-function createPerson(hostile,key,x,z,r){const group=new THREE.Group(),cloth=new THREE.MeshStandardMaterial({color:hostile?0x6d2434:choice([0x315f7b,0x486d45,0x6a4e75,0x785f42])}),skin=new THREE.MeshStandardMaterial({color:0xd5a47c}),body=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.72,5,8),cloth);body.position.y=1.05;group.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.24,9,9),skin);head.position.y=1.72;group.add(head);const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);const hasCash=r()<.56;return{key,group,hostile,axis:r()<.5?'x':'z',speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:hasCash?(5+Math.floor(r()*46)):0,legs:[l1,l2],phase:r()*6.2,name:hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam']),missionGiven:false,caught:false,pickpocketed:false}}
-function addCar(g,key,x0,z0,r,i){const vertical=r()<.5,group=new THREE.Group(),body=new THREE.Mesh(new THREE.BoxGeometry(1.65,.65,3.4),new THREE.MeshStandardMaterial({color:choice([0xc44b4b,0x4b6fc4,0x444b52,0xe0d3b4,0x4f9c68]),metalness:.25,roughness:.45}));body.position.y=.65;group.add(body);const top=new THREE.Mesh(new THREE.BoxGeometry(1.4,.55,1.75),new THREE.MeshStandardMaterial({color:0x607b8c,transparent:true,opacity:.82}));top.position.set(0,1.18,-.15);group.add(top);group.position.set(vertical?x0+3.2:x0+15+i*14,.0,vertical?z0+18+i*18:z0+3.2);if(!vertical)group.rotation.y=Math.PI/2;g.add(group);cars.push({key,group,vertical,dir:r()<.5?-1:1,speed:4+r()*2.3,x0,z0})}
+function addNPC(g,key,x,z,r){const n=createPerson('civilian',key,x,z,r);g.add(n.group);npcs.push(n)}
+function addEnemy(g,key,x,z,r){const n=createPerson('hostile',key,x,z,r);n.speed*=1.08;g.add(n.group);enemies.push(n)}
+function addPolice(g,key,x,z,r){const n=createPerson('police',key,x,z,r);n.speed=.72+r()*.28;g.add(n.group);police.push(n)}
+function createPerson(role,key,x,z,r){
+ const hostile=role==='hostile',isPolice=role==='police',group=new THREE.Group();
+ const cloth=new THREE.MeshStandardMaterial({color:isPolice?0x1f4f83:(hostile?0x6d2434:choice([0x315f7b,0x486d45,0x6a4e75,0x785f42,0xa05d43])),roughness:.82});
+ const skin=new THREE.MeshStandardMaterial({color:choice([0xd5a47c,0xc38e68,0xe0b18d])}),body=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.72,5,8),cloth);body.position.y=1.05;group.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.24,9,9),skin);head.position.y=1.72;group.add(head);
+ const hair=new THREE.Mesh(new THREE.SphereGeometry(.245,8,6),new THREE.MeshStandardMaterial({color:choice([0x31251f,0x5a4131,0x22262b])}));hair.scale.y=.55;hair.position.y=1.86;group.add(hair);
+ if(isPolice){const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.09,10),new THREE.MeshStandardMaterial({color:0x153b63}));cap.position.y=1.96;group.add(cap);const badge=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.025),new THREE.MeshBasicMaterial({color:0xffd260}));badge.position.set(.12,1.25,-.27);group.add(badge)}
+ const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);
+ const hasCash=r()<.58;
+ const n={key,group,role,hostile,isPolice,axis:r()<.5?'x':'z',speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:hasCash?(7+Math.floor(r()*48)):0,legs:[l1,l2],phase:r()*6.2,name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0};
+ group.traverse(o=>{o.userData.person=n});return n
+}
+function createCarVisual(color){
+ const group=new THREE.Group(),body=new THREE.Mesh(new THREE.BoxGeometry(1.75,.62,3.55),new THREE.MeshStandardMaterial({color,metalness:.35,roughness:.38}));body.position.y=.66;group.add(body);
+ const top=new THREE.Mesh(new THREE.BoxGeometry(1.45,.58,1.8),new THREE.MeshStandardMaterial({color:0x7893a5,transparent:true,opacity:.72,metalness:.3,roughness:.15}));top.position.set(0,1.18,-.18);group.add(top);
+ const bumperM=new THREE.MeshStandardMaterial({color:0x1b1f22,metalness:.5}),lampM=new THREE.MeshBasicMaterial({color:0xfff0bc});
+ for(const x of [-.58,.58]){const lamp=new THREE.Mesh(new THREE.BoxGeometry(.28,.16,.05),lampM);lamp.position.set(x,.72,-1.79);group.add(lamp)}
+ for(const x of [-.72,.72])for(const z of [-1.12,1.12]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.27,.27,.18,10),new THREE.MeshStandardMaterial({color:0x151719,roughness:1}));wheel.rotation.z=Math.PI/2;wheel.position.set(x,.34,z);group.add(wheel)}
+ return group
+}
+function addCar(g,key,x0,z0,r,i){
+ const vertical=r()<.5,group=createCarVisual(choice([0xc44b4b,0x4b6fc4,0x444b52,0xe0d3b4,0x4f9c68,0x9c7443]));
+ group.position.set(vertical?x0+3.1:x0+17+i*17,0,vertical?z0+18+i*18:z0+3.1);if(!vertical)group.rotation.y=Math.PI/2;g.add(group);
+ cars.push({key,group,vertical,dir:r()<.5?-1:1,speed:4.2+r()*2.2,x0,z0,lastHit:0})
+}
 
-function unload(key){const g=chunks.get(key);if(!g)return;scene.remove(g);chunks.delete(key);colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key)}
+function unload(key){
+ const g=chunks.get(key);if(!g)return;
+ if(selectedNPC?.key===key)clearTarget();
+ scene.remove(g);chunks.delete(key);
+ colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key)
+}
 function ensureChunks(force=false){if(state.interior)return;const {cx,cz}=currentChunk();for(let x=cx-LOAD;x<=cx+LOAD;x++)for(let z=cz-LOAD;z<=cz+LOAD;z++)createChunk(x,z);for(const[k,g]of chunks){if(Math.abs(g.userData.cx-cx)>UNLOAD||Math.abs(g.userData.cz-cz)>UNLOAD)unload(k)}if(force)drawMap()}
 function collides(x,z){if(state.interior)return Math.abs(x)>8.5||z<-8.5||z>8.5;return colliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ)}
 function movePlayer(dx,dz){const nx=state.pos.x+dx,nz=state.pos.z+dz;if(!collides(nx,state.pos.z))state.pos.x=nx;if(!collides(state.pos.x,nz))state.pos.z=nz}
 function updateCamera(t=0){const bob=(Math.abs(moveStick.x)+Math.abs(moveStick.y)>.15)?Math.sin(t*.012)*.022:0;camera.position.set(state.pos.x,1.72+bob,state.pos.z);const cp=Math.cos(state.pitch),sp=Math.sin(state.pitch),sy=Math.sin(state.yaw),cy=Math.cos(state.yaw);camera.lookAt(state.pos.x+sy*cp,1.72+sp+bob,state.pos.z-cy*cp)}
 function updateWorldLight(dt){
- state.timeOfDay=(state.timeOfDay+dt*.028)%24;const sun=scene.getObjectByName('sun'),day=Math.max(.08,Math.sin((state.timeOfDay-6)/24*Math.PI*2)*.5+.5);sun.intensity=.15+day*1.9;scene.children.find(x=>x.isHemisphereLight).intensity=.35+day*1.8;
- const sky=new THREE.Color().setRGB(.05+.45*day,.08+.58*day,.12+.62*day);scene.background.copy(sky);scene.fog.color.copy(sky);
- if(performance.now()-lastWeatherTick>45000){lastWeatherTick=performance.now();const r=Math.random();state.weather=r<.68?'clear':r<.85?'cloudy':'rain'}
+ state.timeOfDay=(state.timeOfDay+dt*.025)%24;
+ const sun=scene.getObjectByName('sun'),hemi=scene.children.find(x=>x.isHemisphereLight),day=Math.max(.06,Math.sin((state.timeOfDay-6)/24*Math.PI*2)*.5+.5);
+ sun.intensity=.12+day*1.95;hemi.intensity=.28+day*1.9;
+ const cloudDim=state.weather==='cloudy'?.78:state.weather==='rain'?.58:1;
+ sun.intensity*=cloudDim;
+ const sky=new THREE.Color().setRGB(.035+.47*day*cloudDim,.055+.61*day*cloudDim,.09+.68*day*cloudDim);scene.background.copy(sky);scene.fog.color.copy(sky);
+ if(performance.now()-lastWeatherTick>42000){lastWeatherTick=performance.now();const r=Math.random();state.weather=r<.66?'clear':r<.84?'cloudy':'rain'}
 }
-function updateCars(dt){for(const c of cars){if(c.vertical){c.group.position.z+=c.dir*c.speed*dt;if(c.group.position.z<c.z0+8||c.group.position.z>c.z0+CHUNK-6)c.dir*=-1}else{c.group.position.x+=c.dir*c.speed*dt;if(c.group.position.x<c.x0+8||c.group.position.x>c.x0+CHUNK-6)c.dir*=-1}}}
-function updatePeople(dt,t){for(const n of [...npcs,...enemies]){if(n===activeEnemyEntity)continue;const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);if(n.hostile&&dist<8.5){n.group.position.x+=dx/(dist||1)*n.speed*1.25*dt;n.group.position.z+=dz/(dist||1)*n.speed*1.25*dt;if(dist<1.55&&!activeEnemy)startCombat(n)}else{const off=n.axis==='x'?n.group.position.x-n.home.x:n.group.position.z-n.home.z;if(Math.abs(off)>19)n.dir*=-1;if(n.axis==='x')n.group.position.x+=n.dir*n.speed*dt;else n.group.position.z+=n.dir*n.speed*dt}n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x}}
-function animatePickups(dt,t){for(const p of pickups){if(!p.parent)continue;p.rotation.y+=dt;p.position.y=(p.userData.type==='artifact'?.72:.43)+Math.sin(t/450+p.position.x)*.07}}
+function updateCars(dt,t){
+ for(const c of cars){
+   if(c.vertical){c.group.position.z+=c.dir*c.speed*dt;if(c.group.position.z<c.z0+8||c.group.position.z>c.z0+CHUNK-6)c.dir*=-1;c.group.rotation.y=c.dir>0?0:Math.PI}
+   else{c.group.position.x+=c.dir*c.speed*dt;if(c.group.position.x<c.x0+8||c.group.position.x>c.x0+CHUNK-6)c.dir*=-1;c.group.rotation.y=c.dir>0?Math.PI/2:-Math.PI/2}
+   if(!state.interior&&t-c.lastHit>1250){
+     const dx=Math.abs(state.pos.x-c.group.position.x),dz=Math.abs(state.pos.z-c.group.position.z);
+     const hit=c.vertical?(dx<1.15&&dz<2.15):(dx<2.15&&dz<1.15);
+     if(hit){c.lastHit=t;hitByCar(c)}
+   }
+ }
+}
+function hitByCar(c){
+ const raw=18+Math.floor(Math.random()*11),abs=Math.min(state.armor,Math.floor(raw*.35));state.armor-=abs;state.hp-=raw-abs;
+ const k=2.4;c.vertical?state.pos.z+=c.dir*k:state.pos.x+=c.dir*k;
+ toast(`🚗 Percuté ! -${raw-abs} PV`);
+ if(state.hp<=0){state.hp=state.maxHp;state.wanted=0;state.pos={x:2,z:8};clearTarget();toast('K.O. après l’accident — retour au refuge')}
+ save()
+}
+function setHeading(n,dx,dz){
+ if(Math.abs(dx)+Math.abs(dz)<.001)return;
+ n.heading=Math.atan2(dx,dz);n.group.rotation.y=n.heading
+}
+function patrolPerson(n,dt){
+ const off=n.axis==='x'?n.group.position.x-n.home.x:n.group.position.z-n.home.z;if(Math.abs(off)>19)n.dir*=-1;
+ const dx=n.axis==='x'?n.dir*n.speed*dt:0,dz=n.axis==='z'?n.dir*n.speed*dt:0;
+ n.group.position.x+=dx;n.group.position.z+=dz;setHeading(n,dx,dz)
+}
+function updatePeople(dt,t){
+ policeSeeing=false;
+ for(const n of npcs){
+   patrolPerson(n,dt);
+   n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x
+ }
+ for(const n of enemies){
+   if(n===activeEnemyEntity)continue;
+   const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);
+   if(dist<8){const sx=dx/(dist||1)*n.speed*1.18*dt,sz=dz/(dist||1)*n.speed*1.18*dt;n.group.position.x+=sx;n.group.position.z+=sz;setHeading(n,sx,sz);if(dist<1.5&&!activeEnemy)startCombat(n)}else patrolPerson(n,dt);
+   n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x
+ }
+ for(const p of police){
+   const dx=state.pos.x-p.group.position.x,dz=state.pos.z-p.group.position.z,dist=Math.hypot(dx,dz);
+   const canSee=dist<13.5&&hasLineOfSight(p.group.position.x,p.group.position.z,state.pos.x,state.pos.z)&&(!isPlayerHidden()||dist<3.2);
+   const crime=!!tailTheft?.active||state.wanted>0;
+   if(canSee&&crime){policeSeeing=true;p.lastSeen=t;p.chasing=true;if(tailTheft?.active&&tailTheft.validStealTime>.25){state.wanted=Math.max(1,state.wanted);tailTheft.policeObserved=true}}
+   if(p.chasing&&(state.wanted>0||t-p.lastSeen<5000)){
+     const sx=dx/(dist||1)*p.speed*1.75*dt,sz=dz/(dist||1)*p.speed*1.75*dt;p.group.position.x+=sx;p.group.position.z+=sz;setHeading(p,sx,sz);
+     if(dist<1.35)policeCatch(p)
+   }else{p.chasing=false;patrolPerson(p,dt)}
+   p.legs[0].rotation.x=Math.sin(t*.006*p.speed+p.phase)*.55;p.legs[1].rotation.x=-p.legs[0].rotation.x
+ }
+ updateTailTheft(dt,t);
+ if(state.wanted>0){
+   if(policeSeeing){hiddenTimer=0}
+   else{hiddenTimer+=dt;if(hiddenTimer>6.5){state.wanted=Math.max(0,state.wanted-1);hiddenTimer=0;toast(state.wanted?'Tu restes caché : recherche diminuée':'Tu as semé la police')}}
+ }
+}
+function isPlayerHidden(){return hidingZones.some(h=>Math.hypot(state.pos.x-h.x,state.pos.z-h.z)<h.radius)}
+function hasLineOfSight(ax,az,bx,bz){
+ for(const c of colliders){if(segmentRect(ax,az,bx,bz,c.minX,c.minZ,c.maxX,c.maxZ))return false}
+ return true
+}
+function segmentRect(x1,y1,x2,y2,minX,minY,maxX,maxY){
+ const dx=x2-x1,dy=y2-y1;let t0=0,t1=1;
+ for(const [p,q] of [[-dx,x1-minX],[dx,maxX-x1],[-dy,y1-minY],[dy,maxY-y1]]){
+   if(Math.abs(p)<1e-9){if(q<0)return false;continue}
+   const r=q/p;if(p<0){if(r>t1)return false;if(r>t0)t0=r}else{if(r<t0)return false;if(r<t1)t1=r}
+ }
+ return true
+}
+function policeCatch(){
+ if(state.interior)return;
+ const fine=Math.min(state.coins,Math.max(12,Math.round(state.coins*(.10+state.wanted*.055))));
+ state.coins-=fine;state.policeCaught++;state.wanted=0;hiddenTimer=0;
+ if(tailTheft)stopTailTheft('La police t’a attrapé.',true);
+ clearTarget();state.pos={x:2,z:8};toast(`👮 Attrapé : -${fine} crédits`);save()
+}function animatePickups(dt,t){for(const p of pickups){if(!p.parent)continue;p.rotation.y+=dt;p.position.y=(p.userData.type==='artifact'?.72:.43)+Math.sin(t/450+p.position.x)*.07}}
 function animate(){
  if(!renderer)return;requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta()),t=performance.now();
  const forward=-moveStick.y,strafe=moveStick.x,fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);movePlayer((fx*forward+rx*strafe)*4.8*dt,(fz*forward+rz*strafe)*4.8*dt);state.yaw+=lookStick.x*2.0*dt;state.pitch=clamp(state.pitch-lookStick.y*1.5*dt,-1.06,1.06);
- updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}state.wanted=Math.max(0,state.wanted-dt*.5);updateHUD();renderer.render(scene,camera)
+ updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();renderer.render(scene,camera)
 }
 
 function entityPos(x){
@@ -194,7 +389,7 @@ function nearest(arr,max){
  return best
 }
 function checkInteraction(){
- if(activeEnemy||!$('#dialogue').classList.contains('hidden')||!$('#theft').classList.contains('hidden'))return hidePrompt();
+ if(activeEnemy||!$('#dialogue').classList.contains('hidden'))return hidePrompt();
  if(state.interior){
    if(state.interior.type==='shop'){
      if(state.pos.z<-4.6)return setPrompt('Comptoir',`Voir le stock de ${SHOPS[state.interior.shopType].name}.`,'ACHETER',()=>openSheet('physicalShop'));
@@ -204,15 +399,25 @@ function checkInteraction(){
    if(state.pos.z>5.5)return setPrompt('Sortie','Retourner dans la rue.','SORTIR',leaveInterior);
    return hidePrompt()
  }
+ if(tailTheft?.active)return hidePrompt();
+
+ if(selectedNPC&&selectedNPC.group.parent){
+   const d=Math.hypot(state.pos.x-selectedNPC.group.position.x,state.pos.z-selectedNPC.group.position.z);
+   if(d<2.25){
+     const behind=isBehindTarget(selectedNPC);
+     if(behind)return setPrompt(`Cible : ${selectedNPC.name}`,'Reste derrière et collé à la cible. Les pièces arrivent progressivement.','FOUILLER',()=>startTailTheft(selectedNPC));
+     return setPrompt(`Cible : ${selectedNPC.name}`,'Place-toi derrière la personne avant de commencer.','SE PLACER',()=>toast('Passe derrière la cible sans la dépasser.'))
+   }
+ }
  const p=nearest(pickups.filter(x=>x.parent),1.6);if(p)return setPrompt(pickupName(p.userData.type),'Objet trouvé dans la rue.','RAMASSER',()=>collectPickup(p));
- const c=nearest(containers.filter(x=>x.parent),1.7);if(c)return setPrompt(c.userData.type==='bin'?'Poubelle':'Coffre',c.userData.type==='bin'?'Fouiller discrètement.':'Ouvrir le coffre.','FOUILLER',()=>openContainer(c));
- const s=shops.reduce((b,x)=>{const d=Math.hypot(state.pos.x-x.door.x,state.pos.z-x.door.z);return !b||d<b.d?{x,d}:b},null);if(s&&s.d<1.8)return setPrompt(SHOPS[s.x.type].name,'Entrer réellement dans la boutique.','ENTRER',()=>enterInterior('shop',s.x));
- const a=nearest(apartments,1.6);if(a)return setPrompt('Immeuble résidentiel','Entrer dans le hall et explorer un appartement.','ENTRER',()=>enterInterior('apartment',a));
- const n=nearest(npcs,1.55);if(n)return setPrompt(n.name,'Parler, demander une mission ou tenter un vol à la tire.','PARLER',()=>talkNPC(n));
+ const c=nearest(containers.filter(x=>x.parent),1.7);if(c)return setPrompt(c.userData.type==='bin'?'Poubelle':'Coffre',c.userData.type==='bin'?'Fouiller du matériel.':'Ouvrir le coffre.','FOUILLER',()=>openContainer(c));
+ const s=shops.reduce((b,x)=>{const d=Math.hypot(state.pos.x-x.door.x,state.pos.z-x.door.z);return !b||d<b.d?{x,d}:b},null);if(s&&s.d<1.8)return setPrompt(SHOPS[s.x.type].name,'Entrer dans la boutique.','ENTRER',()=>enterInterior('shop',s.x));
+ const a=nearest(apartments,1.6);if(a)return setPrompt('Immeuble résidentiel','Entrer dans le hall.','ENTRER',()=>enterInterior('apartment',a));
+ const n=nearest(npcs,1.5);if(n)return setPrompt(n.name,'Touche directement le passant à l’écran pour le choisir comme cible, ou parle-lui.','PARLER',()=>talkNPC(n));
  hidePrompt()
 }
-function setPrompt(t,d,b,fn){$('#promptTitle').textContent=t;$('#promptText').textContent=d;$('#promptBtn').textContent=b;$('#promptBtn').onclick=fn;$('#prompt').classList.remove('hidden')}
-function hidePrompt(){$('#prompt').classList.add('hidden')}
+function setPrompt(t,d,b,fn){currentInteractFn=fn;$('#promptTitle').textContent=t;$('#promptText').textContent=d;$('#promptBtn').textContent=b;$('#promptBtn').onclick=fn;$('#prompt').classList.remove('hidden')}
+function hidePrompt(){currentInteractFn=null;$('#prompt').classList.add('hidden')}
 function pickupName(t){return{medkit:'Kit de soin',rare:'Cache de matériel',artifact:city().artifact}[t]}
 function collectPickup(m){
  const{id,type}=m.userData;if(state.collected.includes(id))return;
@@ -242,76 +447,95 @@ function talkNPC(n){
 }
 function showNpcChoices(n){
  $('#dialogue').classList.add('hidden');
- openSheet('npc');$('#sheetTitle').textContent=n.name;$('#sheetBody').innerHTML=`<div class="card"><h3>Que faire ?</h3><div class="grid2"><button class="menuBtn primary" id="talkAgain">💬 Discuter</button><button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Faire les poches<small>${n.pickpocketed?'Déjà fouillé':n.caught?'Sur ses gardes':'Maintiens puis relâche au bon moment.'}</small></button></div></div>`;
- $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'Profite du quartier, il y a toujours quelque chose à découvrir.',hideDialogue)};const pp=$('#pickpocket');if(pp)pp.onclick=()=>{closeSheet();startPickpocket(n)}
+ openSheet('npc');$('#sheetTitle').textContent=n.name;$('#sheetBody').innerHTML=`<div class="card"><h3>Que faire ?</h3><div class="grid2"><button class="menuBtn primary" id="talkAgain">💬 Discuter</button><button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Faire les poches<small>${n.pickpocketed?'Déjà fouillé':n.caught?'Sur ses gardes':'Sélectionne-la puis suis-la discrètement.'}</small></button></div></div>`;
+ $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'Profite du quartier, il y a toujours quelque chose à découvrir.',hideDialogue)};const pp=$('#pickpocket');if(pp)pp.onclick=()=>{closeSheet();selectTarget(n);toast('Cible sélectionnée : suis-la et place-toi derrière.')}
 }
 function assignNpcMission(n){const opts=[{kind:'pockets',text:'récupère 30 crédits sur des passants',target:30,start:state.stolenCoins,reward:90},{kind:'container',text:'fouille 2 caches ou poubelles',target:2,start:state.containersOpened,reward:110},{kind:'explore',text:'découvre 2 nouveaux quartiers',target:2,start:state.seenDistricts.length,reward:120}];state.activeNpcMission={...choice(opts),giver:n.name};save()}
 function npcMissionProgress(){const m=state.activeNpcMission;if(!m)return null;const now=m.kind==='pockets'?state.stolenCoins:m.kind==='container'?state.containersOpened:state.seenDistricts.length;return now-m.start}
 function maybeCompleteNpcMission(){const m=state.activeNpcMission;if(!m)return;if(npcMissionProgress()>=m.target){state.coins+=m.reward;state.npcMissions++;toast(`Mission de ${m.giver} terminée +${m.reward}`);state.activeNpcMission=null;checkQuests();save()}}
-let theftState=null,theftRAF=0;
-function startPickpocket(n){
- if(n.pickpocketed)return toast('Tu as déjà vérifié ses poches');
- if(n.caught)return toast('Cette personne est sur ses gardes');
- const distance=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
- if(distance>1.8)return toast('Approche-toi davantage');
- hidePrompt();
- n._theftSpeed=n.speed;n.speed=0;
- const required=950+Math.random()*420-Math.min(260,state.stealth*85);
- const detection=Math.max(required+380,required+650+Math.random()*850+state.stealth*150-state.wanted*80);
- theftState={npc:n,required,detection,start:0,holding:false};
- $('#theftName').textContent=n.name;$('#theftText').textContent='Maintiens le bouton. Relâche dans la zone verte. Trop tôt = rien, trop tard = repéré.';
- $('#theftBar').style.width='0%';
- const sweetStart=required/detection*100;
- const sweetWidth=Math.max(10,Math.min(28,(detection-required)/detection*100));
- $('#theftSweet').style.left=`${sweetStart}%`;$('#theftSweet').style.width=`${sweetWidth}%`;
- $('#theftStatus').textContent='Prêt…';$('#theftHold').className='theftHold';$('#theft').classList.remove('hidden')
+function selectTarget(n){
+ if(!n||n.hostile||n.isPolice)return;
+ clearTarget(false);selectedNPC=n;
+ const marker=makeSign('▼ CIBLE','#8ee8ff');marker.scale.set(2.8,.7,1);marker.position.set(0,2.55,0);n.group.add(marker);targetMarker=marker;
+ $('#targetCard').classList.remove('hidden');$('#targetName').textContent=n.name;$('#targetInfo').textContent='Suis-la puis place-toi juste derrière.';updateTargetHUD()
 }
-function theftBegin(e){
- if(!theftState||theftState.holding)return;
- e.preventDefault();theftState.holding=true;theftState.start=performance.now();$('#theftStatus').textContent='Doucement…';theftLoop()
+function clearTarget(show=true){
+ if(tailTheft?.active)stopTailTheft('Filature annulée.');
+ if(targetMarker?.parent)targetMarker.parent.remove(targetMarker);targetMarker=null;selectedNPC=null;$('#targetCard').classList.add('hidden');if(show)toast('Cible désélectionnée')
 }
-function theftRelease(e){
- if(!theftState||!theftState.holding)return;
- e?.preventDefault();const elapsed=performance.now()-theftState.start;theftState.holding=false;cancelAnimationFrame(theftRAF);
- if(elapsed<theftState.required){
-   $('#theftBar').style.width='0%';$('#theftStatus').textContent='Trop tôt. Réessaie sans traîner.';$('#theftHold').className='theftHold';return
+function isBehindTarget(n){
+ const vx=state.pos.x-n.group.position.x,vz=state.pos.z-n.group.position.z,d=Math.hypot(vx,vz)||1;
+ const fx=Math.sin(n.heading),fz=Math.cos(n.heading);
+ return (fx*(vx/d)+fz*(vz/d))<-.38
+}
+function startTailTheft(n){
+ if(!n||n.pickpocketed)return toast('Tu as déjà fouillé cette personne');
+ const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);if(d>2.1)return toast('Reste plus près de la cible');
+ if(!isBehindTarget(n))return toast('Place-toi derrière la cible');
+ tailTheft={npc:n,suspicion:0,validStealTime:0,lostTime:0,nextCoin:.65+Math.random()*.55,emptyTimer:0,policeObserved:false,stolen:0};
+ document.body.classList.add('crime-active');$('#targetInfo').textContent='Vol en cours : reste derrière, proche et hors de vue de la police.'
+}
+function updateTailTheft(dt,t){
+ if(!tailTheft?.active&&tailTheft)tailTheft.active=true;
+ if(!tailTheft?.active)return;
+ const n=tailTheft.npc;
+ if(!n?.group?.parent)return stopTailTheft('La cible est partie.');
+ const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z),behind=isBehindTarget(n),hidden=isPlayerHidden();
+ const ideal=d>=.62&&d<=1.65&&behind;
+ if(d>2.2){tailTheft.lostTime+=dt;if(tailTheft.lostTime>1.3)return stopTailTheft('Tu as perdu la cible.')}else tailTheft.lostTime=Math.max(0,tailTheft.lostTime-dt*2);
+
+ if(ideal){
+   tailTheft.validStealTime+=dt;tailTheft.nextCoin-=dt;
+   tailTheft.suspicion=Math.max(0,tailTheft.suspicion-dt*(5+state.stealth*2));
+   if(n.money<=0){
+     tailTheft.emptyTimer+=dt;if(tailTheft.emptyTimer>1.15){n.pickpocketed=true;return stopTailTheft(tailTheft.stolen>0?'Tu as vidé ses poches.':'Poches vides : rien à récupérer.')}
+   }else if(tailTheft.nextCoin<=0){
+     const take=Math.min(n.money,1+Math.floor(Math.random()*(3+Math.min(2,state.stealth))));n.money-=take;state.coins+=take;state.coinsEarned+=take;state.stolenCoins+=take;tailTheft.stolen+=take;
+     tailTheft.nextCoin=.72+Math.random()*.72;$('#targetLoot').textContent=`🪙 +${tailTheft.stolen}`;checkQuests();maybeCompleteNpcMission()
+   }
+ }else{
+   tailTheft.validStealTime=Math.max(0,tailTheft.validStealTime-dt*.35);
+   tailTheft.suspicion+=dt*(behind?14:32)+(d<.55?dt*35:0);
  }
- if(elapsed<theftState.detection)return theftSuccess()
+ // target can sense something if the player shadows them too long
+ tailTheft.suspicion+=dt*Math.max(0,(tailTheft.validStealTime-5.5))*1.8;
+ if(tailTheft.policeObserved)return theftSpottedByPolice();
+ if(tailTheft.suspicion>=n.alertness)return targetNotices();
+ updateTargetHUD();save()
 }
-function theftLoop(){
- if(!theftState||!theftState.holding)return;
- const n=theftState.npc,dist=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
- if(dist>1.95)return cancelTheft('Tu t’es trop éloigné.');
- const elapsed=performance.now()-theftState.start,pct=clamp(elapsed/theftState.detection*100,0,100);
- $('#theftBar').style.width=`${pct}%`;
- if(elapsed>=theftState.required){$('#theftStatus').textContent='BON MOMENT — RELÂCHE !';$('#theftHold').className='theftHold ready'}
- else if(elapsed>theftState.required*.7){$('#theftStatus').textContent='Presque…';$('#theftHold').className='theftHold'}
- if(elapsed>=theftState.detection)return theftCaught();
- theftRAF=requestAnimationFrame(theftLoop)
+function targetNotices(){
+ const n=tailTheft.npc;n.caught=true;state.wanted=Math.max(1,state.wanted);stopTailTheft(`${n.name} s’est aperçu du vol !`,true);n.speed*=1.5
 }
-function theftSuccess(){
- const n=theftState.npc,amount=n.money;n.pickpocketed=true;n.money=0;restoreTheftNPC();
- $('#theft').classList.add('hidden');theftState=null;
- if(amount>0){state.coins+=amount;state.coinsEarned+=amount;state.stolenCoins+=amount;state.pickpockets++;toast(`Poches réussies : +${amount} crédits`)}
- else toast('Poches vides — cette personne n’avait pas d’argent.');
- checkQuests();maybeCompleteNpcMission();save()
+function theftSpottedByPolice(){
+ state.wanted=Math.max(1,state.wanted);stopTailTheft('Un policier t’a vu faire les poches !',true)
 }
-function theftCaught(){
- const n=theftState.npc;n.caught=true;n.pickpocketed=true;restoreTheftNPC(true);
- state.wanted=clamp(state.wanted+1,0,5);$('#theft').classList.add('hidden');theftState=null;
- toast('Trop long ! Tu as été repéré 🚨');
- if(state.wanted>=2)spawnSecurity();
- save()
+function stopTailTheft(msg,caught=false){
+ if(!tailTheft)return;const n=tailTheft.npc,stolen=tailTheft.stolen||0;
+ if(stolen>0&&!n._counted){state.pickpockets++;n._counted=true}
+ tailTheft=null;document.body.classList.remove('crime-active');$('#targetInfo').textContent=caught?'Repéré ! Cache-toi et coupe la ligne de vue.':'Filature interrompue.';if(msg)toast(msg);save()
 }
-function cancelTheft(msg='Vol annulé'){
- if(!theftState)return;cancelAnimationFrame(theftRAF);restoreTheftNPC();theftState=null;$('#theft').classList.add('hidden');toast(msg)
+function updateTargetHUD(){
+ if(!selectedNPC?.group?.parent){if(selectedNPC)clearTarget(false);return}
+ const d=Math.hypot(state.pos.x-selectedNPC.group.position.x,state.pos.z-selectedNPC.group.position.z);
+ $('#targetDistance').textContent=`${d.toFixed(1)} m`;
+ const s=tailTheft?.npc===selectedNPC?tailTheft.suspicion:0;$('#suspicionBar').style.width=`${clamp(s/selectedNPC.alertness*100,0,100)}%`;
+ if(!tailTheft)$('#targetLoot').textContent=selectedNPC.pickpocketed?'🪙 fouillé':'🪙 ?';
+ if(tailTheft){
+   const behind=isBehindTarget(selectedNPC);
+   $('#targetInfo').textContent=policeSeeing?'👮 Police en vue ! Cache-toi.':(!behind?'⚠️ Reviens derrière la cible.':(isPlayerHidden()?'🌿 Caché — poursuis la fouille.':'🫳 Fouille en cours…'));
+ }
 }
-function restoreTheftNPC(run=false){
- if(!theftState?.npc)return;const n=theftState.npc;n.speed=n._theftSpeed||n.speed;if(run)n.speed*=1.8;delete n._theftSpeed
-}
-function spawnSecurity(){
- const {cx,cz}=currentChunk(),key=ck(cx,cz),g=chunks.get(key);if(!g||!THREE)return;
- const r=rngFor(key+':security:'+Math.floor(performance.now())),n=createPerson(true,key,state.pos.x+5,state.pos.z+5,r);n.name='Agent de sécurité';n.speed=1.35;g.add(n.group);enemies.push(n)
+function setupWorldTap(){
+ const canvas=renderer.domElement;
+ canvas.addEventListener('pointerdown',e=>{tapStart={x:e.clientX,y:e.clientY,t:performance.now(),id:e.pointerId}});
+ canvas.addEventListener('pointerup',e=>{
+   if(!tapStart||tapStart.id!==e.pointerId)return;
+   const moved=Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y),elapsed=performance.now()-tapStart.t;tapStart=null;
+   if(moved>12||elapsed>350||state.interior)return;
+   const r=canvas.getBoundingClientRect(),pt=new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
+   raycaster.setFromCamera(pt,camera);const hits=raycaster.intersectObjects(npcs.map(n=>n.group),true);
+   const n=hits.map(h=>h.object.userData.person).find(Boolean);if(n)selectTarget(n)
+ })
 }
 
 function showDialogue(name,text,next){$('#dialogueName').textContent=name;$('#dialogueText').textContent=text;$('#dialogueIcon').textContent='🙂';$('#dialogue').classList.remove('hidden');$('#dialogueNext').onclick=next}
@@ -359,14 +583,16 @@ function drawMap(){
  q.fillStyle='#6a7680';for(const b of colliders){const x=(b.minX-state.pos.x)*S,y=(b.minZ-state.pos.z)*S,w=(b.maxX-b.minX)*S,h=(b.maxZ-b.minZ)*S;if(Math.abs(x)>W||Math.abs(y)>H)continue;q.fillRect(x,y,w,h)}
  q.fillStyle='#63e2b0';for(const s of shops){const dx=(s.x-state.pos.x)*S,dz=(s.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,5,0,Math.PI*2);q.fill()}}
  q.fillStyle='#ff6c7e';for(const e of enemies){const dx=(e.group.position.x-state.pos.x)*S,dz=(e.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,3,0,Math.PI*2);q.fill()}}
+ q.fillStyle='#4ea8ff';for(const p of police){const dx=(p.group.position.x-state.pos.x)*S,dz=(p.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,3.5,0,Math.PI*2);q.fill()}}
  q.fillStyle='#7ccf9c';for(const n of npcs){const dx=(n.group.position.x-state.pos.x)*S,dz=(n.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,2.3,0,Math.PI*2);q.fill()}}
+ if(selectedNPC?.group?.parent){const dx=(selectedNPC.group.position.x-state.pos.x)*S,dz=(selectedNPC.group.position.z-state.pos.z)*S;q.strokeStyle='#8ee8ff';q.lineWidth=2;q.beginPath();q.arc(dx,dz,6,0,Math.PI*2);q.stroke()}
  q.rotate(state.yaw);q.fillStyle='#fff';q.beginPath();q.moveTo(0,-8);q.lineTo(5,6);q.lineTo(0,3);q.lineTo(-5,6);q.closePath();q.fill();q.restore()
 }
 function updateHUD(){
  const {cx,cz}=currentChunk(),d=districtFor(cx,cz),aq=activeQuest(),prog=Math.min(aq.target,progress(aq.goal));$('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;$('#level').textContent=state.level;$('#wanted').textContent=state.wanted;
  $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
  const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️',period=state.timeOfDay<6||state.timeOfDay>20?'NUIT':state.timeOfDay<9?'MATIN':state.timeOfDay>17?'SOIR':'JOUR';$('#weatherChip').textContent=`${icon} ${period}`;
- maybeCompleteNpcMission()
+ maybeCompleteNpcMission();updateTargetHUD()
 }
 
 function makeJoy(baseSel,knobSel,target){const b=$(baseSel),k=$(knobSel);let pid=null;const mv=e=>{const r=b.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),max=30,len=Math.hypot(dx,dy)||1,f=Math.min(1,max/len);target.x=dx/max*f;target.y=dy/max*f;k.style.transform=`translate(${dx*f}px,${dy*f}px)`},reset=()=>{pid=null;target.x=target.y=0;k.style.transform='translate(0,0)'};b.addEventListener('pointerdown',e=>{pid=e.pointerId;b.setPointerCapture(pid);mv(e)});b.addEventListener('pointermove',e=>e.pointerId===pid&&mv(e));b.addEventListener('pointerup',reset);b.addEventListener('pointercancel',reset)}
@@ -383,31 +609,25 @@ function openSheet(panel){
  bindSheet(panel)
 }
 function worldHTML(){return `<div class="card"><h3>Exploration chill</h3><p class="sub">Explore sans chronomètre. Les quartiers se chargent au fur et à mesure, avec voitures, habitants, boutiques, appartements, parcs et secrets.</p></div><div class="card"><h3>Voyager</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div>`}
-function bagHTML(){const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join(''),meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';return `<div class="card"><h3>Armes</h3>${ws}</div><div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div><div class="card"><h3>Discrétion</h3><p class="sub">${state.pickpockets} vols réussis • ${state.stolenCoins} crédits récupérés dans les poches • niveau de recherche ${state.wanted}/5.</p></div>`}
+function bagHTML(){const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join(''),meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';return `<div class="card"><h3>Armes</h3>${ws}</div><div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div><div class="card"><h3>Discrétion</h3><p class="sub">${state.pickpockets} vols réussis • ${state.stolenCoins} crédits récupérés dans les poches • niveau de recherche ${state.wanted}/5 • ${state.policeCaught||0} arrestations.</p></div>`}
 function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
 function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. La conquête apporte des récompenses, mais n’empêche jamais l’exploration libre.</p></div>`}
-function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div><div class="warning">Street View n’est pas intégré dans cette V4 : j’ai privilégié un monde 3D texturé, procédural et réellement jouable sans dépendre d’une API externe.</div>`}
+function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div><div class="warning">Street View n’est pas intégré dans cette V5 : j’ai privilégié un monde 3D texturé, procédural et réellement jouable sans dépendre d’une API externe.</div>`}
 function bindSheet(panel){
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
  if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
  if(panel==='districts')$('#secureDistrict').onclick=secureDistrict;
- if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v4-1');location.reload()}};
+ if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v5');location.reload()}};
  if(panel==='physicalShop')bindShop()
 }
-function switchCity(id){state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
+function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
 function useMed(){const x=state.inventory.find(i=>i.id==='medkit');if(!x)return toast('Aucun kit');if(state.hp>=state.maxHp)return toast('PV déjà au maximum');x.qty--;state.hp=clamp(state.hp+40,0,state.maxHp);if(x.qty<=0)state.inventory=state.inventory.filter(i=>i!==x);save();openSheet('bag')}
 function closeSheet(){$('#sheet').classList.add('hidden')}
 let toastTimer;function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.add('hidden'),2200)}
 
 
-const theftHold=$('#theftHold');
-theftHold.addEventListener('pointerdown',theftBegin);
-theftHold.addEventListener('pointerup',theftRelease);
-theftHold.addEventListener('pointercancel',theftRelease);
-theftHold.addEventListener('pointerleave',e=>{if(theftState?.holding)theftRelease(e)});
-$('#theftCancel').onclick=()=>cancelTheft();
 
-$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>toast('Approche-toi d’un objet, d’un habitant, d’une boutique ou d’un appartement.');$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
+$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible et place-toi derrière elle.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTouch<320)e.preventDefault();lastTouch=n},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
 init();

@@ -60,3 +60,49 @@ Puis Commit changes et attendre le déploiement GitHub Pages.
 - Les coffres/poubelles donnent désormais du matériel, des soins ou de l'XP, pas d'argent.
 - Les ennemis donnent surtout XP/matériel, pas d'argent.
 - Intérieurs de boutique corrigés : arrivée face au magasin, comptoir interactif, sortie distincte.
+
+
+# V5 — Shadow City
+
+## Nouvelle mécanique de vol à la tire
+- Touche directement le passant que tu veux choisir.
+- La cible reste marquée à l’écran et sur la mini-carte.
+- Suis-la dans la rue.
+- Place-toi derrière elle, à environ 0,6–1,6 m.
+- Lance la fouille avec le bouton d’interaction.
+- Tant que tu restes correctement placé, des crédits sont transférés progressivement.
+- Certains passants n’ont aucun argent.
+- Si tu passes sur le côté / devant, colles trop près ou traînes trop longtemps, la suspicion augmente.
+- Si la cible remarque le vol, ton niveau de recherche augmente.
+- Des policiers patrouillent réellement.
+- Un policier doit avoir une ligne de vue dégagée pour te repérer.
+- Les bâtiments bloquent leur vue.
+- Les buissons permettent aussi de se cacher.
+- Après plusieurs secondes hors de vue, le niveau de recherche baisse.
+- Si un policier t’attrape, une partie de tes crédits est confisquée.
+
+## Circulation
+- Les voitures infligent désormais des dégâts lorsqu’elles percutent le joueur.
+- Une collision retire des PV, une partie pouvant être absorbée par l’armure.
+- Le joueur est repoussé dans le sens du choc.
+- Un K.O. renvoie au refuge.
+
+## Graphismes
+- rendu ACES / espace couleur sRGB
+- textures de façades retravaillées
+- façades modernes, briques et pierre
+- corniches et éléments de toit
+- balcons dans certains quartiers
+- bordures de trottoir
+- passages piétons améliorés
+- lampadaires
+- bancs
+- buissons utilisables comme cachettes
+- végétation plus dense
+- véhicules plus détaillés avec roues et phares
+- voitures stationnées
+- nuages
+- pluie légère lors de la météo pluvieuse
+- magasins orientés correctement vers le trottoir
+- portes d’immeubles placées côté rue
+- streaming réduit à 3×3 quartiers pour laisser plus de budget graphique sur iPhone
