@@ -23,6 +23,20 @@ const WEAPONS={
  pulse:{id:'pulse',name:'Carabine à impulsion',icon:'✨',damage:38,price:780},
  relic:{id:'relic',name:'Lame relique',icon:'🗡️',damage:55,price:1450}
 };
+
+const STREET_ITEMS={
+ phone:{id:'phone',name:'Téléphone',icon:'📱',value:95},
+ watch:{id:'watch',name:'Montre',icon:'⌚',value:80},
+ earbuds:{id:'earbuds',name:'Écouteurs',icon:'🎧',value:55},
+ ring:{id:'ring',name:'Bague',icon:'💍',value:130},
+ camera:{id:'camera',name:'Petit appareil photo',icon:'📷',value:110},
+ glasses:{id:'glasses',name:'Lunettes',icon:'🕶️',value:45},
+ perfume:{id:'perfume',name:'Parfum',icon:'🧴',value:65},
+ walletItem:{id:'walletItem',name:'Portefeuille',icon:'👛',value:35}
+};
+const STREET_ITEM_IDS=Object.keys(STREET_ITEMS);
+function itemInfo(id){return id==='medkit'?{id:'medkit',name:'Kit de soin',icon:'🩹',value:0}:STREET_ITEMS[id]||{id,name:id,icon:'📦',value:0}}
+
 const SHOPS={
  corner:{name:'Épicerie Nova',icon:'🥤',stock:[
   {id:'medkit',name:'Kit de soin',icon:'🩹',price:55,desc:'+40 PV'},
@@ -41,6 +55,10 @@ const SHOPS={
   {id:'map',name:'Scanner longue portée',icon:'📡',price:600,desc:'Scanner amélioré'}
  ]}
 };
+SHOPS.pawn={name:'Comptoir Seconde Main',icon:'🏪',stock:[
+  {id:'medkit',name:'Kit de soin',icon:'🩹',price:60,desc:'+40 PV'},
+  {id:'bag',name:'Sac renforcé',icon:'🎒',price:260,desc:'+5 places'}
+]};
 SHOPS.home={name:'Maison & Co',icon:'🪑',stock:[
   {id:'wallKit',name:'Module de cloison',icon:'🧱',price:140,desc:'Aménager la base'},
   {id:'chest',name:'Coffre simple',icon:'📦',price:150,desc:'Rangement maison'},
@@ -82,11 +100,11 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[]
+ landOwned:false,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[]
 };
 let state=loadState();
-function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v9')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v9',JSON.stringify(state))}
+function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v10')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
+function save(){localStorage.setItem('sq3d-v10',JSON.stringify(state))}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
@@ -107,8 +125,8 @@ function progress(goal){if(goal==='stolenCoins')return state.stolenCoins;if(goal
 function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.id))||{id:'free',title:'Légende urbaine',text:'Explore librement, collectionne les artefacts et sécurise les quartiers.',goal:'districtsOwned',target:999}}
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
-let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],clouds=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={};
+let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],clouds=[];
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0;
 
 async function init(){
  try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
@@ -251,6 +269,7 @@ function createChunk(cx,cz){
  lots.forEach((p,i)=>{
    if(startChunk&&i===0){addShop(g,key,x0+p[0],z0+p[1],r,'corner');made++;return}
    if(startChunk&&i===2){addShop(g,key,x0+p[0],z0+p[1],r,'home');made++;return}
+   if(startChunk&&i===3){addShop(g,key,x0+p[0],z0+p[1],r,'pawn');made++;return}
    if(startChunk&&i===8){addHomePlot(g,key,x0+p[0],z0+p[1]);made++;return}
    if(d.style==='green'&&r()<.11){addPocketGarden(g,key,x0+p[0],z0+p[1],r);return}
    if(r()<.08&&made>5)return;
@@ -270,7 +289,7 @@ function createChunk(cx,cz){
  if(r()<.05){const p=randomPedestrianPath(x0,z0,r);addEnemy(g,key,p.x,p.z,r,p)}
  if(r()<.12){const p=randomPedestrianPath(x0,z0,r);addPolice(g,key,p.x,p.z,r,p)}
 
- const carN=2+Math.floor(r()*2);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
+ const trafficBase=d.style==='central'?4:d.style==='green'?2:3;const carN=trafficBase+Math.floor(r()*3);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
  if(r()<.55)addParkedCar(g,key,x0,z0,r)
 }
 function randomSidewalk(x0,z0,r){
@@ -378,18 +397,37 @@ function addParkedCar(g,key,x0,z0,r){
 function addHomePlot(g,key,x,z){
  const plot=new THREE.Group();
  const grass=new THREE.Mesh(new THREE.PlaneGeometry(16,14),new THREE.MeshStandardMaterial({color:0x4e744a,roughness:1}));grass.rotation.x=-Math.PI/2;grass.position.set(0,.03,0);plot.add(grass);
- const path=new THREE.Mesh(new THREE.PlaneGeometry(2.3,5),new THREE.MeshStandardMaterial({color:0xc8bea7,roughness:1}));path.rotation.x=-Math.PI/2;path.position.set(0,.04,-4.5);plot.add(path);
+ const path=new THREE.Mesh(new THREE.PlaneGeometry(2.5,5.4),new THREE.MeshStandardMaterial({color:0xc8bea7,roughness:1}));path.rotation.x=-Math.PI/2;path.position.set(0,.04,-4.4);plot.add(path);
+
  const fenceM=new THREE.MeshStandardMaterial({color:0x8a6547,roughness:.95});
- [[0,.55,-7,16,.28],[0,.55,7,16,.28],[-8,.55,0,.28,14],[8,.55,0,.28,14]].forEach(f=>{const m=new THREE.Mesh(new THREE.BoxGeometry(f[3],1.1,f[4]),fenceM);m.position.set(f[0],f[1],f[2]);plot.add(m)});
+ const fenceParts=[
+   [0,.55,7,16,.28],
+   [-8,.55,0,.28,14],[8,.55,0,.28,14],
+   [-4.9,.55,-7,6.2,.28],[4.9,.55,-7,6.2,.28]
+ ];
+ fenceParts.forEach(f=>{const m=new THREE.Mesh(new THREE.BoxGeometry(f[3],1.1,f[4]),fenceM);m.position.set(f[0],f[1],f[2]);plot.add(m)});
+ // Physics for fence, with a real gate opening at the south side.
+ colliders.push({key,minX:x-8.15,maxX:x-7.75,minZ:z-7,maxZ:z+7,type:'fence'});
+ colliders.push({key,minX:x+7.75,maxX:x+8.15,minZ:z-7,maxZ:z+7,type:'fence'});
+ colliders.push({key,minX:x-8,maxX:x+8,minZ:z+6.85,maxZ:z+7.15,type:'fence'});
+ colliders.push({key,minX:x-8,maxX:x-1.8,minZ:z-7.15,maxZ:z-6.85,type:'fence'});
+ colliders.push({key,minX:x+1.8,maxX:x+8,minZ:z-7.15,maxZ:z-6.85,type:'fence'});
+
  const sign=makeSign(state.landOwned?`🏠 CHEZ TOI N.${state.homeLevel}`:`🏡 TERRAIN ${HOME_PLOT_PRICE}`,'#9ef1ff');sign.position.set(0,3.3,-6.25);plot.add(sign);
+
+ let doorZ=z-7.55;
  if(state.landOwned){
    const lv=state.homeLevel||1,w=lv===1?5:lv===2?7:9,d=lv===1?5:lv===2?6.5:8,h=lv===1?3.2:lv===2?4.2:5.0;
-   const house=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({map:lv===1?textures.stone:textures.brick,roughness:.92}));house.position.set(0,h/2,.2);plot.add(house);
-   const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*.72,1.25,4),new THREE.MeshStandardMaterial({color:0x4a4f53,roughness:.9}));roof.rotation.y=Math.PI/4;roof.position.set(0,h+.62,.2);plot.add(roof);
-   const door=new THREE.Mesh(new THREE.PlaneGeometry(1.15,2.05),new THREE.MeshStandardMaterial({color:0x513a29}));door.position.set(0,1.05,-d/2-.012);door.rotation.y=Math.PI;plot.add(door);
-   if(lv>=2){for(const sx of [-2,2]){const win=new THREE.Mesh(new THREE.PlaneGeometry(1.15,.9),new THREE.MeshStandardMaterial({color:0x8fc8df,metalness:.2,roughness:.2}));win.position.set(sx,2.2,-d/2-.018);win.rotation.y=Math.PI;plot.add(win)}}
+   const house=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({map:lv===1?textures.stone:textures.brick,roughness:.92}));house.position.set(0,h/2,.7);plot.add(house);
+   const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*.72,1.25,4),new THREE.MeshStandardMaterial({color:0x4a4f53,roughness:.9}));roof.rotation.y=Math.PI/4;roof.position.set(0,h+.62,.7);plot.add(roof);
+   const door=new THREE.Mesh(new THREE.PlaneGeometry(1.15,2.05),new THREE.MeshStandardMaterial({color:0x513a29}));door.position.set(0,1.05,.7-d/2-.012);door.rotation.y=Math.PI;plot.add(door);
+   if(lv>=2){for(const sx of [-2,2]){const win=new THREE.Mesh(new THREE.PlaneGeometry(1.15,.9),new THREE.MeshStandardMaterial({color:0x8fc8df,metalness:.2,roughness:.2}));win.position.set(sx,2.2,.7-d/2-.018);win.rotation.y=Math.PI;plot.add(win)}}
+   // The house itself is solid.
+   colliders.push({key,minX:x-w/2-.25,maxX:x+w/2+.25,minZ:z+.7-d/2-.25,maxZ:z+.7+d/2+.25,type:'playerHome'});
+   doorZ=z+.7-d/2-.9
  }
- plot.position.set(x,0,z);g.add(plot);homePlots.push({key,x,z,price:HOME_PLOT_PRICE})
+ plot.position.set(x,0,z);g.add(plot);
+ homePlots.push({key,x,z:state.landOwned?doorZ:z-7.55,centerX:x,centerZ:z,price:HOME_PLOT_PRICE})
 }
 function makeSign(text,color='#ffdb77'){const c=document.createElement('canvas');c.width=512;c.height=128;const q=c.getContext('2d');q.fillStyle='#10222a';q.fillRect(0,0,512,128);q.fillStyle=color;q.font='bold 44px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(text,256,64);const t=new THREE.CanvasTexture(c),s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.scale.set(5.2,1.3,1);return s}
 function addShop(g,key,x,z,r,forcedType=null){
@@ -400,7 +438,9 @@ function addShop(g,key,x,z,r,forcedType=null){
  const awning=new THREE.Mesh(new THREE.BoxGeometry(6.2,.28,1.1),new THREE.MeshStandardMaterial({color:type==='corner'?0xe4bd55:type==='gear'?0xd46a53:0x9c77d2}));awning.position.set(0,3.35,-4.85);group.add(awning);
  const sign=makeSign(`${shop.icon} ${shop.name}`);sign.position.set(0,4.72,-4.72);group.add(sign);group.position.set(x,0,z);g.add(group);
  colliders.push({key,minX:x-5.2,maxX:x+5.2,minZ:z-4.7,maxZ:z+4.7,type:'shop'});
- shops.push({key,x,z,type,group,door:{x,z:z-5.05}})
+ shops.push({key,x,z,type,group,door:{x,z:z-5.05}});
+ const sid=`${state.cityId}:${Math.round(x)}:${Math.round(z)}:${type}`;
+ if(!state.discoveredShops.some(s=>s.id===sid))state.discoveredShops.push({id:sid,cityId:state.cityId,x,z,type})
 }
 function addApartmentDoor(g,key,x,z,dep){
  const door=new THREE.Mesh(new THREE.PlaneGeometry(1.6,2.6),new THREE.MeshStandardMaterial({color:0x49362b,roughness:.75}));door.position.set(x,1.4,z-dep/2-.012);door.rotation.y=Math.PI;g.add(door);
@@ -446,40 +486,50 @@ function createPerson(role,key,x,z,r,path=null){
  l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);
 
  const hasCash=r()<.50;
+ const pocketItems=[];
+ if(r()<.46)pocketItems.push(choice(STREET_ITEM_IDS));
+ if(r()<.12)pocketItems.push(choice(STREET_ITEM_IDS));
  const n={
    key,group,role,hostile,isPolice,
    axis:path?.axis||(r()<.5?'x':'z'),pathMin:path?.min??null,pathMax:path?.max??null,
    route:path?.route||null,routeIndex:path?.routeIndex||0,
    speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},
-   money:hasCash?(2+Math.floor(r()*34)):0,
+   money:hasCash?(2+Math.floor(r()*34)):0,pocketItems,
    legs:[l1,l2],arms:[a1,a2],phase:r()*6.2,
    name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),
-   missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false
+   missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false,following:false,trust:.25+r()*.7,courage:.2+r()*.75,followDoubt:r()*.55
  };
  group.traverse(o=>{o.userData.person=n;o.frustumCulled=false});
  return n
 }
-function createCarVisual(color){
- const group=new THREE.Group(),body=new THREE.Mesh(new THREE.BoxGeometry(1.75,.62,3.55),new THREE.MeshStandardMaterial({color,metalness:.35,roughness:.38}));body.position.y=.66;group.add(body);
- const top=new THREE.Mesh(new THREE.BoxGeometry(1.45,.58,1.8),new THREE.MeshStandardMaterial({color:0x7893a5,transparent:true,opacity:.72,metalness:.3,roughness:.15}));top.position.set(0,1.18,-.18);group.add(top);
- const bumperM=new THREE.MeshStandardMaterial({color:0x1b1f22,metalness:.5}),lampM=new THREE.MeshBasicMaterial({color:0xfff0bc});
- for(const x of [-.58,.58]){const lamp=new THREE.Mesh(new THREE.BoxGeometry(.28,.16,.05),lampM);lamp.position.set(x,.72,-1.79);group.add(lamp)}
- for(const x of [-.72,.72])for(const z of [-1.12,1.12]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.27,.27,.18,10),new THREE.MeshStandardMaterial({color:0x151719,roughness:1}));wheel.rotation.z=Math.PI/2;wheel.position.set(x,.34,z);group.add(wheel)}
+function createCarVisual(color,kind='car'){
+ const group=new THREE.Group();
+ const dims=kind==='van'?[1.9,.86,4.15]:kind==='compact'?[1.55,.58,3.05]:kind==='taxi'?[1.72,.62,3.55]:[1.75,.62,3.55];
+ const body=new THREE.Mesh(new THREE.BoxGeometry(dims[0],dims[1],dims[2]),new THREE.MeshStandardMaterial({color,metalness:.35,roughness:.38}));body.position.y=.66;group.add(body);
+ const top=new THREE.Mesh(new THREE.BoxGeometry(dims[0]*.82,kind==='van'?.78:.58,dims[2]*.5),new THREE.MeshStandardMaterial({color:0x7893a5,transparent:true,opacity:.72,metalness:.3,roughness:.15}));top.position.set(0,kind==='van'?1.38:1.18,-.18);group.add(top);
+ const lampM=new THREE.MeshBasicMaterial({color:0xfff0bc});
+ for(const x of [-dims[0]*.33,dims[0]*.33]){const lamp=new THREE.Mesh(new THREE.BoxGeometry(.28,.16,.05),lampM);lamp.position.set(x,.72,-dims[2]/2-.01);group.add(lamp)}
+ for(const x of [-dims[0]*.41,dims[0]*.41])for(const z of [-dims[2]*.31,dims[2]*.31]){const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.27,.27,.18,10),new THREE.MeshStandardMaterial({color:0x151719,roughness:1}));wheel.rotation.z=Math.PI/2;wheel.position.set(x,.34,z);group.add(wheel)}
+ if(kind==='taxi'){const sign=new THREE.Mesh(new THREE.BoxGeometry(.55,.17,.28),new THREE.MeshBasicMaterial({color:0xffd85e}));sign.position.set(0,1.58,0);group.add(sign)}
  return group
 }
 function addCar(g,key,x0,z0,r,i){
- const mode=r()<.5?'v':'h',dir=mode==='v'?(r()<.5?-1:1):(r()<.5?-1:1),group=createCarVisual(choice([0xc44b4b,0x4b6fc4,0x444b52,0xe0d3b4,0x4f9c68,0x9c7443]));
+ const mode=r()<.5?'v':'h',dir=r()<.5?-1:1;
+ const kind=r()<.18?'van':r()<.42?'compact':r()<.58?'taxi':'car';
+ const colors=kind==='taxi'?[0xd9bd39,0xe4c447]:[0xc44b4b,0x4b6fc4,0x444b52,0xe0d3b4,0x4f9c68,0x9c7443,0x6a5b9c];
+ const group=createCarVisual(choice(colors),kind);
  if(mode==='v'){
    const laneX=dir>0?x0+3.2:x0+7.8;
-   group.position.set(laneX,0,z0+18+i*18);
-   group.rotation.y=dir>0?Math.PI:0;
+   group.position.set(laneX,0,z0+16+(i%4)*13);
+   group.rotation.y=dir>0?Math.PI:0
  }else{
    const laneZ=dir>0?z0+7.8:z0+3.2;
-   group.position.set(x0+18+i*17,0,laneZ);
-   group.rotation.y=dir>0?-Math.PI/2:Math.PI/2;
+   group.position.set(x0+16+(i%4)*13,0,laneZ);
+   group.rotation.y=dir>0?-Math.PI/2:Math.PI/2
  }
  g.add(group);
- cars.push({key,group,mode,dir,speed:4.1+r()*2.1,lastHit:0,turnCooldown:.6+Math.random(),turnSeed:Math.random()})
+ const baseSpeed=kind==='van'?3.3:kind==='compact'?5.4:kind==='taxi'?4.8:4.2;
+ cars.push({key,group,mode,dir,kind,speed:baseSpeed+r()*1.45,lastHit:0,turnCooldown:1+Math.random()*1.5,turnSeed:r()})
 }
 
 function unload(key){
@@ -489,9 +539,19 @@ function unload(key){
  colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key);homePlots=homePlots.filter(x=>x.key!==key);trafficLights=trafficLights.filter(x=>x.group.parent!==g);alleys=alleys.filter(x=>x.key!==key)
 }
 function ensureChunks(force=false){if(state.interior)return;const {cx,cz}=currentChunk();for(let x=cx-LOAD;x<=cx+LOAD;x++)for(let z=cz-LOAD;z<=cz+LOAD;z++)createChunk(x,z);for(const[k,g]of chunks){if(Math.abs(g.userData.cx-cx)>UNLOAD||Math.abs(g.userData.cz-cz)>UNLOAD)unload(k)}if(force)drawMap()}
-function collides(x,z){if(state.interior)return Math.abs(x)>8.5||z<-8.5||z>8.5;return colliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ)}
+function collides(x,z){
+ if(state.interior)return Math.abs(x)>8.5||z<-8.5||z>8.5||interiorColliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ);
+ return colliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ)
+}
+function blockedByPerson(x,z){
+ for(const n of [...npcs,...police,...enemies]){
+   if(!n?.group?.parent)continue;
+   if(Math.hypot(x-n.group.position.x,z-n.group.position.z)<.62)return true
+ }
+ return false
+}
 function entityBlocked(x,z,pad=.3){return colliders.some(c=>x+pad>c.minX&&x-pad<c.maxX&&z+pad>c.minZ&&z-pad<c.maxZ)}
-function movePlayer(dx,dz){const nx=state.pos.x+dx,nz=state.pos.z+dz;if(!collides(nx,state.pos.z))state.pos.x=nx;if(!collides(state.pos.x,nz))state.pos.z=nz}
+function movePlayer(dx,dz){const nx=state.pos.x+dx,nz=state.pos.z+dz;if(!collides(nx,state.pos.z)&&!blockedByPerson(nx,state.pos.z))state.pos.x=nx;if(!collides(state.pos.x,nz)&&!blockedByPerson(state.pos.x,nz))state.pos.z=nz}
 function moveEntity(n,dx,dz,pad=.28){
  let moved=false,x=n.group.position.x,z=n.group.position.z;
  if(!entityBlocked(x+dx,z,pad)){n.group.position.x=x+dx;moved=true}
@@ -523,45 +583,51 @@ function updateCars(dt,t){
  const verticalGreen=updateTrafficLights(t);
  for(const c of cars){
    c.turnCooldown=Math.max(0,(c.turnCooldown||0)-dt);
-
    let cx=Math.floor(c.group.position.x/CHUNK),cz=Math.floor(c.group.position.z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
    const newKey=ck(cx,cz);
-   if(newKey!==c.key&&chunks.has(newKey)){
-     chunks.get(newKey).add(c.group);
-     c.key=newKey
-   }
+   if(newKey!==c.key&&chunks.has(newKey)){chunks.get(newKey).add(c.group);c.key=newKey}
    const localX=c.group.position.x-x0,localZ=c.group.position.z-z0;
 
    if(c.mode==='v'){
-     // +Z uses west lane, -Z uses east lane.
-     const laneX=c.dir>0?x0+3.0:x0+8.0;
-     c.group.position.x+=(laneX-c.group.position.x)*Math.min(1,dt*8);
-     const nearIntersection=localZ<11.2&&localZ>1.0;
-     const red=nearIntersection&&!verticalGreen;
-     if(!red)c.group.position.z+=c.dir*c.speed*dt;
+     const laneX=c.dir>0?x0+3.2:x0+7.8;c.group.position.x+=(laneX-c.group.position.x)*Math.min(1,dt*8);
+     // Red-light stop lines are before the pedestrian crossing.
+     const stopAt=c.dir>0?z0+CHUNK-2.4:z0+13.2;
+     const distance=c.dir>0?stopAt-c.group.position.z:c.group.position.z-stopAt;
+     const mustStop=!verticalGreen&&distance>=0&&distance<6.2;
+     if(mustStop){
+       if(c.dir>0)c.group.position.z=Math.min(c.group.position.z,stopAt);
+       else c.group.position.z=Math.max(c.group.position.z,stopAt)
+     }else{
+       c.group.position.z+=c.dir*c.speed*dt
+     }
 
-     const turnZone=Math.abs(localZ-5.5)<1.1;
-     if(turnZone&&c.turnCooldown<=0&&Math.random()<.055){
-       const right=Math.random()<.62;
-       if(c.dir>0){c.mode='h';c.dir=right?-1:1;c.group.position.z=right?z0+3.0:z0+8.0}
-       else{c.mode='h';c.dir=right?1:-1;c.group.position.z=right?z0+8.0:z0+3.0}
-       c.turnCooldown=2.2
+     // Turn only once the vehicle has entered the intersection on green.
+     const turnZone=c.dir>0?(localZ<7&&localZ>3):(localZ<8&&localZ>3);
+     if(verticalGreen&&turnZone&&c.turnCooldown<=0&&Math.random()<.035){
+       const right=c.turnSeed<.62;
+       if(c.dir>0){c.mode='h';c.dir=right?-1:1;c.group.position.z=right?z0+3.2:z0+7.8}
+       else{c.mode='h';c.dir=right?1:-1;c.group.position.z=right?z0+7.8:z0+3.2}
+       c.turnCooldown=2.8;c.turnSeed=Math.random()
      }
      c.group.rotation.y=c.dir>0?Math.PI:0
    }else{
-     // +X uses north lane, -X uses south lane.
-     const laneZ=c.dir>0?z0+8.0:z0+3.0;
-     c.group.position.z+=(laneZ-c.group.position.z)*Math.min(1,dt*8);
-     const nearIntersection=localX<11.2&&localX>1.0;
-     const red=nearIntersection&&verticalGreen;
-     if(!red)c.group.position.x+=c.dir*c.speed*dt;
+     const laneZ=c.dir>0?z0+7.8:z0+3.2;c.group.position.z+=(laneZ-c.group.position.z)*Math.min(1,dt*8);
+     const stopAt=c.dir>0?x0+CHUNK-2.4:x0+13.2;
+     const distance=c.dir>0?stopAt-c.group.position.x:c.group.position.x-stopAt;
+     const mustStop=verticalGreen&&distance>=0&&distance<6.2;
+     if(mustStop){
+       if(c.dir>0)c.group.position.x=Math.min(c.group.position.x,stopAt);
+       else c.group.position.x=Math.max(c.group.position.x,stopAt)
+     }else{
+       c.group.position.x+=c.dir*c.speed*dt
+     }
 
-     const turnZone=Math.abs(localX-5.5)<1.1;
-     if(turnZone&&c.turnCooldown<=0&&Math.random()<.055){
-       const right=Math.random()<.62;
-       if(c.dir>0){c.mode='v';c.dir=right?1:-1;c.group.position.x=right?x0+3.0:x0+8.0}
-       else{c.mode='v';c.dir=right?-1:1;c.group.position.x=right?x0+8.0:x0+3.0}
-       c.turnCooldown=2.2
+     const turnZone=c.dir>0?(localX<7&&localX>3):(localX<8&&localX>3);
+     if(!verticalGreen&&turnZone&&c.turnCooldown<=0&&Math.random()<.035){
+       const right=c.turnSeed<.62;
+       if(c.dir>0){c.mode='v';c.dir=right?1:-1;c.group.position.x=right?x0+3.2:x0+7.8}
+       else{c.mode='v';c.dir=right?-1:1;c.group.position.x=right?x0+7.8:x0+3.2}
+       c.turnCooldown=2.8;c.turnSeed=Math.random()
      }
      c.group.rotation.y=c.dir>0?-Math.PI/2:Math.PI/2
    }
@@ -606,6 +672,56 @@ function patrolPerson(n,dt){
  const dx=n.axis==='x'?n.dir*n.speed*dt:0,dz=n.axis==='z'?n.dir*n.speed*dt:0;
  if(moveEntity(n,dx,dz,.3))setHeading(n,dx,dz)
 }
+function updateFollower(n,dt){
+ const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);
+ if(dist>13){n.following=false;toast(`${n.name} a arrêté de te suivre.`);return}
+ if(dist>1.55){
+   const sx=dx/(dist||1)*n.speed*1.18*dt,sz=dz/(dist||1)*n.speed*1.18*dt;
+   if(moveEntity(n,sx,sz,.3))setHeading(n,sx,sz)
+ }
+}
+function isInAlley(x,z){
+ return alleys.some(a=>{
+   const dx=Math.abs(x-a.x),dz=Math.abs(z-a.z);
+   return (dx<2.8&&dz<28)||(dz<2.8&&dx<28)
+ })
+}
+function askFollow(n){
+ if(n.following)return toast(`${n.name} te suit déjà.`);
+ const doubt=clamp(n.followDoubt+state.wanted*.12-(state.reputation||0)*.015,0,.95);
+ const chance=clamp(n.trust-doubt+.28,.08,.92);
+ closeSheet();
+ if(Math.random()<chance){
+   n.following=true;n.route=null;n.caught=false;
+   toast(`${n.name} accepte de te suivre.`)
+ }else{
+   n.trust=Math.max(0,n.trust-.1);
+   toast(`${n.name} refuse : il/elle se méfie.`)
+ }
+}
+function transferPocketLoot(n,all=false){
+ let coins=0,items=[];
+ if(n.money>0){coins=all?n.money:Math.min(n.money,8+Math.floor(Math.random()*14));n.money-=coins;state.coins+=coins;state.coinsEarned+=coins;state.stolenCoins+=coins}
+ const takeCount=all?Math.min(n.pocketItems.length,2):Math.min(n.pocketItems.length,1);
+ for(let i=0;i<takeCount&&invCount()<state.bagMax;i++){const id=n.pocketItems.shift();addInv(id);items.push(id)}
+ return {coins,items}
+}
+function robFollower(n){
+ if(!n.following)return;
+ if(!isInAlley(state.pos.x,state.pos.z))return toast('Va dans une ruelle plus isolée.');
+ const compliance=clamp(.58+(weapon().damage>10?.12:0)-n.courage*.38+(state.reputation||0)*.005,.12,.88);
+ n.following=false;n.pickpocketed=true;n.caught=true;
+ if(Math.random()<compliance){
+   const loot=transferPocketLoot(n,true);
+   const names=loot.items.map(id=>itemInfo(id).name);
+   toast(`Butin : ${loot.coins?loot.coins+' crédits':''}${loot.coins&&names.length?' + ':''}${names.join(', ')||(!loot.coins?'rien':'')}`);
+   if(n.courage>.55&&Math.random()<.35){n.aggroTime=6;n.calledPolice=false;state.wanted=Math.max(1,state.wanted)}
+ }else{
+   n.aggroTime=9;n.calledPolice=false;state.wanted=Math.max(1,state.wanted);
+   toast(`${n.name} refuse et appelle à l’aide !`)
+ }
+ save()
+}
 function updateAngryCivilian(n,dt,t){
  const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);
  n.aggroTime=Math.max(0,n.aggroTime-dt);
@@ -634,6 +750,7 @@ function updatePeople(dt,t){
  policeSeeing=false;
  for(const n of npcs){
    if(n.aggroTime>0) updateAngryCivilian(n,dt,t);
+   else if(n.following) updateFollower(n,dt);
    else patrolPerson(n,dt);
    n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x;
    if(n.arms){n.arms[0].rotation.x=-n.legs[0].rotation.x*.7;n.arms[1].rotation.x=-n.legs[1].rotation.x*.7}
@@ -679,9 +796,12 @@ function segmentRect(x1,y1,x2,y2,minX,minY,maxX,maxY){
 function policeCatch(){
  if(state.interior)return;
  const fine=Math.min(state.coins,Math.max(12,Math.round(state.coins*(.10+state.wanted*.055))));
+ let seized='';
+ const carried=state.inventory.filter(i=>STREET_ITEMS[i.id]&&i.qty>0);
+ if(carried.length&&Math.random()<.65){const x=choice(carried);removeStack(state.inventory,x.id,1);seized=itemInfo(x.id).name}
  state.coins-=fine;state.policeCaught++;state.wanted=0;hiddenTimer=0;
  if(tailTheft)stopTailTheft('La police t’a attrapé.',true);
- clearTarget();state.pos={x:2,z:8};toast(`👮 Attrapé : -${fine} crédits`);save()
+ clearTarget();state.pos={x:2,z:8};toast(`👮 Attrapé : -${fine} crédits${seized?` • ${seized} confisqué`:''}`);save()
 }function animatePickups(dt,t){for(const p of pickups){if(!p.parent)continue;p.rotation.y+=dt;p.position.y=(p.userData.type==='artifact'?.72:.43)+Math.sin(t/450+p.position.x)*.07}}
 function animate(){
  if(!renderer)return;requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta()),t=performance.now();
@@ -730,6 +850,9 @@ function checkInteraction(){
  }
  if(tailTheft?.active)return hidePrompt();
 
+ const follower=nearest(npcs.filter(n=>n.following),1.85);
+ if(follower&&isInAlley(state.pos.x,state.pos.z))return setPrompt(follower.name,'La ruelle est isolée.','BRAQUER',()=>robFollower(follower));
+
  if(selectedNPC&&selectedNPC.group.parent){
    const d=Math.hypot(state.pos.x-selectedNPC.group.position.x,state.pos.z-selectedNPC.group.position.z);
    if(d<2.25){
@@ -746,8 +869,12 @@ function checkInteraction(){
  const n=nearest(npcs,1.5);if(n)return setPrompt(n.name,'Touche le passant pour le choisir comme cible, ou ouvre le dialogue.','PARLER',()=>talkNPC(n));
  hidePrompt()
 }
-function setPrompt(t,d,b,fn){currentInteractFn=fn;$('#promptTitle').textContent=t;$('#promptText').textContent=d;$('#promptBtn').textContent=b;$('#promptBtn').onclick=fn;$('#prompt').classList.remove('hidden')}
-function hidePrompt(){currentInteractFn=null;$('#prompt').classList.add('hidden')}
+function setPrompt(t,d,b,fn){
+ currentInteractFn=fn;const sig=`${t}|${d}|${b}`;
+ if(sig!==lastPromptSig){lastPromptSig=sig;$('#promptTitle').textContent=t;$('#promptText').textContent=d;$('#promptBtn').textContent=b}
+ $('#promptBtn').onclick=fn;$('#prompt').classList.remove('hidden')
+}
+function hidePrompt(){currentInteractFn=null;lastPromptSig='';if(!$('#prompt').classList.contains('hidden'))$('#prompt').classList.add('hidden')}
 function pickupName(t){return{medkit:'Kit de soin',rare:'Cache de matériel',artifact:city().artifact}[t]}
 function artifactLabel(id){return (CITIES.find(c=>c.id===id)||{artifact:id}).artifact}
 function artifactCount(id){return state.artifactBag.filter(x=>x===id).length}
@@ -788,8 +915,15 @@ function talkNPC(n){
 }
 function showNpcChoices(n){
  $('#dialogue').classList.add('hidden');
- openSheet('npc');$('#sheetTitle').textContent=n.name;$('#sheetBody').innerHTML=`<div class="card"><h3>Que faire ?</h3><div class="grid2"><button class="menuBtn primary" id="talkAgain">💬 Discuter</button><button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Faire les poches<small>${n.pickpocketed?'Déjà fouillé':n.caught?'Sur ses gardes':'Tu la sélectionnes puis la fouille démarre quand tu restes derrière elle.'}</small></button></div></div>`;
- $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'Profite du quartier, il y a toujours quelque chose à découvrir.',hideDialogue)};const pp=$('#pickpocket');if(pp)pp.onclick=()=>{closeSheet();selectTarget(n);toast('Cible sélectionnée : suis-la et place-toi derrière.')}
+ openSheet('npc');$('#sheetTitle').textContent=n.name;
+ $('#sheetBody').innerHTML=`<div class="card"><div class="grid2">
+ <button class="menuBtn primary" id="talkAgain">💬 Discuter</button>
+ <button class="menuBtn" id="askFollow" ${n.caught?'disabled':''}>🚶 Suis-moi<small>${n.following?'Te suit déjà':'Peut accepter ou se méfier'}</small></button>
+ <button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Faire les poches<small>${n.pickpocketed?'Déjà fouillé':n.caught?'Sur ses gardes':'Suis-le/la discrètement'}</small></button>
+ </div></div>`;
+ $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'On se croise peut-être plus loin.',hideDialogue)};
+ const af=$('#askFollow');if(af)af.onclick=()=>askFollow(n);
+ const pp=$('#pickpocket');if(pp)pp.onclick=()=>{closeSheet();selectTarget(n);toast('Cible sélectionnée.')}
 }
 function assignNpcMission(n){const opts=[{kind:'pockets',text:'récupère 30 crédits sur des passants',target:30,start:state.stolenCoins,reward:90},{kind:'container',text:'fouille 2 caches ou poubelles',target:2,start:state.containersOpened,reward:110},{kind:'explore',text:'découvre 2 nouveaux quartiers',target:2,start:state.seenDistricts.length,reward:120}];state.activeNpcMission={...choice(opts),giver:n.name};save()}
 function npcMissionProgress(){const m=state.activeNpcMission;if(!m)return null;const now=m.kind==='pockets'?state.stolenCoins:m.kind==='container'?state.containersOpened:state.seenDistricts.length;return now-m.start}
@@ -798,7 +932,7 @@ function selectTarget(n){
  if(!n||n.hostile||n.isPolice)return;
  clearTarget(false);selectedNPC=n;
  const marker=makeSign('▼ CIBLE','#8ee8ff');marker.scale.set(2.8,.7,1);marker.position.set(0,2.55,0);n.group.add(marker);targetMarker=marker;
- $('#targetCard').classList.remove('hidden');$('#targetName').textContent=n.name;$('#targetInfo').textContent='Suis-la. Dès que tu es bien derrière, la fouille démarre automatiquement.';updateTargetHUD()
+ $('#targetCard').classList.remove('hidden');$('#targetName').textContent=n.name;$('#targetInfo').textContent='Suis la cible et reste derrière.';updateTargetHUD()
 }
 function clearTarget(show=true){
  if(tailTheft?.active)stopTailTheft('Filature annulée.');
@@ -814,30 +948,43 @@ function startTailTheft(n){
  if(!n||n.pickpocketed)return;
  const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);if(d>2.1)return;
  if(!isBehindTarget(n))return;
- tailTheft={npc:n,suspicion:0,validStealTime:0,lostTime:0,nextCoin:.65+Math.random()*.55,emptyTimer:0,policeObserved:false,stolen:0};
- document.body.classList.add('crime-active');$('#targetInfo').textContent='Vol en cours : reste derrière, proche et hors de vue de la police.'
+ tailTheft={npc:n,suspicion:0,validStealTime:0,lostTime:0,nextCoin:.65+Math.random()*.55,emptyTimer:0,policeObserved:false,stolen:0,items:[]};
+ document.body.classList.add('crime-active');$('#targetInfo').textContent='Fouille en cours.'
 }
 function updateTailTheft(dt,t){
  if(!tailTheft?.active&&tailTheft)tailTheft.active=true;
  if(!tailTheft?.active)return;
  const n=tailTheft.npc;
- if(!n?.group?.parent)return stopTailTheft('La cible est partie.');
- const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z),behind=isBehindTarget(n),hidden=isPlayerHidden();
+ if(!n?.group?.parent)return stopTailTheft('Cible perdue.');
+ const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z),behind=isBehindTarget(n);
  const ideal=d>=.62&&d<=1.65&&behind;
- if(d>2.2){tailTheft.lostTime+=dt;if(tailTheft.lostTime>1.3)return stopTailTheft('Tu as perdu la cible.')}else tailTheft.lostTime=Math.max(0,tailTheft.lostTime-dt*2);
+ if(d>2.2){tailTheft.lostTime+=dt;if(tailTheft.lostTime>1.3)return stopTailTheft('Cible perdue.')}else tailTheft.lostTime=Math.max(0,tailTheft.lostTime-dt*2);
 
  if(ideal){
    tailTheft.validStealTime+=dt;tailTheft.nextCoin-=dt;
    tailTheft.suspicion=Math.max(0,tailTheft.suspicion-dt*(5+state.stealth*2));
-   if(n.money<=0){
-     tailTheft.emptyTimer+=dt;if(tailTheft.emptyTimer>1.15){n.pickpocketed=true;return stopTailTheft(tailTheft.stolen>0?'Tu as vidé ses poches.':'Poches vides : rien à récupérer.')}
+
+   const hasMoney=n.money>0,hasItems=n.pocketItems.length>0;
+   if(!hasMoney&&!hasItems){
+     tailTheft.emptyTimer+=dt;
+     if(tailTheft.emptyTimer>1.0){n.pickpocketed=true;return stopTailTheft((tailTheft.stolen||tailTheft.items.length)?'Poches vidées.':'Poches vides.')}
    }else if(tailTheft.nextCoin<=0){
-     const take=Math.min(n.money,1+Math.floor(Math.random()*(3+Math.min(2,state.stealth))));n.money-=take;state.coins+=take;state.coinsEarned+=take;state.stolenCoins+=take;tailTheft.stolen+=take;
-     tailTheft.nextCoin=.72+Math.random()*.72;$('#targetLoot').textContent=`🪙 +${tailTheft.stolen}`;checkQuests();maybeCompleteNpcMission()
+     const stealItem=hasItems&&(!hasMoney||Math.random()<.28);
+     if(stealItem){
+       if(invCount()>=state.bagMax)return stopTailTheft('Sac plein.');
+       const id=n.pocketItems.shift();addInv(id);tailTheft.items.push(id);
+       $('#targetLoot').textContent=`🪙 ${tailTheft.stolen} • 🎒 ${tailTheft.items.length}`;
+       toast(`${itemInfo(id).icon} ${itemInfo(id).name} récupéré`)
+     }else if(hasMoney){
+       const take=Math.min(n.money,1+Math.floor(Math.random()*(3+Math.min(2,state.stealth))));
+       n.money-=take;state.coins+=take;state.coinsEarned+=take;state.stolenCoins+=take;tailTheft.stolen+=take;
+       $('#targetLoot').textContent=`🪙 ${tailTheft.stolen} • 🎒 ${tailTheft.items.length}`
+     }
+     tailTheft.nextCoin=.72+Math.random()*.72;checkQuests();maybeCompleteNpcMission()
    }
  }else{
    tailTheft.validStealTime=Math.max(0,tailTheft.validStealTime-dt*.35);
-   tailTheft.suspicion+=dt*(behind?14:32)+(d<.55?dt*35:0);
+   tailTheft.suspicion+=dt*(behind?14:32)+(d<.55?dt*35:0)
  }
  tailTheft.suspicion+=dt*Math.max(0,(tailTheft.validStealTime-5.5))*1.8;
  if(tailTheft.policeObserved)return theftSpottedByPolice();
@@ -854,7 +1001,7 @@ function theftSpottedByPolice(){
 }
 function stopTailTheft(msg,caught=false){
  if(!tailTheft)return;const n=tailTheft.npc,stolen=tailTheft.stolen||0;
- if(stolen>0&&!n._counted){state.pickpockets++;n._counted=true}
+ if((stolen>0||(tailTheft.items?.length||0)>0)&&!n._counted){state.pickpockets++;n._counted=true}
  tailTheft=null;document.body.classList.remove('crime-active');$('#targetInfo').textContent=caught?'Repéré ! Cache-toi et coupe la ligne de vue.':'Filature interrompue.';if(msg)toast(msg);save()
 }
 function updateTargetHUD(){
@@ -868,7 +1015,7 @@ function updateTargetHUD(){
  if(tailTheft){
    $('#targetInfo').textContent=policeSeeing?'👮 Police en vue ! Cache-toi.':(!behind?'⚠️ Reviens derrière la cible.':(isPlayerHidden()?'🌿 Caché — poursuis la fouille.':'🫳 Fouille en cours…'));
  }else{
-   $('#targetInfo').textContent=selectedNPC.pickpocketed?'Cette personne a déjà été fouillée.':(behind&&d<=1.65?'La fouille démarre toute seule.':'Suis-la puis place-toi derrière elle.')
+   $('#targetInfo').textContent=selectedNPC.pickpocketed?'Déjà fouillé.':(behind&&d<=1.65?'Fouille automatique.':'Reste derrière.')
  }
 }
 function setupWorldTap(){
@@ -888,7 +1035,7 @@ function showDialogue(name,text,next){$('#dialogueName').textContent=name;$('#di
 function hideDialogue(){$('#dialogue').classList.add('hidden')}
 
 function enterInterior(type,obj){
- state.returnPos={...state.pos};state.interior={type,shopType:obj?.type||null};for(const[,g]of chunks)g.visible=false;
+ state.returnPos={...state.pos};state.interior={type,shopType:obj?.type||null};interiorColliders=[];for(const[,g]of chunks)g.visible=false;
  if(interiorGroup)scene.remove(interiorGroup);interiorGroup=new THREE.Group();scene.add(interiorGroup);
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(18,18),new THREE.MeshStandardMaterial({color:type==='shop'?0x786f60:type==='home'?0x7b6c5d:0x6b665f,roughness:1}));floor.rotation.x=-Math.PI/2;interiorGroup.add(floor);
  const wallM=new THREE.MeshStandardMaterial({color:type==='shop'?0xc8c0aa:type==='home'?0xd7cfbf:0xd2cbc1});[[0,2.5,-9,18,.25],[0,2.5,9,18,.25],[-9,2.5,0,.25,18],[9,2.5,0,.25,18]].forEach(w=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],5,w[4]),wallM);m.position.set(w[0],w[1],w[2]);interiorGroup.add(m)});
@@ -896,8 +1043,8 @@ function enterInterior(type,obj){
  state.pos={x:0,z:6.5};state.yaw=0;state.pitch=0;hidePrompt();save()
 }
 function buildShopInterior(type){
- const shelfM=new THREE.MeshStandardMaterial({color:0x4c3c2d});for(let i=-1;i<=1;i++){const s=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.8,5),shelfM);s.position.set(i*4,1,0);interiorGroup.add(s)}
- const counter=new THREE.Mesh(new THREE.BoxGeometry(5,1.2,1.2),new THREE.MeshStandardMaterial({color:0x2f4855}));counter.position.set(0,.6,-6);interiorGroup.add(counter);
+ const shelfM=new THREE.MeshStandardMaterial({color:0x4c3c2d});for(let i=-1;i<=1;i++){const s=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.8,5),shelfM);s.position.set(i*4,1,0);interiorGroup.add(s);interiorColliders.push({minX:i*4-.95,maxX:i*4+.95,minZ:-2.55,maxZ:2.55})}
+ const counter=new THREE.Mesh(new THREE.BoxGeometry(5,1.2,1.2),new THREE.MeshStandardMaterial({color:0x2f4855}));counter.position.set(0,.6,-6);interiorGroup.add(counter);interiorColliders.push({minX:-2.55,maxX:2.55,minZ:-6.65,maxZ:-5.35});
  const sign=makeSign(`${SHOPS[type].icon} ${SHOPS[type].name}`);sign.position.set(0,3,-8.5);interiorGroup.add(sign)
 }
 function buildApartmentInterior(){
@@ -922,24 +1069,42 @@ function buildHomeInterior(){
  const desk=new THREE.Mesh(new THREE.BoxGeometry(4.1,1,1.1),new THREE.MeshStandardMaterial({color:0x56422f}));desk.position.set(0,.5,-6.2);interiorGroup.add(desk);
  const rug=new THREE.Mesh(new THREE.PlaneGeometry(5.4,3.5),new THREE.MeshStandardMaterial({color:0x31576c,roughness:1}));rug.rotation.x=-Math.PI/2;rug.position.set(0,.02,-1);interiorGroup.add(rug);
  const maxSlots=state.homeLevel===1?8:state.homeLevel===2?12:16;
- state.homePlaced.slice(0,maxSlots).forEach((id,i)=>{const slot=HOME_SLOTS[i],p=makeHomeProp(id);p.position.set(slot.x,0,slot.z);if(slot.rot)p.rotation.y=slot.rot;interiorGroup.add(p)});
+ state.homePlaced.slice(0,maxSlots).forEach((id,i)=>{
+   const slot=HOME_SLOTS[i],p=makeHomeProp(id);p.position.set(slot.x,0,slot.z);if(slot.rot)p.rotation.y=slot.rot;interiorGroup.add(p);
+   const sizes={wallKit:[1.7,.25],sofa:[1.45,.75],table:[.95,.75],lamp:[.35,.35],plant:[.55,.55],wardrobe:[.9,.5],chest:[.75,.55],safe:[.7,.6]};
+   const s=sizes[id]||[.5,.5];interiorColliders.push({minX:slot.x-s[0],maxX:slot.x+s[0],minZ:slot.z-s[1],maxZ:slot.z+s[1]})
+ });
  if(state.artifacts.length){
    const shelf=new THREE.Mesh(new THREE.BoxGeometry(5,.16,.65),new THREE.MeshStandardMaterial({color:0x66482f}));shelf.position.set(0,1.25,7.9);interiorGroup.add(shelf);
    state.artifacts.slice(0,5).forEach((id,i)=>{const art=new THREE.Mesh(new THREE.OctahedronGeometry(.32),new THREE.MeshStandardMaterial({color:0x61d7ff,emissive:0x15546c,emissiveIntensity:.9}));art.position.set(-2+i,1.65,7.85);interiorGroup.add(art)})
  }
 }
 function exitInterior(){leaveInterior()}
-function leaveInterior(){if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}for(const[,g]of chunks)g.visible=true;state.interior=null;state.pos=state.returnPos||{x:2,z:8};state.returnPos=null;save();hidePrompt()}
+function leaveInterior(){if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}interiorColliders=[];for(const[,g]of chunks)g.visible=true;state.interior=null;state.pos=state.returnPos||{x:2,z:8};state.returnPos=null;save();hidePrompt()}
 function physicalShopHTML(){
- const s=SHOPS[state.interior.shopType];
- const arts=[...new Set(state.artifactBag)];
- return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits disponibles. ${state.reputation?`Réputation ${state.reputation} : remise jusqu’à ${Math.min(15,state.reputation)}%.`:''}</p></div>
- <div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price} crédits</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div>
- <div class="card"><h3>💎 Vente d’artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>En sac ×${artifactCount(id)} • 500 crédits pièce</small></div><button class="menuBtn sellArtifact" data-id="${id}">Vendre</button></div>`).join(''):'<p class="sub">Aucun artefact à vendre pour le moment.</p>'}</div>
- <button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir de la boutique</button>`
+ const s=SHOPS[state.interior.shopType],arts=[...new Set(state.artifactBag)];
+ const valuables=state.inventory.filter(i=>STREET_ITEMS[i.id]&&i.qty>0);
+ const resale=state.interior.shopType==='pawn'
+   ?`<div class="card"><h3>📦 Revente d’objets</h3>${valuables.length?valuables.map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty} • ${info.value} crédits pièce</small></div><button class="menuBtn sellLoot" data-id="${i.id}">Vendre</button></div>`}).join(''):'<p class="sub">Aucun objet revendable.</p>'}</div>`
+   :'';
+ return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits${state.reputation?` • remise ${Math.min(15,state.reputation)}%`:''}</p></div>
+ <div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price}</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div>
+ ${resale}
+ <div class="card"><h3>💎 Artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • 500 crédits</small></div><button class="menuBtn sellArtifact" data-id="${id}">Vendre</button></div>`).join(''):'<p class="sub">Aucun artefact.</p>'}</div>
+ <button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`
 }
 function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),finalPrice=Math.max(1,Math.round(price*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(id==='snack'){state.hp=clamp(state.hp+15,0,state.maxHp)}if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;if(HOME_ITEMS[id])addHomeItem(id);save();updateHUD();toast('Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
-function bindShop(){$$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));$('#leaveShop').onclick=()=>{closeSheet();leaveInterior()}}
+function sellLoot(id){
+ const info=STREET_ITEMS[id];if(!info||!removeStack(state.inventory,id,1))return;
+ state.coins+=info.value;save();toast(`${info.name} vendu : +${info.value}`);
+ $('#sheetBody').innerHTML=physicalShopHTML();bindShop()
+}
+function bindShop(){
+ $$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));
+ $$('.sellLoot').forEach(b=>b.onclick=()=>sellLoot(b.dataset.id));
+ $$('.sellArtifact').forEach(b=>b.onclick=()=>sellArtifact(b.dataset.id));
+ $('#leaveShop').onclick=()=>{closeSheet();leaveInterior()}
+}
 
 function buyLand(){if(state.landOwned)return enterInterior('home',{});if(state.coins<HOME_PLOT_PRICE)return toast('Pas assez de crédits pour acheter ce terrain');state.coins-=HOME_PLOT_PRICE;state.landOwned=true;toast('Terrain acheté ! Tu as maintenant une base.');save();for(const[k] of [...chunks]){unload(k)}ensureChunks(true)}
 function homeHTML(){
@@ -956,6 +1121,10 @@ function homeHTML(){
  <div class="card"><h3>🗄️ Coffre</h3><p class="sub">${canSecure?'Ton argent déposé ici est protégé des amendes de police.':'Place un coffre ou coffre sécurisé pour activer le stockage.'}</p>
  <div class="placeGrid"><button class="menuBtn deposit50" ${canSecure?'':'disabled'}>Déposer 50</button><button class="menuBtn withdraw50" ${canSecure?'':'disabled'}>Retirer 50</button><button class="menuBtn depositMed" ${canSecure&&stackCount(state.inventory,'medkit')>0?'':'disabled'}>Déposer medkit</button><button class="menuBtn withdrawMed" ${(canSecure&&(state.homeStorage.medkit||0)>0)?'':'disabled'}>Retirer medkit</button></div></div>
  <div class="card"><h3>🛏️ Repos</h3><p class="sub">Dormir restaure tous tes PV, fait avancer le temps et réduit la recherche policière.</p><button class="menuBtn green" id="restHome" style="width:100%">Dormir à la maison</button></div>
+ <div class="card"><h3>📦 Objets de valeur</h3>
+ ${state.inventory.filter(i=>STREET_ITEMS[i.id]).map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>Sur toi ×${i.qty}</small></div><button class="menuBtn depositLoot" data-id="${i.id}">Déposer</button></div>`}).join('')||'<p class="sub">Aucun objet de valeur sur toi.</p>'}
+ ${Object.entries(state.homeStorage).filter(([id,qty])=>STREET_ITEMS[id]&&qty>0).map(([id,qty])=>{const info=itemInfo(id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>Au coffre ×${qty}</small></div><button class="menuBtn withdrawLoot" data-id="${id}">Retirer</button></div>`}).join('')}
+ </div>
  <div class="card"><h3>🏆 Collection</h3><p class="sub">${state.artifacts.length}/${CITIES.length} artefacts exposés automatiquement dans ta base.</p></div>`
 }
 function placeHomeItem(id){
@@ -974,6 +1143,8 @@ function restAtHome(){
 }
 function depositCoins(amount=50){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(state.coins<amount)return toast('Pas assez de crédits sur toi');state.coins-=amount;state.homeBank+=amount;save();openSheet('home')}
 function withdrawCoins(amount=50){if(state.homeBank<amount)return toast('Pas assez dans le coffre');state.homeBank-=amount;state.coins+=amount;save();openSheet('home')}
+function depositValuable(id){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(!removeStack(state.inventory,id,1))return;state.homeStorage[id]=(state.homeStorage[id]||0)+1;save();openSheet('home')}
+function withdrawValuable(id){if((state.homeStorage[id]||0)<=0)return;if(invCount()>=state.bagMax)return toast('Sac plein');state.homeStorage[id]--;addInv(id);save();openSheet('home')}
 function depositMedkit(){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(!removeStack(state.inventory,'medkit',1))return toast('Aucun medkit à déposer');state.homeStorage.medkit=(state.homeStorage.medkit||0)+1;save();openSheet('home')}
 function withdrawMedkit(){if((state.homeStorage.medkit||0)<=0)return toast('Aucun medkit stocké');if(invCount()>=state.bagMax)return toast('Sac plein');state.homeStorage.medkit--;addInv('medkit',1);save();openSheet('home')}
 
@@ -1003,8 +1174,16 @@ function renderMapTo(canvas,zoom=2.0){
  q.strokeStyle='#47555e';q.lineWidth=11*(zoom/2);const minCx=Math.floor((state.pos.x-R)/CHUNK)-1,maxCx=Math.floor((state.pos.x+R)/CHUNK)+1,minCz=Math.floor((state.pos.z-R)/CHUNK)-1,maxCz=Math.floor((state.pos.z+R)/CHUNK)+1;
  for(let cx=minCx;cx<=maxCx;cx++){const x=(cx*CHUNK-state.pos.x)*S;q.beginPath();q.moveTo(x,-H);q.lineTo(x,H);q.stroke()}for(let cz=minCz;cz<=maxCz;cz++){const y=(cz*CHUNK-state.pos.z)*S;q.beginPath();q.moveTo(-W,y);q.lineTo(W,y);q.stroke()}
  q.fillStyle='#6a7680';for(const b of colliders){const x=(b.minX-state.pos.x)*S,y=(b.minZ-state.pos.z)*S,w=(b.maxX-b.minX)*S,h=(b.maxZ-b.minZ)*S;if(Math.abs(x)>W||Math.abs(y)>H)continue;q.fillRect(x,y,w,h)}
- q.fillStyle='#63e2b0';for(const s of shops){const dx=(s.x-state.pos.x)*S,dz=(s.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,5*(zoom/2),0,Math.PI*2);q.fill()}}
- q.fillStyle='#f0cf63';for(const h of homePlots){const dx=(h.x-state.pos.x)*S,dz=(h.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.fillRect(dx-4*(zoom/2),dz-4*(zoom/2),8*(zoom/2),8*(zoom/2))}}
+ q.fillStyle='#63e2b0';
+ const known=state.discoveredShops.filter(s=>s.cityId===state.cityId);
+ for(const s of known){
+   const dx=(s.x-state.pos.x)*S,dz=(s.z-state.pos.z)*S;
+   if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){
+     q.beginPath();q.arc(dx,dz,Math.max(3,5*(zoom/2)),0,Math.PI*2);q.fill();
+     if(W>300){q.fillStyle='#bdf5dc';q.font='13px system-ui';q.fillText(SHOPS[s.type]?.name||'Boutique',dx+7,dz-5);q.fillStyle='#63e2b0'}
+   }
+ }
+ q.fillStyle='#f0cf63';for(const h of homePlots){const hx=h.centerX??h.x,hz=h.centerZ??h.z,dx=(hx-state.pos.x)*S,dz=(hz-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.fillRect(dx-4*(zoom/2),dz-4*(zoom/2),8*(zoom/2),8*(zoom/2))}}
  q.fillStyle='#ff6c7e';for(const e of enemies){const dx=(e.group.position.x-state.pos.x)*S,dz=(e.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,3*(zoom/2),0,Math.PI*2);q.fill()}}
  q.fillStyle='#4ea8ff';for(const p of police){
    const dx=(p.group.position.x-state.pos.x)*S,dz=(p.group.position.z-state.pos.z)*S;
@@ -1019,7 +1198,7 @@ function renderMapTo(canvas,zoom=2.0){
  if(selectedNPC?.group?.parent){const dx=(selectedNPC.group.position.x-state.pos.x)*S,dz=(selectedNPC.group.position.z-state.pos.z)*S;q.strokeStyle='#8ee8ff';q.lineWidth=2*(zoom/2);q.beginPath();q.arc(dx,dz,6*(zoom/2),0,Math.PI*2);q.stroke()}
  q.rotate(state.yaw);q.fillStyle='#fff';q.beginPath();q.moveTo(0,-8*(zoom/2));q.lineTo(5*(zoom/2),6*(zoom/2));q.lineTo(0,3*(zoom/2));q.lineTo(-5*(zoom/2),6*(zoom/2));q.closePath();q.fill();q.restore()
 }
-function drawMap(){renderMapTo($('#minimap'),2.0);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),4.2)}
+function drawMap(){renderMapTo($('#minimap'),1.15);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),.62)}
 function updateHUD(){
  const {cx,cz}=currentChunk(),d=districtFor(cx,cz),aq=activeQuest(),prog=Math.min(aq.target,progress(aq.goal));$('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;$('#level').textContent=state.level;$('#wanted').textContent=state.wanted;
  $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
@@ -1075,18 +1254,18 @@ function openSheet(panel){
 function worldHTML(){return `<div class="card"><h3>Exploration chill</h3><p class="sub">Explore sans chronomètre. Les quartiers se chargent au fur et à mesure, avec voitures, habitants, boutiques, appartements, parcs, terrain personnel et secrets.</p></div><div class="card"><h3>Voyager</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div>`}
 function bagHTML(){
  const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join('');
- const meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';
+ const inv=state.inventory.length?state.inventory.map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty}${info.value?` • revente ${info.value}`:''}</small></div>${i.id==='medkit'?'<button class="menuBtn useMed">Utiliser</button>':''}</div>`}).join(''):'<p class="sub">Sac vide.</p>';
  const arts=[...new Set(state.artifactBag)];
  return `<div class="card"><h3>Armes</h3>${ws}</div>
- <div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div>
- <div class="card"><h3>Artefacts transportés</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • valeur 500 crédits pièce en boutique</small></div></div>`).join(''):'<p class="sub">Aucun artefact sur toi.</p>'}</div>
- <div class="card"><h3>Discrétion</h3><p class="sub">${state.pickpockets} vols réussis • ${state.stolenCoins} crédits récupérés dans les poches • niveau de recherche ${state.wanted}/5 • ${state.policeCaught||0} arrestations.</p><p class="sub">Coffre maison : ${state.homeBank||0} crédits • ${state.homeStorage.medkit||0} medkits.</p></div>`
+ <div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${inv}</div>
+ <div class="card"><h3>Artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • 500 crédits</small></div></div>`).join(''):'<p class="sub">Aucun artefact.</p>'}</div>
+ <div class="card"><h3>Progression</h3><p class="sub">${state.pickpockets} vols réussis • ${state.wanted}/5 recherche • coffre maison ${state.homeBank||0} crédits.</p></div>`
 }
 function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
 function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. Ta base te permet de sécuriser tes gains pendant l’aventure.</p></div>`}
-function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>
-<div class="card"><h3>Commandes PC V9</h3><p class="sub">⬆️⬇️⬅️➡️ = déplacement. Pour regarder autour de toi, clique et déplace le <b>joystick REGARDER</b> avec la souris, comme sur téléphone. E = interagir, M = grande carte, I = sac.</p></div>
-<div class="warning">V9 : 4 feux par intersection, ville plus dense, maisons et ruelles, PNJ avec bras couleur peau, visages stabilisés et déplacements avec vrais virages.</div>`}
+function settingsHTML(){return `<div class="card"><h3>Version V10</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Rechercher et installer la dernière version</button><p class="sub">Les pages utilisent maintenant le réseau en priorité. Le cache sert seulement de secours hors connexion.</p></div>
+<div class="card"><h3>Commandes PC</h3><p class="sub">Flèches = déplacement • joystick REGARDER à la souris = caméra • E = interagir • M = carte • I = sac.</p></div>
+<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
 function bindSheet(panel){
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
  if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
@@ -1098,20 +1277,24 @@ function bindSheet(panel){
    $$('.placeHome').forEach(b=>b.onclick=()=>placeHomeItem(b.dataset.id));
    const storeBtn=$('#storeAllHome'); if(storeBtn)storeBtn.onclick=storeAllHome;
    $$('.deposit50').forEach(b=>b.onclick=()=>depositCoins(50));$$('.withdraw50').forEach(b=>b.onclick=()=>withdrawCoins(50));
-   $$('.depositMed').forEach(b=>b.onclick=depositMedkit);$$('.withdrawMed').forEach(b=>b.onclick=withdrawMedkit)
+   $$('.depositMed').forEach(b=>b.onclick=depositMedkit);$$('.withdrawMed').forEach(b=>b.onclick=withdrawMedkit);$$('.depositLoot').forEach(b=>b.onclick=()=>depositValuable(b.dataset.id));$$('.withdrawLoot').forEach(b=>b.onclick=()=>withdrawValuable(b.dataset.id))
  }
  if(panel==='districts'){const x=$('#secureDistrict'); if(x)x.onclick=secureDistrict}
- if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v9');location.reload()}};
+ if(panel==='settings'){const u=$('#forceUpdate');if(u)u.onclick=()=>window.streetQuestUpdate?.();$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v10');location.reload()}}};
  if(panel==='physicalShop')bindShop()
 }
 function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
 function useMed(){const x=state.inventory.find(i=>i.id==='medkit');if(!x)return toast('Aucun kit');if(state.hp>=state.maxHp)return toast('PV déjà au maximum');x.qty--;state.hp=clamp(state.hp+40,0,state.maxHp);if(x.qty<=0)state.inventory=state.inventory.filter(i=>i!==x);save();openSheet('bag')}
 function closeSheet(){$('#sheet').classList.add('hidden')}
-let toastTimer;function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.add('hidden'),2200)}
+let toastTimer;function toast(m){
+ const now=Date.now();if(m===lastToastMessage&&now-lastToastAt<1800)return;
+ lastToastMessage=m;lastToastAt=now;
+ const t=$('#toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.add('hidden'),1900)
+}
 
 
 
-$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
+$('#updateBtn').onclick=()=>window.streetQuestUpdate?.();$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
 init();

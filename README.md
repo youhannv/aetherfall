@@ -235,3 +235,51 @@ streetquest3d-v9
 
 ## Sauvegarde
 sq3d-v9
+
+
+# V10 — Urban Life
+
+## Mise à jour
+- nouveau bouton ↻ en haut du jeu
+- bouton de mise à jour dans Réglages
+- Service Worker en stratégie network-first pour HTML/JS/CSS/JSON
+- vérification automatique de mise à jour toutes les 60 secondes
+- activation immédiate d’un nouveau Service Worker
+- anciens caches StreetQuest supprimés automatiquement
+
+## Circulation
+- voitures plus nombreuses
+- densité différente selon les quartiers
+- voitures, compactes, taxis et utilitaires
+- vitesses différentes selon les véhicules
+- arrêt avant le passage piéton / feu rouge plutôt qu’au milieu de l’intersection
+- itinéraires et virages moins uniformes
+
+## PNJ
+- collision physique avec le joueur
+- argent fini : chaque PNJ a une somme déterminée ou zéro
+- certains PNJ transportent 0, 1 ou 2 objets
+- téléphones, montres, écouteurs, bagues, appareils photo, lunettes, parfum, portefeuille
+- objets volés prennent de la place dans le sac
+- revente au Comptoir Seconde Main
+
+## Social
+- option « Suis-moi » dans les dialogues
+- chaque PNJ possède confiance, doute et courage
+- il peut accepter ou refuser de suivre
+- un PNJ qui te suit peut être emmené dans une ruelle
+- action BRAQUER disponible en zone isolée
+- la victime peut coopérer, résister, crier ou appeler une police proche
+
+## Base
+- maison et clôtures désormais solides
+- véritable ouverture de portail
+- meubles et rayonnages avec collisions à l’intérieur
+- objets de valeur déposables au coffre
+- objets déposés chez soi protégés d’une confiscation policière
+
+## Carte
+- mini-carte dézoomée
+- grande carte beaucoup plus large
+- boutiques découvertes mémorisées
+- noms des boutiques affichés sur la grande carte

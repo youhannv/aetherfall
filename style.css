@@ -61,3 +61,9 @@ button,.joystick,.knob,.actionCircle,.nav{touch-action:none!important}
   #lookJoy{cursor:grab}
   #lookJoy:active{cursor:grabbing}
 }
+
+.topActions{display:flex;gap:7px}
+.updateBtn{font-size:18px}
+.updateBtn.updateReady{border-color:#65e4a8;background:#123d2d;box-shadow:0 0 0 3px #65e4a822}
+.updateBtn.checking{opacity:.7}
+.mapLegend{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px;font-size:10px;color:#bdd2e2}

@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V9">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V10">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V9</title>
+<title>StreetQuest 3D V10</title>
 </head>
 <body>
 <div id="app">
@@ -51,7 +51,7 @@
   <div id="threeHost"></div>
   <header class="topHud">
    <div class="brand"><b>STREETQUEST 3D</b><small id="district">PARIS • CENTRE</small></div>
-   <button id="menuBtn" class="roundBtn">☰</button>
+   <div class="topActions"><button id="updateBtn" class="roundBtn updateBtn" title="Rechercher une mise à jour">↻</button><button id="menuBtn" class="roundBtn">☰</button></div>
   </header>
 
   <div class="stats">
@@ -112,7 +112,7 @@
    <div class="mapOverlayBox">
     <div class="sheetHead"><h2>Grande mini-carte</h2><button id="closeMapOverlay" class="roundBtn">✕</button></div>
     <canvas id="bigMinimap" width="640" height="640"></canvas>
-    <p class="sub" style="margin-top:10px">Astuce PC : clic dans le jeu pour activer la souris, M pour ouvrir cette carte, E pour interagir.</p>
+    <div class="mapLegend"><span>🟢 Boutique</span><span>🔵 Police</span><span>🟡 Base</span><span>⚪ Toi</span></div>
    </div>
   </div>
 
@@ -136,6 +136,72 @@
  </div>
 </div>
 <script type="module" src="game.js"></script>
-<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}</script>
+<script>
+(() => {
+  let registration = null;
+  const btn = () => document.getElementById('updateBtn');
+
+  function markUpdateReady(){
+    const b=btn(); if(!b)return;
+    b.classList.add('updateReady');
+    b.textContent='⬆';
+    b.title='Nouvelle version disponible';
+  }
+
+  async function checkUpdate(forceReload=false){
+    const b=btn();
+    try{
+      if(b){b.classList.add('checking');b.textContent='…'}
+      if(!('serviceWorker' in navigator)){ if(forceReload)location.reload(); return; }
+      registration = registration || await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
+      await registration.update();
+
+      if(registration.waiting){
+        registration.waiting.postMessage({type:'SKIP_WAITING'});
+        return;
+      }
+
+      const installing=registration.installing;
+      if(installing){
+        installing.addEventListener('statechange',()=>{
+          if(installing.state==='installed'){
+            if(navigator.serviceWorker.controller) markUpdateReady();
+            else location.reload();
+          }
+        });
+      }else if(forceReload){
+        location.reload();
+      }else{
+        const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻'}
+      }
+    }catch(e){
+      const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻'}
+    }
+  }
+
+  window.streetQuestUpdate=()=>checkUpdate(true);
+
+  addEventListener('load',async()=>{
+    if(!('serviceWorker' in navigator))return;
+    registration=await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>null);
+    if(!registration)return;
+    if(registration.waiting)markUpdateReady();
+    registration.addEventListener('updatefound',()=>{
+      const w=registration.installing;
+      if(w)w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)markUpdateReady()});
+    });
+    setTimeout(()=>checkUpdate(false),1200);
+    setInterval(()=>checkUpdate(false),60000);
+  });
+
+  navigator.serviceWorker?.addEventListener('controllerchange',()=>{
+    if(sessionStorage.getItem('sq-reloading'))return;
+    sessionStorage.setItem('sq-reloading','1');
+    location.reload();
+  });
+
+  addEventListener('pageshow',()=>sessionStorage.removeItem('sq-reloading'));
+})();
+</script>
 </body>
 </html>
