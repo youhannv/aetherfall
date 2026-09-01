@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#081019">
+<meta name="theme-color" content="#071019">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="StreetQuest 3D">
@@ -14,27 +14,87 @@
 </head>
 <body>
 <div id="app">
-<div id="gameViewport">
-<div id="threeHost"></div><div id="streetHost" class="hidden"></div>
-<header class="hudTop"><div class="brand"><b>STREETQUEST 3D</b><small id="modeLabel">MODE 3D</small></div><button id="menuBtn" class="roundBtn">☰</button></header>
-<div class="statusRow">
-<div class="stat">❤️ <b id="hpText">100</b></div><div class="stat">🛡️ <b id="armorText">0</b></div><div class="stat">🪙 <b id="coinsText">0</b></div><div class="stat">🎒 <b id="bagText">0/20</b></div>
+  <div id="viewport">
+    <div id="threeHost"></div>
+    <div id="streetHost" class="hidden"></div>
+
+    <header class="topHud">
+      <div class="brand"><b>STREETQUEST 3D</b><small id="district">PARIS • SECTEUR 0,0</small></div>
+      <button class="roundBtn" id="menuBtn">☰</button>
+    </header>
+
+    <div class="stats">
+      <span>❤️ <b id="hp">100</b></span>
+      <span>🛡️ <b id="armor">0</b></span>
+      <span>🪙 <b id="coins">150</b></span>
+      <span>🚨 <b id="alert">0</b>%</span>
+    </div>
+
+    <canvas id="minimap" width="180" height="180" aria-label="Mini carte"></canvas>
+
+    <div class="mission">
+      <small>MISSION ACTIVE</small>
+      <b id="missionTitle"></b>
+      <span id="missionText"></span>
+    </div>
+
+    <div id="prompt" class="prompt hidden">
+      <div><b id="promptTitle"></b><small id="promptText"></small></div>
+      <button id="promptBtn" class="promptBtn">INTERAGIR</button>
+    </div>
+
+    <div id="combat" class="combat hidden">
+      <div class="combatHead"><b id="enemyName"></b><span id="enemyLvl"></span></div>
+      <div class="hpbar"><i id="enemyBar"></i></div>
+      <div class="combatBtns">
+        <button id="attackBtn" class="dangerBtn">⚔️ ATTAQUER</button>
+        <button id="fleeBtn" class="normalBtn">🏃 FUIR</button>
+      </div>
+    </div>
+
+    <div id="streetControls" class="streetControls hidden">
+      <button id="stLeft">↶</button><button id="stForward" class="main">↑</button>
+      <button id="stRight">↷</button><button id="stScan">📡</button>
+    </div>
+
+    <div id="controls" class="controls">
+      <div class="joyWrap">
+        <small>MARCHER</small>
+        <div class="joystick" id="moveJoy"><div class="knob" id="moveKnob"></div></div>
+      </div>
+      <div class="centerActions">
+        <button id="scanBtn" class="actionCircle">📡</button>
+        <button id="interactBtn" class="actionCircle large">✋</button>
+      </div>
+      <div class="joyWrap">
+        <small>REGARDER</small>
+        <div class="joystick" id="lookJoy"><div class="knob" id="lookKnob"></div></div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <nav class="bottomNav">
+    <button data-panel="world" class="nav active">🌍<small>Monde</small></button>
+    <button data-panel="bag" class="nav">🎒<small>Sac</small></button>
+    <button data-panel="shops" class="nav">🛒<small>Boutiques</small></button>
+    <button data-panel="quests" class="nav">📜<small>Quêtes</small></button>
+    <button data-panel="settings" class="nav">⚙️<small>Réglages</small></button>
+  </nav>
+
+  <div id="sheet" class="sheet hidden">
+    <div class="sheetBox">
+      <div class="handle"></div>
+      <div class="sheetHead"><h2 id="sheetTitle"></h2><button id="closeSheet" class="roundBtn">✕</button></div>
+      <div id="sheetBody"></div>
+    </div>
+  </div>
 </div>
-<div id="questCard" class="questCard"><small>MISSION</small><b id="questTitle">Chargement…</b><span id="questProgress"></span></div>
-<div id="enemyPanel" class="enemyPanel hidden">
-<div class="enemyHead"><b id="enemyName">Créature</b><span id="enemyLevel"></span></div><div class="bar"><i id="enemyHpBar"></i></div>
-<div class="enemyActions"><button id="attackBtn" class="actionBtn danger">⚔️ ATTAQUER</button><button id="fleeBtn" class="actionBtn">🏃 FUIR</button></div>
-</div>
-<div id="lootPrompt" class="lootPrompt hidden"><div><b id="lootName"></b><small id="lootDesc"></small></div><button id="lootBtn" class="actionBtn gold">RAMASSER</button></div>
-<div class="controls3d" id="controls3d"><div class="joystick" id="joystick"><div class="joyKnob" id="joyKnob"></div></div><div class="rightControls"><button id="interactBtn" class="bigCircle">✋</button><button id="scanBtn" class="smallCircle">📡</button></div></div>
-<div class="streetControls hidden" id="streetControls"><button id="streetLeft" class="streetMove">↶</button><button id="streetForward" class="streetMove main">↑</button><button id="streetRight" class="streetMove">↷</button><button id="streetScan" class="streetMove">📡</button></div>
-<div class="lookHint">👆 Glisse sur l’écran pour regarder autour de toi</div><div id="toast" class="toast hidden"></div>
-</div>
-<div id="sheet" class="sheet hidden"><div class="sheetBox"><div class="sheetHandle"></div><div class="sheetHeader"><h2 id="sheetTitle">Menu</h2><button id="closeSheet" class="roundBtn">✕</button></div><div id="sheetBody"></div></div></div>
-<nav class="bottomNav">
-<button class="nav active" data-panel="world">🌍<small>Monde</small></button><button class="nav" data-panel="inventory">🎒<small>Sac</small></button><button class="nav" data-panel="shop">🛒<small>Boutique</small></button><button class="nav" data-panel="quests">📜<small>Quêtes</small></button><button class="nav" data-panel="settings">⚙️<small>Réglages</small></button>
-</nav>
-</div>
+
 <script type="module" src="game.js"></script>
-<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}</script>
-</body></html>
+<script>
+if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
