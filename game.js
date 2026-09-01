@@ -56,8 +56,8 @@ const base={
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0
 };
 let state=loadState();
-function loadState(){try{return {...structuredClone(base),...JSON.parse(localStorage.getItem('sq3d-v5')||'{}')}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v5',JSON.stringify(state))}
+function loadState(){try{return {...structuredClone(base),...JSON.parse(localStorage.getItem('sq3d-v5-1')||'{}')}}catch{return structuredClone(base)}}
+function save(){localStorage.setItem('sq3d-v5-1',JSON.stringify(state))}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
@@ -73,7 +73,7 @@ function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.i
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
 let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],clouds=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null;
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight;
 
 async function init(){
  try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
@@ -90,6 +90,11 @@ async function init(){
  createAtmosphere();setupWorldTap();
  ensureChunks(true);updateHUD();animate();
  addEventListener('resize',()=>{camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight)});
+ if(window.visualViewport){
+   const syncViewport=()=>{const h=Math.round(window.visualViewport.height);if(Math.abs(h-lastViewportHeight)>12){lastViewportHeight=h;camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight);lookStick.x=0;lookStick.y=0}}
+   visualViewport.addEventListener('resize',syncViewport);visualViewport.addEventListener('scroll',syncViewport)
+ }
+ addEventListener('blur',()=>{moveStick.x=moveStick.y=lookStick.x=lookStick.y=0});
 }
 function tex(draw,rx=4,ry=4){const c=document.createElement('canvas');c.width=c.height=256;const q=c.getContext('2d');draw(q,256,256);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);return t}
 function createTextures(){
@@ -247,10 +252,19 @@ function addPolice(g,key,x,z,r){const n=createPerson('police',key,x,z,r);n.speed
 function createPerson(role,key,x,z,r){
  const hostile=role==='hostile',isPolice=role==='police',group=new THREE.Group();
  const cloth=new THREE.MeshStandardMaterial({color:isPolice?0x1f4f83:(hostile?0x6d2434:choice([0x315f7b,0x486d45,0x6a4e75,0x785f42,0xa05d43])),roughness:.82});
- const skin=new THREE.MeshStandardMaterial({color:choice([0xd5a47c,0xc38e68,0xe0b18d])}),body=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.72,5,8),cloth);body.position.y=1.05;group.add(body);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.24,9,9),skin);head.position.y=1.72;group.add(head);
- const hair=new THREE.Mesh(new THREE.SphereGeometry(.245,8,6),new THREE.MeshStandardMaterial({color:choice([0x31251f,0x5a4131,0x22262b])}));hair.scale.y=.55;hair.position.y=1.86;group.add(hair);
- if(isPolice){const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.09,10),new THREE.MeshStandardMaterial({color:0x153b63}));cap.position.y=1.96;group.add(cap);const badge=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.025),new THREE.MeshBasicMaterial({color:0xffd260}));badge.position.set(.12,1.25,-.27);group.add(badge)}
+ const skin=new THREE.MeshStandardMaterial({color:choice([0xd5a47c,0xc38e68,0xe0b18d])});
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.72,5,8),cloth);body.position.y=1.05;group.add(body);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.24,12,10),skin);head.position.y=1.72;group.add(head);
+ const hair=new THREE.Mesh(new THREE.SphereGeometry(.245,10,8),new THREE.MeshStandardMaterial({color:choice([0x31251f,0x5a4131,0x22262b,0x8d6a41])}));hair.scale.y=.55;hair.position.y=1.86;group.add(hair);
+ const eyeMat=new THREE.MeshBasicMaterial({color:0x101317});
+ const mouthMat=new THREE.MeshBasicMaterial({color:hostile?0x5a1720:0x8e4c52});
+ const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.022,8,8),eyeMat);eyeL.position.set(-.07,1.74,-.21);group.add(eyeL);
+ const eyeR=eyeL.clone();eyeR.position.x=.07;group.add(eyeR);
+ const mouth=new THREE.Mesh(new THREE.BoxGeometry(.09,.018,.01),mouthMat);mouth.position.set(0,1.64,-.225);group.add(mouth);
+ if(isPolice){
+   const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.09,10),new THREE.MeshStandardMaterial({color:0x153b63}));cap.position.y=1.96;group.add(cap);
+   const badge=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.025),new THREE.MeshBasicMaterial({color:0xffd260}));badge.position.set(.12,1.25,-.27);group.add(badge)
+ }
  const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);
  const hasCash=r()<.58;
  const n={key,group,role,hostile,isPolice,axis:r()<.5?'x':'z',speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:hasCash?(7+Math.floor(r()*48)):0,legs:[l1,l2],phase:r()*6.2,name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0};
@@ -367,7 +381,7 @@ function policeCatch(){
 }function animatePickups(dt,t){for(const p of pickups){if(!p.parent)continue;p.rotation.y+=dt;p.position.y=(p.userData.type==='artifact'?.72:.43)+Math.sin(t/450+p.position.x)*.07}}
 function animate(){
  if(!renderer)return;requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta()),t=performance.now();
- const forward=-moveStick.y,strafe=moveStick.x,fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);movePlayer((fx*forward+rx*strafe)*4.8*dt,(fz*forward+rz*strafe)*4.8*dt);state.yaw+=lookStick.x*2.0*dt;state.pitch=clamp(state.pitch-lookStick.y*1.5*dt,-1.06,1.06);
+ const forward=-moveStick.y,strafe=moveStick.x,fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);movePlayer((fx*forward+rx*strafe)*4.8*dt,(fz*forward+rz*strafe)*4.8*dt);state.yaw+=lookStick.x*1.8*dt;state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1);
  updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();renderer.render(scene,camera)
 }
 
@@ -405,15 +419,15 @@ function checkInteraction(){
    const d=Math.hypot(state.pos.x-selectedNPC.group.position.x,state.pos.z-selectedNPC.group.position.z);
    if(d<2.25){
      const behind=isBehindTarget(selectedNPC);
-     if(behind)return setPrompt(`Cible : ${selectedNPC.name}`,'Reste derrière et collé à la cible. Les pièces arrivent progressivement.','FOUILLER',()=>startTailTheft(selectedNPC));
-     return setPrompt(`Cible : ${selectedNPC.name}`,'Place-toi derrière la personne avant de commencer.','SE PLACER',()=>toast('Passe derrière la cible sans la dépasser.'))
+     if(behind)return setPrompt(`Cible : ${selectedNPC.name}`,'Reste derrière et proche de la cible. La fouille démarre automatiquement.','SUIVRE',()=>startTailTheft(selectedNPC));
+     return setPrompt(`Cible : ${selectedNPC.name}`,'Place-toi derrière la personne. La fouille démarre toute seule quand tu es bien placé.','SUIVRE',()=>toast('Passe derrière la cible sans la dépasser.'))
    }
  }
  const p=nearest(pickups.filter(x=>x.parent),1.6);if(p)return setPrompt(pickupName(p.userData.type),'Objet trouvé dans la rue.','RAMASSER',()=>collectPickup(p));
  const c=nearest(containers.filter(x=>x.parent),1.7);if(c)return setPrompt(c.userData.type==='bin'?'Poubelle':'Coffre',c.userData.type==='bin'?'Fouiller du matériel.':'Ouvrir le coffre.','FOUILLER',()=>openContainer(c));
  const s=shops.reduce((b,x)=>{const d=Math.hypot(state.pos.x-x.door.x,state.pos.z-x.door.z);return !b||d<b.d?{x,d}:b},null);if(s&&s.d<1.8)return setPrompt(SHOPS[s.x.type].name,'Entrer dans la boutique.','ENTRER',()=>enterInterior('shop',s.x));
  const a=nearest(apartments,1.6);if(a)return setPrompt('Immeuble résidentiel','Entrer dans le hall.','ENTRER',()=>enterInterior('apartment',a));
- const n=nearest(npcs,1.5);if(n)return setPrompt(n.name,'Touche directement le passant à l’écran pour le choisir comme cible, ou parle-lui.','PARLER',()=>talkNPC(n));
+ const n=nearest(npcs,1.5);if(n)return setPrompt(n.name,'Touche le passant pour le choisir comme cible, ou ouvre le dialogue.','PARLER',()=>talkNPC(n));
  hidePrompt()
 }
 function setPrompt(t,d,b,fn){currentInteractFn=fn;$('#promptTitle').textContent=t;$('#promptText').textContent=d;$('#promptBtn').textContent=b;$('#promptBtn').onclick=fn;$('#prompt').classList.remove('hidden')}
@@ -457,7 +471,7 @@ function selectTarget(n){
  if(!n||n.hostile||n.isPolice)return;
  clearTarget(false);selectedNPC=n;
  const marker=makeSign('▼ CIBLE','#8ee8ff');marker.scale.set(2.8,.7,1);marker.position.set(0,2.55,0);n.group.add(marker);targetMarker=marker;
- $('#targetCard').classList.remove('hidden');$('#targetName').textContent=n.name;$('#targetInfo').textContent='Suis-la puis place-toi juste derrière.';updateTargetHUD()
+ $('#targetCard').classList.remove('hidden');$('#targetName').textContent=n.name;$('#targetInfo').textContent='Suis-la. Dès que tu es bien derrière, la fouille démarre automatiquement.';updateTargetHUD()
 }
 function clearTarget(show=true){
  if(tailTheft?.active)stopTailTheft('Filature annulée.');
@@ -469,9 +483,10 @@ function isBehindTarget(n){
  return (fx*(vx/d)+fz*(vz/d))<-.38
 }
 function startTailTheft(n){
- if(!n||n.pickpocketed)return toast('Tu as déjà fouillé cette personne');
- const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);if(d>2.1)return toast('Reste plus près de la cible');
- if(!isBehindTarget(n))return toast('Place-toi derrière la cible');
+ if(tailTheft?.npc===n)return;
+ if(!n||n.pickpocketed)return;
+ const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);if(d>2.1)return;
+ if(!isBehindTarget(n))return;
  tailTheft={npc:n,suspicion:0,validStealTime:0,lostTime:0,nextCoin:.65+Math.random()*.55,emptyTimer:0,policeObserved:false,stolen:0};
  document.body.classList.add('crime-active');$('#targetInfo').textContent='Vol en cours : reste derrière, proche et hors de vue de la police.'
 }
@@ -497,7 +512,6 @@ function updateTailTheft(dt,t){
    tailTheft.validStealTime=Math.max(0,tailTheft.validStealTime-dt*.35);
    tailTheft.suspicion+=dt*(behind?14:32)+(d<.55?dt*35:0);
  }
- // target can sense something if the player shadows them too long
  tailTheft.suspicion+=dt*Math.max(0,(tailTheft.validStealTime-5.5))*1.8;
  if(tailTheft.policeObserved)return theftSpottedByPolice();
  if(tailTheft.suspicion>=n.alertness)return targetNotices();
@@ -520,9 +534,12 @@ function updateTargetHUD(){
  $('#targetDistance').textContent=`${d.toFixed(1)} m`;
  const s=tailTheft?.npc===selectedNPC?tailTheft.suspicion:0;$('#suspicionBar').style.width=`${clamp(s/selectedNPC.alertness*100,0,100)}%`;
  if(!tailTheft)$('#targetLoot').textContent=selectedNPC.pickpocketed?'🪙 fouillé':'🪙 ?';
+ const behind=isBehindTarget(selectedNPC);
+ if(!tailTheft && !selectedNPC.pickpocketed && d>=.62 && d<=1.65 && behind) startTailTheft(selectedNPC);
  if(tailTheft){
-   const behind=isBehindTarget(selectedNPC);
    $('#targetInfo').textContent=policeSeeing?'👮 Police en vue ! Cache-toi.':(!behind?'⚠️ Reviens derrière la cible.':(isPlayerHidden()?'🌿 Caché — poursuis la fouille.':'🫳 Fouille en cours…'));
+ }else{
+   $('#targetInfo').textContent=selectedNPC.pickpocketed?'Cette personne a déjà été fouillée.':(behind&&d<=1.65?'La fouille démarre toute seule.':'Suis-la puis place-toi derrière elle.')
  }
 }
 function setupWorldTap(){
@@ -534,7 +551,7 @@ function setupWorldTap(){
    if(moved>12||elapsed>350||state.interior)return;
    const r=canvas.getBoundingClientRect(),pt=new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
    raycaster.setFromCamera(pt,camera);const hits=raycaster.intersectObjects(npcs.map(n=>n.group),true);
-   const n=hits.map(h=>h.object.userData.person).find(Boolean);if(n)selectTarget(n)
+   const n=hits.map(h=>h.object.userData.person).find(Boolean);if(n){selectTarget(n);toast('Cible choisie : suis-la et place-toi derrière elle.')}
  })
 }
 
@@ -595,7 +612,19 @@ function updateHUD(){
  maybeCompleteNpcMission();updateTargetHUD()
 }
 
-function makeJoy(baseSel,knobSel,target){const b=$(baseSel),k=$(knobSel);let pid=null;const mv=e=>{const r=b.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),max=30,len=Math.hypot(dx,dy)||1,f=Math.min(1,max/len);target.x=dx/max*f;target.y=dy/max*f;k.style.transform=`translate(${dx*f}px,${dy*f}px)`},reset=()=>{pid=null;target.x=target.y=0;k.style.transform='translate(0,0)'};b.addEventListener('pointerdown',e=>{pid=e.pointerId;b.setPointerCapture(pid);mv(e)});b.addEventListener('pointermove',e=>e.pointerId===pid&&mv(e));b.addEventListener('pointerup',reset);b.addEventListener('pointercancel',reset)}
+function makeJoy(baseSel,knobSel,target){
+ const b=$(baseSel),k=$(knobSel);let pid=null;
+ const mv=e=>{const r=b.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),max=30,len=Math.hypot(dx,dy)||1,nx=clamp(dx/Math.max(len,max),-1,1)*(Math.min(len,max)/max),ny=clamp(dy/Math.max(len,max),-1,1)*(Math.min(len,max)/max);target.x=Math.abs(nx)<.05?0:nx;target.y=Math.abs(ny)<.05?0:ny;k.style.transform=`translate(${target.x*30}px,${target.y*30}px)`};
+ const reset=()=>{pid=null;target.x=target.y=0;k.style.transform='translate(0,0)'};
+ b.addEventListener('pointerdown',e=>{e.preventDefault();pid=e.pointerId;b.setPointerCapture(pid);mv(e)},{passive:false});
+ b.addEventListener('pointermove',e=>{if(e.pointerId===pid){e.preventDefault();mv(e)}},{passive:false});
+ b.addEventListener('pointerup',reset);
+ b.addEventListener('pointercancel',reset);
+ b.addEventListener('pointerleave',reset);
+ b.addEventListener('lostpointercapture',reset);
+ window.addEventListener('touchend',reset,{passive:true});
+ window.addEventListener('touchcancel',reset,{passive:true});
+}
 makeJoy('#moveJoy','#moveKnob',moveStick);makeJoy('#lookJoy','#lookKnob',lookStick);
 
 function openSheet(panel){
@@ -617,7 +646,7 @@ function bindSheet(panel){
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
  if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
  if(panel==='districts')$('#secureDistrict').onclick=secureDistrict;
- if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v5');location.reload()}};
+ if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v5-1');location.reload()}};
  if(panel==='physicalShop')bindShop()
 }
 function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
@@ -627,7 +656,7 @@ let toastTimer;function toast(m){const t=$('#toast');t.textContent=m;t.classList
 
 
 
-$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible et place-toi derrière elle.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
-document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTouch<320)e.preventDefault();lastTouch=n},{passive:false});
+$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
+document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('touchmove',e=>{if(e.scale&&e.scale!==1)e.preventDefault()},{passive:false});let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTouch<320)e.preventDefault();lastTouch=n},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
 init();

@@ -106,3 +106,26 @@ Puis Commit changes et attendre le déploiement GitHub Pages.
 - magasins orientés correctement vers le trottoir
 - portes d’immeubles placées côté rue
 - streaming réduit à 3×3 quartiers pour laisser plus de budget graphique sur iPhone
+
+
+# V5.1 — correctifs mobile
+- Correction du faux “zoom” sur iPhone :
+  - joystick droit réinitialisé plus agressivement,
+  - pitch caméra moins extrême,
+  - retour progressif vers l’horizon,
+  - meilleure prise en charge de `visualViewport`,
+  - blocage renforcé des gestes Safari.
+- Vol à la tire simplifié pour téléphone :
+  - tu touches un passant,
+  - tu le suis,
+  - si tu es bien derrière et assez près, la fouille démarre automatiquement,
+  - plus besoin de marcher et d’appuyer sur un bouton en même temps.
+- Ajout de vrais visages simples :
+  - yeux,
+  - bouche,
+  - meilleure lisibilité des PNJ.
+- Nouvelle sauvegarde : `sq3d-v5-1`
+- Nouveau cache PWA : `streetquest3d-v5-1`
+
+## Conseil iPhone
+Le jeu marche mieux si tu l’ouvres depuis l’écran d’accueil en mode PWA. Dans Safari, la barre d’adresse qui monte/descend peut encore donner une impression visuelle de zoom même si le moteur est stable.

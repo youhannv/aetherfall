@@ -33,3 +33,7 @@ button,input{font:inherit;color:inherit}
 body.crime-active #viewport{box-shadow:inset 0 0 0 2px #ffbf5266}
 #threeHost canvas{filter:saturate(1.06) contrast(1.03)}
 @media(max-width:360px){.targetCard{width:138px;top:calc(199px + var(--safe-top))}}
+
+html,body,#app,#viewport{touch-action:none}
+#threeHost{touch-action:none}
+body{position:fixed;width:100%;height:100%;inset:0}
