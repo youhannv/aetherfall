@@ -129,3 +129,18 @@ Puis Commit changes et attendre le déploiement GitHub Pages.
 
 ## Conseil iPhone
 Le jeu marche mieux si tu l’ouvres depuis l’écran d’accueil en mode PWA. Dans Safari, la barre d’adresse qui monte/descend peut encore donner une impression visuelle de zoom même si le moteur est stable.
+
+
+# V6 — Base Builder & pathing fix
+- achat d’un terrain personnel
+- vraie base accessible depuis la ville
+- boutique Maison & Co
+- achat de meubles, coffres, cloisons et décoration
+- pose des meubles dans la base
+- coffre sécurisé pour mettre les crédits à l’abri
+- stockage de medkits à la maison
+- correction de l’orientation des visages des PNJ
+- réduction des immeubles qui mordent sur les trottoirs
+- pathing PNJ/policiers amélioré contre les murs
+- ennemis encore un peu moins nombreux
+- panneau et zone CHEZ TOI visibles dans le chunk de départ
