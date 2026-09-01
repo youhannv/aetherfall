@@ -79,3 +79,9 @@ button,.joystick,.knob,.actionCircle,.nav{touch-action:none!important}
 /* V11.1 social/pathing fixes */
 
 .emergencyExit{position:absolute;z-index:31;right:10px;top:calc(205px + var(--safe-top));border:1px solid #75cfff;background:#0d2638e8;color:#d9f4ff;border-radius:999px;padding:7px 11px;font-size:9px;font-weight:900}
+
+.followerCard{position:absolute;z-index:34;right:8px;top:calc(205px + var(--safe-top));width:178px;background:#0a1622ed;border:1px solid #58a9c8;border-radius:15px;padding:9px;backdrop-filter:blur(10px);box-shadow:0 7px 22px #0007}
+.followerHead{display:flex;align-items:center;justify-content:space-between;font-size:11px}.followerHead b{font-size:12px}.followerCard>div:nth-child(2){font-size:9px;color:#b6cad7;margin:6px 0;line-height:1.3}
+.robFollowerBtn{width:100%;min-height:36px;border-radius:10px;border:1px solid #4b6375;background:#162b39;color:#b8c8d4;font-size:9px;font-weight:900}
+.robFollowerBtn.ready{background:#6d2532;border-color:#d1586d;color:#fff}
+@media(max-width:380px){.followerCard{width:158px;top:calc(198px + var(--safe-top))}}

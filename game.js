@@ -116,7 +116,7 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:113
 };
 let state=loadState();
 function loadState(){
@@ -139,6 +139,10 @@ function loadState(){
        : {...base.pos};
      loaded.interior=null;
      loaded.returnPos=null
+   }
+   if(raw.worldLayoutVersion!==113){
+     loaded.discoveredShops=[];
+     loaded.worldLayoutVersion=113
    }
    return loaded
  }catch{return structuredClone(base)}
@@ -195,7 +199,7 @@ async function init(){
  const fill=new THREE.DirectionalLight(0x8dc8ff,.32);fill.position.set(-35,30,-25);scene.add(fill);
  textures=createTextures();weaponRig=createWeaponRig();camera.add(weaponRig);scene.add(camera);
  createAtmosphere();setupWorldTap();setupDesktopControls();setupMapUI();
- ensureChunks(true);updateHUD();animate();
+ ensureChunks(true);ensureOutdoorPositionClear();updateHUD();animate();
  addEventListener('resize',()=>{camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight)});
  if(window.visualViewport){
    const syncViewport=()=>{const h=Math.round(window.visualViewport.height);if(Math.abs(h-lastViewportHeight)>12){lastViewportHeight=h;camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight);lookStick.x=0;lookStick.y=0}}
@@ -304,48 +308,90 @@ function addTrafficLight(g,x,z,axis,rot=0){
  mkLens(2.70,0x4d151a,-.19);mkLens(2.28,0x143d25,-.19);
  group.position.set(x,0,z);group.rotation.y=rot;g.add(group);trafficLights.push({group,red,green,axis})
 }
+
+function plannedShopType(cx,cz){
+ const fixed={
+  '0,0':'corner',
+  '1,0':'housing',
+  '-1,0':'pawn',
+  '0,1':'home',
+  '0,-1':'gear',
+  '1,1':'rare'
+ };
+ const fk=`${cx},${cz}`;if(fixed[fk])return fixed[fk];
+ // About one commercial block every 5 chunks, deterministic.
+ const h=hashStr(`${state.cityId}:shop-plan:${cx}:${cz}`);
+ if(h%100>=19)return null;
+ const pool=['corner','corner','gear','pawn','home','rare'];
+ return pool[(h>>>8)%pool.length]
+}
+function generateIrregularLots(x0,z0,r,startChunk){
+ const zones=[
+  [18,39,18,39],[47,68,18,39],
+  [18,39,47,68],[47,68,47,68]
+ ];
+ const out=[];
+ for(let qi=0;qi<zones.length;qi++){
+   if(startChunk&&qi===3)continue; // south-east is reserved for the future home plot.
+   const [xmin,xmax,zmin,zmax]=zones[qi];
+   const wanted=1+Math.floor(r()*3);
+   let made=0,tries=0;
+   while(made<wanted&&tries++<35){
+     const x=x0+xmin+2.5+r()*(xmax-xmin-5);
+     const z=z0+zmin+2.5+r()*(zmax-zmin-5);
+     if(out.some(p=>Math.hypot(p.x-x,p.z-z)<9.4))continue;
+     out.push({x,z,qi,variant:Math.floor(r()*4)});
+     made++
+   }
+ }
+ return out
+}
+
 function createChunk(cx,cz){
- const key=ck(cx,cz);if(chunks.has(key))return;const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
- const x0=cx*CHUNK,z0=cz*CHUNK,d=districtFor(cx,cz),grass=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));
- grass.rotation.x=-Math.PI/2;grass.position.set(x0+CHUNK/2,-.04,z0+CHUNK/2);g.add(grass);makeRoad(g,x0,z0);
- addAlleyNetwork(g,key,x0,z0,d,r);
+ const key=ck(cx,cz);if(chunks.has(key))return;
+ const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
+ const x0=cx*CHUNK,z0=cz*CHUNK,d=districtFor(cx,cz);
+ const grass=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));
+ grass.rotation.x=-Math.PI/2;grass.position.set(x0+CHUNK/2,-.04,z0+CHUNK/2);g.add(grass);
+ makeRoad(g,x0,z0);addAlleyNetwork(g,key,x0,z0,d,r);
  const id=districtId(cx,cz);if(!state.seenDistricts.includes(id))state.seenDistricts.push(id);
 
  const startChunk=cx===0&&cz===0;
- // Lots kept away from both major sidewalks and the central alley cross.
- const lots=[
-  [21.5,21.5],[31.5,21.5],[53.5,21.5],[63.5,21.5],
-  [21.5,31.5],[63.5,31.5],
-  [21.5,53.5],[63.5,53.5],
-  [21.5,63.0],[31.5,63.0],[53.5,63.0],[63.5,63.0]
- ];
- let made=0;
+ const plannedShop=plannedShopType(cx,cz);
+ const lots=generateIrregularLots(x0,z0,r,startChunk);
+ let shopIndex=plannedShop?Math.floor(r()*Math.max(1,lots.length)):-1;
+
+ // Start block keeps the grocery away from the player's house plot.
+ if(startChunk&&plannedShop&&lots.length)shopIndex=Math.min(lots.length-1,0);
+
  lots.forEach((p,i)=>{
-   if(startChunk&&i===0){addShop(g,key,x0+p[0],z0+p[1],r,'corner');made++;return}
-   if(startChunk&&i===2){addShop(g,key,x0+p[0],z0+p[1],r,'home');made++;return}
-   if(startChunk&&i===3){addShop(g,key,x0+p[0],z0+p[1],r,'pawn');made++;return}
-   if(startChunk&&i===4){addShop(g,key,x0+p[0],z0+p[1],r,'housing');made++;return}
-   if(startChunk&&i===8){addHomePlot(g,key,x0+p[0],z0+p[1]);made++;return}
-   if(d.style==='green'&&r()<.11){addPocketGarden(g,key,x0+p[0],z0+p[1],r);return}
-   if(r()<.08&&made>5)return;
-   addDenseBuilding(g,key,x0+p[0],z0+p[1],d,r,i);
-   made++
+   if(plannedShop&&i===shopIndex){addShop(g,key,p.x,p.z,r,plannedShop);return}
+   if(d.style==='green'&&r()<.13){addPocketGarden(g,key,p.x,p.z,r);return}
+   addDenseBuilding(g,key,p.x,p.z,d,r,i,p.variant)
  });
 
- const trees=3+Math.floor(r()*(d.style==='green'?7:3));for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);addTree(g,p.x,p.z,r)}
- for(let i=0;i<(d.style==='green'?5:2);i++){const p=randomGreenPoint(x0,z0,r);addBush(g,key,p.x,p.z,r)}
+ if(startChunk)addHomePlot(g,key,x0+58,z0+58);
 
- const cont=1+Math.floor(r()*3);for(let i=0;i<cont;i++){const p=r()<.35?randomAlleyPoint(x0,z0,r):randomSidewalk(x0,z0,r),type=r()<.72?'bin':'chest',idc=`${key}:container:${i}`;if(!state.collected.includes(idc))addContainer(g,key,idc,p.x,p.z,type)}
- const lootN=1+Math.floor(r()*3);for(let i=0;i<lootN;i++){const p=r()<.32?randomAlleyPoint(x0,z0,r):randomSidewalk(x0,z0,r),type=r()<.67?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
- if(!state.artifacts.includes(state.cityId)&&((Math.abs(cx)+Math.abs(cz)>1&&r()<.055)||(cx===3&&cz===-2))){const p=randomAlleyPoint(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')}
+ const trees=2+Math.floor(r()*(d.style==='green'?7:4));
+ for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);if(!entityBlocked(p.x,p.z,1.1))addTree(g,p.x,p.z,r)}
+ for(let i=0;i<(d.style==='green'?5:2);i++){const p=randomGreenPoint(x0,z0,r);if(!entityBlocked(p.x,p.z,.9))addBush(g,key,p.x,p.z,r)}
 
- const npcN=5+Math.floor(r()*4);
+ const cont=1+Math.floor(r()*3);
+ for(let i=0;i<cont;i++){const p=r()<.42?randomAlleyPoint(x0,z0,r):randomSidewalk(x0,z0,r),type=r()<.72?'bin':'chest',idc=`${key}:container:${i}`;if(!state.collected.includes(idc))addContainer(g,key,idc,p.x,p.z,type)}
+ const lootN=1+Math.floor(r()*3);
+ for(let i=0;i<lootN;i++){const p=r()<.38?randomAlleyPoint(x0,z0,r):randomSidewalk(x0,z0,r),type=r()<.67?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
+ if(!state.artifacts.includes(state.cityId)&&((Math.abs(cx)+Math.abs(cz)>1&&r()<.055)||(cx===3&&cz===-2))){
+   const p=randomAlleyPoint(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')
+ }
+
+ const npcN=4+Math.floor(r()*4);
  for(let i=0;i<npcN;i++){const p=randomPedestrianPath(x0,z0,r);addNPC(g,key,p.x,p.z,r,p)}
- if(r()<.05){const p=randomPedestrianPath(x0,z0,r);addEnemy(g,key,p.x,p.z,r,p)}
- if(r()<.12){const p=randomPedestrianPath(x0,z0,r);addPolice(g,key,p.x,p.z,r,p)}
+ if(r()<.045){const p=randomPedestrianPath(x0,z0,r);addEnemy(g,key,p.x,p.z,r,p)}
+ if(r()<.11){const p=randomPedestrianPath(x0,z0,r);addPolice(g,key,p.x,p.z,r,p)}
 
- const trafficBase=d.style==='central'?4:d.style==='green'?2:3;const carN=trafficBase+Math.floor(r()*3);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
- if(r()<.55)addParkedCar(g,key,x0,z0,r)
+ const trafficBase=d.style==='central'?4:d.style==='green'?2:3;
+ const carN=trafficBase+Math.floor(r()*3);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
+ if(r()<.48)addParkedCar(g,key,x0,z0,r)
 }
 function randomSidewalk(x0,z0,r){
  const side=Math.floor(r()*4);
@@ -359,55 +405,58 @@ function randomAlleyPoint(x0,z0,r){
  return{x:x0+18+r()*48,z:z0+43}
 }
 function randomPedestrianPath(x0,z0,r){
- // 75% boulevard loop, 25% ruelle loop. Waypoints create real turns without teleporting.
- if(r()<.75){
+ if(r()<.72){
    const route=[
-    {x:x0+12.5,z:z0+18},{x:x0+12.5,z:z0+67},
-    {x:x0+67,z:z0+70.5},{x:x0+70.5,z:z0+67},
-    {x:x0+70.5,z:z0+18},{x:x0+67,z:z0+12.5},
-    {x:x0+18,z:z0+12.5},{x:x0+12.5,z:z0+18}
+    {x:x0+12.5,z:z0+18},{x:x0+12.5,z:z0+32},{x:x0+12.5,z:z0+50},{x:x0+12.5,z:z0+67},
+    {x:x0+28,z:z0+70.5},{x:x0+48,z:z0+70.5},{x:x0+67,z:z0+70.5},
+    {x:x0+70.5,z:z0+60},{x:x0+70.5,z:z0+40},{x:x0+70.5,z:z0+18},
+    {x:x0+58,z:z0+12.5},{x:x0+38,z:z0+12.5},{x:x0+18,z:z0+12.5}
    ];
-   const idx=Math.floor(r()*(route.length-1)),p=route[idx];
-   return{x:p.x,z:p.z,route,routeIndex:(idx+1)%route.length}
+   const idx=Math.floor(r()*route.length),p=route[idx];return{x:p.x,z:p.z,route,routeIndex:(idx+1)%route.length}
  }
  const route=[
-   {x:x0+43,z:z0+17},{x:x0+43,z:z0+43},{x:x0+66,z:z0+43},
-   {x:x0+43,z:z0+43},{x:x0+43,z:z0+66},{x:x0+43,z:z0+43},
-   {x:x0+20,z:z0+43},{x:x0+43,z:z0+43},{x:x0+43,z:z0+20}
+  {x:x0+43,z:z0+18},{x:x0+43,z:z0+30},{x:x0+43,z:z0+43},
+  {x:x0+55,z:z0+43},{x:x0+67,z:z0+43},{x:x0+55,z:z0+43},
+  {x:x0+43,z:z0+43},{x:x0+43,z:z0+56},{x:x0+43,z:z0+67},
+  {x:x0+43,z:z0+56},{x:x0+43,z:z0+43},{x:x0+30,z:z0+43},{x:x0+19,z:z0+43}
  ];
- const idx=Math.floor(r()*route.length),p=route[idx];
- return{x:p.x,z:p.z,route,routeIndex:(idx+1)%route.length}
+ const idx=Math.floor(r()*route.length),p=route[idx];return{x:p.x,z:p.z,route,routeIndex:(idx+1)%route.length}
 }
 function randomGreenPoint(x0,z0,r){return{x:x0+22+r()*(CHUNK-31),z:z0+22+r()*(CHUNK-31)}}
 
 function addAlleyNetwork(g,key,x0,z0,d,r){
  const alleyM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:1});
- const v=new THREE.Mesh(new THREE.PlaneGeometry(3.8,51),alleyM);v.rotation.x=-Math.PI/2;v.position.set(x0+43,.055,z0+43);g.add(v);
- const h=new THREE.Mesh(new THREE.PlaneGeometry(51,3.8),alleyM);h.rotation.x=-Math.PI/2;h.position.set(x0+43,.056,z0+43);g.add(h);
- // Small darker service lane branches.
- if(r()<.7){
-   const branch=new THREE.Mesh(new THREE.PlaneGeometry(18,2.5),new THREE.MeshStandardMaterial({color:0x77766f,roughness:1}));
-   branch.rotation.x=-Math.PI/2;branch.position.set(x0+52,.057,z0+32);g.add(branch)
+ const v=new THREE.Mesh(new THREE.PlaneGeometry(4.4,52),alleyM);v.rotation.x=-Math.PI/2;v.position.set(x0+43,.055,z0+43);g.add(v);
+ const h=new THREE.Mesh(new THREE.PlaneGeometry(52,4.4),alleyM);h.rotation.x=-Math.PI/2;h.position.set(x0+43,.056,z0+43);g.add(h);
+ alleys.push({key,axis:'z',x:x0+43,min:z0+17,max:z0+69,width:3.1});
+ alleys.push({key,axis:'x',z:z0+43,min:x0+17,max:x0+69,width:3.1});
+ if(r()<.62){
+   const branch=new THREE.Mesh(new THREE.PlaneGeometry(18,3.0),new THREE.MeshStandardMaterial({color:0x77766f,roughness:1}));
+   branch.rotation.x=-Math.PI/2;branch.position.set(x0+52,.057,z0+32);g.add(branch);
+   alleys.push({key,axis:'x',z:z0+32,min:x0+43,max:x0+61,width:2.4})
  }
- alleys.push({key,x:x0+43,z:z0+43})
 }
-function addDenseBuilding(g,key,x,z,d,r,i){
+function addDenseBuilding(g,key,x,z,d,r,i,variant=0){
  const central=d.style==='central',green=d.style==='green',old=d.style==='old';
- const isHouse=green||old ? r()<.58 : r()<.16;
- const w=isHouse?7.2+r()*1.8:7.8+r()*1.8,dep=isHouse?7.0+r()*1.8:7.8+r()*1.8;
- const h=isHouse?(4.2+r()*3.0):(central?14+r()*25:9+r()*15);
- const texChoice=old?textures.brick:(d.style==='harbor'?textures.stone:(r()<.6?textures.modern:textures.brick));
+ const isHouse=(green||old)?r()<.62:r()<.20;
+ const scale=[.82,1,1.08,.92][variant]||1;
+ const w=(isHouse?6.2+r()*2.0:6.8+r()*2.2)*scale;
+ const dep=(isHouse?6.1+r()*2.1:6.8+r()*2.2)*(variant===2?.82:1);
+ const h=isHouse?(4.0+r()*3.2):(central?11+r()*27:8+r()*16);
+ // More irregular setback inside each parcel.
+ x+=(r()-.5)*2.0;z+=(r()-.5)*2.0;
+ const texChoice=old?textures.brick:(d.style==='harbor'?textures.stone:(r()<.58?textures.modern:textures.brick));
  const mat=new THREE.MeshStandardMaterial({map:texChoice,roughness:.87,metalness:d.style==='harbor'?.04:0});
  const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),mat);b.position.set(x,h/2,z);g.add(b);
  addBuildingDetails(g,x,z,w,dep,h,r,d);
  if(isHouse){
-   const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,dep)*.68,1.5,4),new THREE.MeshStandardMaterial({color:choice([0x58483f,0x4a5056,0x6a493c]),roughness:.96}));
-   roof.rotation.y=Math.PI/4;roof.position.set(x,h+.72,z);g.add(roof);
+   const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,dep)*.68,1.35+r()*.4,4),new THREE.MeshStandardMaterial({color:choice([0x58483f,0x4a5056,0x6a493c]),roughness:.96}));
+   roof.rotation.y=Math.PI/4;roof.position.set(x,h+.7,z);g.add(roof);
    const door=new THREE.Mesh(new THREE.PlaneGeometry(.9,1.8),new THREE.MeshStandardMaterial({color:0x4b3427,roughness:.85}));
-   door.position.set(x,1.0,z-dep/2-.014);door.rotation.y=Math.PI;g.add(door)
+   door.position.set(x+(r()-.5)*1.6,1.0,z-dep/2-.014);door.rotation.y=Math.PI;g.add(door)
  }
- colliders.push({key,minX:x-w/2-.28,maxX:x+w/2+.28,minZ:z-dep/2-.28,maxZ:z+dep/2+.28,type:isHouse?'house':'building'});
- if(!isHouse&&i%5===0&&r()<.4)addApartmentDoor(g,key,x,z,dep)
+ colliders.push({key,minX:x-w/2-.30,maxX:x+w/2+.30,minZ:z-dep/2-.30,maxZ:z+dep/2+.30,type:isHouse?'house':'building'});
+ if(!isHouse&&i%4===0&&r()<.34)addApartmentDoor(g,key,x,z,dep)
 }
 function addPocketGarden(g,key,x,z,r){
  const p=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));p.rotation.x=-Math.PI/2;p.position.set(x,.06,z);g.add(p);
@@ -568,7 +617,7 @@ function createPerson(role,key,x,z,r,path=null){
    money:hasCash?(2+Math.floor(r()*34)):0,pocketItems,
    legs:[l1,l2],arms:[a1,a2],phase:r()*6.2,
    name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),
-   missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false,following:false,trust:.25+r()*.7,courage:.2+r()*.75,followDoubt:r()*.55
+   missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false,following:false,trust:.25+r()*.7,courage:.2+r()*.75,followDoubt:r()*.55,routeStuck:0,followStuck:0,lastSafe:{x,z}
  };
  group.traverse(o=>{o.userData.person=n;o.frustumCulled=false});
  return n
@@ -740,59 +789,99 @@ function setHeading(n,dx,dz){
 }
 function patrolPerson(n,dt){
  if(n.route?.length){
-   let target=n.route[n.routeIndex%n.route.length],dx=target.x-n.group.position.x,dz=target.z-n.group.position.z,dist=Math.hypot(dx,dz);
+   let target=n.route[n.routeIndex%n.route.length];
+   let dx=target.x-n.group.position.x,dz=target.z-n.group.position.z,dist=Math.hypot(dx,dz);
    if(dist<.48){
      n.routeIndex=(n.routeIndex+1)%n.route.length;
      target=n.route[n.routeIndex];dx=target.x-n.group.position.x;dz=target.z-n.group.position.z;dist=Math.hypot(dx,dz)
    }
    if(dist>.001){
      const sx=dx/dist*n.speed*dt,sz=dz/dist*n.speed*dt;
-     if(moveEntity(n,sx,sz,.3))setHeading(n,sx,sz)
+     if(moveEntity(n,sx,sz,.29)){
+       n.routeStuck=0;n.lastSafe={x:n.group.position.x,z:n.group.position.z};setHeading(n,sx,sz)
+     }else{
+       n.routeStuck+=dt;
+       if(n.routeStuck>1.15){
+         // Route nodes themselves are generated only on clear pedestrian lanes.
+         n.routeIndex=(n.routeIndex+1)%n.route.length;
+         if(n.lastSafe&&!entityBlocked(n.lastSafe.x,n.lastSafe.z,.3)){
+           n.group.position.set(n.lastSafe.x,0,n.lastSafe.z)
+         }
+         n.routeStuck=0
+       }
+     }
    }
    return
  }
- const current=n.axis==='x'?n.group.position.x:n.group.position.z;
- if(n.pathMin!=null&&n.pathMax!=null){
-   if(current<n.pathMin+.35)n.dir=1;
-   if(current>n.pathMax-.35)n.dir=-1
- }
  const dx=n.axis==='x'?n.dir*n.speed*dt:0,dz=n.axis==='z'?n.dir*n.speed*dt:0;
- if(moveEntity(n,dx,dz,.3))setHeading(n,dx,dz)
+ if(moveEntity(n,dx,dz,.29))setHeading(n,dx,dz);else n.dir*=-1
 }
 function updatePlayerTrail(){
  if(state.interior)return;
  const last=playerTrail[playerTrail.length-1];
- if(!last||Math.hypot(state.pos.x-last.x,state.pos.z-last.z)>.72){
+ if(!last||Math.hypot(state.pos.x-last.x,state.pos.z-last.z)>.62){
    playerTrail.push({x:state.pos.x,z:state.pos.z});
-   if(playerTrail.length>90)playerTrail.shift()
+   if(playerTrail.length>150){
+     playerTrail.shift();
+     for(const n of npcs)if(n.following)n.followTrailIndex=Math.max(0,(n.followTrailIndex||0)-1)
+   }
  }
 }
-function followerTrailTarget(n){
- if(playerTrail.length<2)return state.pos;
- let best=0,bd=Infinity;
- for(let i=0;i<playerTrail.length;i++){
-   const p=playerTrail[i],d=Math.hypot(n.group.position.x-p.x,n.group.position.z-p.z);
-   if(d<bd){bd=d;best=i}
- }
- return playerTrail[Math.min(playerTrail.length-1,best+3)]||state.pos
-}
-
 function updateFollower(n,dt){
  const pd=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
- if(pd>18){n.following=false;removeFollowMarker(n);toast(`${n.name} t’a perdu.`);return}
- if(pd<1.35)return;
- const target=followerTrailTarget(n),dx=target.x-n.group.position.x,dz=target.z-n.group.position.z,dist=Math.hypot(dx,dz);
- if(dist>.1){
-   const sx=dx/dist*n.speed*1.28*dt,sz=dz/dist*n.speed*1.28*dt;
-   if(moveEntity(n,sx,sz,.3))setHeading(n,sx,sz)
+ if(pd>20){n.following=false;removeFollowMarker(n);toast(`${n.name} t’a perdu.`);return}
+ if(pd<1.25){n.followStuck=0;return}
+ if(!playerTrail.length)updatePlayerTrail();
+ n.followTrailIndex=Math.min(n.followTrailIndex||0,Math.max(0,playerTrail.length-1));
+ let target=playerTrail[n.followTrailIndex]||state.pos;
+ let dx=target.x-n.group.position.x,dz=target.z-n.group.position.z,dist=Math.hypot(dx,dz);
+ if(dist<.75&&n.followTrailIndex<playerTrail.length-1){
+   n.followTrailIndex++;
+   target=playerTrail[n.followTrailIndex]||state.pos;
+   dx=target.x-n.group.position.x;dz=target.z-n.group.position.z;dist=Math.hypot(dx,dz)
+ }
+ if(dist>.08){
+   const sx=dx/(dist||1)*n.speed*1.34*dt,sz=dz/(dist||1)*n.speed*1.34*dt;
+   if(moveEntity(n,sx,sz,.29)){n.followStuck=0;n.lastSafe={x:n.group.position.x,z:n.group.position.z};setHeading(n,sx,sz)}
+   else{
+     n.followStuck+=dt;
+     if(n.followStuck>1.4){
+       // Rare recovery: put the follower back on a recent walkable breadcrumb.
+       const idx=Math.max(0,playerTrail.length-7),p=playerTrail[idx];
+       if(p&&!entityBlocked(p.x,p.z,.35)){n.group.position.set(p.x,0,p.z);n.followTrailIndex=idx}
+       n.followStuck=0
+     }
+   }
  }
 }
 function isInAlley(x,z){
  return alleys.some(a=>{
-   const dx=Math.abs(x-a.x),dz=Math.abs(z-a.z);
-   return (dx<2.8&&dz<28)||(dz<2.8&&dx<28)
+   if(a.axis==='z')return Math.abs(x-a.x)<=a.width&&z>=a.min&&z<=a.max;
+   return Math.abs(z-a.z)<=a.width&&x>=a.min&&x<=a.max
  })
 }
+
+function currentFollower(){return npcs.find(n=>n.following&&n.group?.parent)||null}
+function updateFollowerCard(){
+ const n=currentFollower(),card=$('#followerCard');if(!card)return;
+ if(!n){card.classList.add('hidden');return}
+ card.classList.remove('hidden');$('#followerName').textContent=n.name;
+ const near=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z)<3.2;
+ const secluded=isInAlley(state.pos.x,state.pos.z)||isInAlley(n.group.position.x,n.group.position.z);
+ const btn=$('#robFollowerBtn');
+ if(secluded&&near){
+   $('#followerStatus').textContent='Vous êtes dans une ruelle, à l’écart.';
+   btn.textContent='⚠️ BRAQUER';btn.disabled=false;btn.classList.add('ready');btn.onclick=()=>robFollower(n)
+ }else{
+   $('#followerStatus').textContent=secluded?'Attends qu’il/elle se rapproche.':'Emmène cette personne dans une ruelle.';
+   btn.textContent=secluded?'🚶 ATTENDRE':'🌃 TROUVER UNE RUELLE';btn.disabled=true;btn.classList.remove('ready');btn.onclick=null
+ }
+}
+function dismissFollower(){
+ const n=currentFollower();if(!n)return;
+ n.following=false;removeFollowMarker(n);$('#followerCard').classList.add('hidden');toast(`${n.name} ne te suit plus.`)
+}
+
 function addFollowMarker(n){
  removeFollowMarker(n);
  const m=makeSign('🚶 TE SUIT','#9effc7');m.scale.set(2.5,.62,1);m.position.set(0,2.72,0);n.group.add(m);n.followMarker=m
@@ -800,12 +889,12 @@ function addFollowMarker(n){
 function removeFollowMarker(n){if(n?.followMarker?.parent)n.followMarker.parent.remove(n.followMarker);if(n)n.followMarker=null}
 
 function askFollow(n){
- if(n.following)return toast(`${n.name} te suit déjà.`);
+ if(n.following)return toast(`${n.name} te suit déjà.`);const existing=currentFollower();if(existing&&existing!==n)return toast(`${existing.name} te suit déjà. Fais-lui d’abord signe de partir.`);
  const doubt=clamp(n.followDoubt+state.wanted*.12-(state.reputation||0)*.015,0,.95);
  const hygieneBonus=(state.hygiene-50)/180;const chance=clamp(n.trust-doubt+.28+hygieneBonus,.05,.92);
  closeSheet();
  if(Math.random()<chance){
-   n.following=true;n.route=null;n.caught=false;playerTrail=[];updatePlayerTrail();addFollowMarker(n);
+   n.following=true;n.route=null;n.caught=false;playerTrail=[];updatePlayerTrail();n.followTrailIndex=0;addFollowMarker(n);
    closeSheet();toast(`${n.name} te suit maintenant. Emmène-le/la où tu veux.`)
  }else{
    n.trust=Math.max(0,n.trust-.1);
@@ -821,7 +910,7 @@ function transferPocketLoot(n,all=false){
 }
 function robFollower(n){
  if(!n.following)return;
- if(!(isInAlley(state.pos.x,state.pos.z)||isInAlley(n.group.position.x,n.group.position.z)))return toast('Emmène la personne dans une ruelle.');
+ if(!(isInAlley(state.pos.x,state.pos.z)||isInAlley(n.group.position.x,n.group.position.z)))return toast('Emmène la personne dans une ruelle.');if(Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z)>3.2)return toast('Attends que la personne se rapproche.');
  const compliance=clamp(.58+(weapon().damage>10?.12:0)-n.courage*.38+(state.reputation||0)*.005,.12,.88);
  n.following=false;removeFollowMarker(n);n.pickpocketed=true;n.caught=true;
  if(Math.random()<compliance){
@@ -959,6 +1048,19 @@ function animate(){
  updateNeeds(dt);updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();renderer.render(scene,camera)
 }
 
+
+function ensureOutdoorPositionClear(){
+ if(state.interior||!collides(state.pos.x,state.pos.z))return;
+ const {cx,cz}=currentChunk(),x0=cx*CHUNK,z0=cz*CHUNK;
+ const candidates=[
+  {x:x0+12.5,z:z0+22},{x:x0+22,z:z0+12.5},
+  {x:x0+12.5,z:z0+48},{x:x0+48,z:z0+12.5},
+  {x:x0+43,z:z0+43}
+ ];
+ const p=candidates.find(p=>!collides(p.x,p.z))||base.pos;
+ state.pos={x:p.x,z:p.z};save();toast('Position ajustée après la nouvelle génération de la ville.')
+}
+
 function entityPos(x){
  if(!x)return null;
  if(x.group?.position)return x.group.position;
@@ -994,7 +1096,7 @@ function checkInteraction(){
  }
  if(tailTheft?.active)return hidePrompt();
 
- const follower=nearest(npcs.filter(n=>n.following),2.5);
+ const follower=nearest(npcs.filter(n=>n.following),3.2);
  if(follower&&(isInAlley(state.pos.x,state.pos.z)||isInAlley(follower.group.position.x,follower.group.position.z)))
    return setPrompt(follower.name,'Vous êtes à l’écart.','BRAQUER',()=>robFollower(follower));
 
@@ -1401,7 +1503,7 @@ function updateHUD(){
  $('#hungerBar').style.width=`${state.hunger}%`;$('#thirstBar').style.width=`${state.thirst}%`;$('#hygieneBar').style.width=`${state.hygiene}%`;
  $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
  const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️',period=state.timeOfDay<6||state.timeOfDay>20?'NUIT':state.timeOfDay<9?'MATIN':state.timeOfDay>17?'SOIR':'JOUR';$('#weatherChip').textContent=`${icon} ${period}`;
- maybeCompleteNpcMission();updateTargetHUD()
+ maybeCompleteNpcMission();updateTargetHUD();updateFollowerCard()
 }
 
 
@@ -1464,7 +1566,7 @@ function bagHTML(){
 }
 function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
 function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. Ta base te permet de sécuriser tes gains pendant l’aventure.</p></div>`}
-function settingsHTML(){return `<div class="card"><h3>StreetQuest V11.1</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>
+function settingsHTML(){return `<div class="card"><h3>StreetQuest V11.3</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>
 <div class="card"><h3>Survie</h3><p class="sub">🍗 faim • 💧 soif • 🧼 propreté. Quand faim ou soif tombent à zéro, tes PV commencent à diminuer.</p></div>
 <div class="card"><h3>Progression logement</h3><p class="sub">Sans logement → studio loué → appartement acheté → terrain + maison.</p></div>
 <div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
@@ -1499,7 +1601,7 @@ let toastTimer;function toast(m){
 
 
 
-$('#updateBtn').onclick=()=>window.streetQuestUpdate?.();$('#emergencyExitBtn').onclick=emergencyExit;$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
+$('#updateBtn').onclick=()=>window.streetQuestUpdate?.();$('#emergencyExitBtn').onclick=emergencyExit;$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#dismissFollower').onclick=dismissFollower;$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
 init();

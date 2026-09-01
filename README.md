@@ -363,3 +363,44 @@ La partie démarre avec 0 crédit et aucun logement.
 - watchdog de cohérence : si `state.interior` existe sans `interiorGroup`, retour automatique dans la rue
 - bouton de secours `SORTIR` visible pendant les intérieurs
 - sauvegarde `sq3d-v11` conservée : aucune progression V11/V11.1 perdue
+
+
+# V11.3 — City Layout / Follower Fix
+
+## Boutiques
+- maximum 1 boutique par pâté de maisons
+- épicerie : chunk de départ
+- agence immobilière : quartier voisin à l’est
+- seconde main : quartier voisin à l’ouest
+- Maison & Co : quartier au nord
+- atelier : quartier au sud
+- boutique rare : autre quartier
+- autres boutiques réparties procéduralement dans environ 19 % des chunks
+- une parcelle boutique remplace un bâtiment : plus de magasin superposé devant l’agence
+- anciens marqueurs de boutiques de la V11/V11.2 sont migrés automatiquement
+
+## Ville
+- parcelles générées aléatoirement dans quatre zones de bloc
+- 1 à 3 bâtiments par sous-zone au lieu d’une grille identique
+- tailles, retraits et positions variables
+- le terrain personnel réserve son propre quadrant
+- ruelles centrales conservées comme corridors libres
+
+## PNJ
+- beaucoup plus de points de trajectoire
+- déplacement centré sur les couloirs piétons libres
+- déblocage automatique si un waypoint est inaccessible
+- mémorisation d’une dernière position sûre
+- les suiveurs parcourent les traces du joueur dans l’ordre
+- récupération anti-blocage si un suiveur reste coincé
+
+## Braquage
+- nouveau panneau permanent quand un PNJ te suit
+- affiche clairement « TROUVER UNE RUELLE »
+- dans une ruelle et lorsque le PNJ est proche : bouton rouge « BRAQUER »
+- bouton pour demander au PNJ d’arrêter de suivre
+- détection des ruelles basée sur leurs vraies dimensions et branches
+
+## Sauvegarde
+La sauvegarde reste `sq3d-v11`.
+Seul le plan de boutiques est migré ; argent, logement, inventaire et progression sont conservés.

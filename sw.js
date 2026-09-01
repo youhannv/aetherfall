@@ -1,4 +1,4 @@
-const C='streetquest3d-v11-2';
+const C='streetquest3d-v11-3-3';
 const CORE=['./','./index.html','./style.css','./game.js','./manifest.json','./icon-192.png','./icon-512.png','./version.json'];
 
 self.addEventListener('install',e=>{

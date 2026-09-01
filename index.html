@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V11.2">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V11.3.3">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V11.2</title>
+<title>StreetQuest 3D V11.3.3</title>
 </head>
 <body>
 <div id="app">
@@ -78,6 +78,13 @@
   </div>
 
   <div id="weatherChip" class="weatherChip">☀️ JOUR</div><button id="emergencyExitBtn" class="emergencyExit hidden">↩ SORTIR</button>
+
+
+  <div id="followerCard" class="followerCard hidden">
+   <div class="followerHead"><span>🚶 <b id="followerName">Passant</b></span><button id="dismissFollower" class="targetClose">✕</button></div>
+   <div id="followerStatus">Cette personne te suit.</div>
+   <button id="robFollowerBtn" class="robFollowerBtn" disabled>🌃 TROUVER UNE RUELLE</button>
+  </div>
 
   <div id="targetCard" class="targetCard hidden">
    <div class="targetHead">
