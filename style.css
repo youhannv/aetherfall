@@ -47,3 +47,10 @@ body{position:fixed!important;inset:0!important;touch-action:none!important;-web
 #viewport,#threeHost,#threeHost canvas{touch-action:none!important;overscroll-behavior:none!important}
 button,.joystick,.knob,.actionCircle,.nav{touch-action:none!important}
 .reputationBadge{display:inline-block;padding:4px 7px;border-radius:999px;background:#142b23;border:1px solid #356b55;color:#9df0c7;font-size:9px}
+
+.mapWrap{position:absolute;right:14px;top:40px}
+.mapExpandBtn{position:absolute;right:-6px;bottom:-10px;width:36px;height:36px;border-radius:50%;border:1px solid #67c4ff;background:#0c1d2b;color:#d8f6ff;box-shadow:0 10px 18px rgba(0,0,0,.26)}
+.mapOverlay{position:fixed;inset:0;background:rgba(2,8,14,.72);z-index:120;display:flex;align-items:center;justify-content:center;padding:16px}
+.mapOverlayBox{width:min(92vw,700px);background:#07111dcc;border:1px solid #2b5269;border-radius:24px;padding:16px;backdrop-filter:blur(10px)}
+#bigMinimap{width:100%;height:auto;aspect-ratio:1/1;border-radius:18px;border:2px solid #6fcfff;background:#08121b}
+.armHint{display:inline-block;padding:5px 8px;border-radius:999px;background:#122435;border:1px solid #355670;color:#b7ecff;font-size:10px}

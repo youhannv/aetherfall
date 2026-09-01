@@ -179,3 +179,15 @@ Le jeu marche mieux si tu l’ouvres depuis l’écran d’accueil en mode PWA. 
 - réputation gagnée avec les missions PNJ
 - réputation = remises en boutique jusqu'à 15 %
 - cônes de vision policiers sur la mini-carte quand tu es recherché ou en train de voler
+
+
+# V8
+- feux mieux placés sur les coins de trottoirs
+- PNJ avec bras visibles et animation de bras
+- PNJ qui peuvent tourner aux coins des trottoirs au lieu de marcher toujours en ligne droite
+- voitures sur voies à sens de circulation, arrêts aux feux et virages possibles
+- les passants ont une somme limitée ou rien du tout dans les poches
+- si une victime remarque le vol, elle crie, peut te frapper et alerte la police proche
+- grande mini-carte ouvrable
+- support PC : flèches / WASD + souris
+- les artefacts ramassés se vendent 500 crédits pièce en boutique

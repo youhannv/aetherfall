@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V7">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V8">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V7</title>
+<title>StreetQuest 3D V8</title>
 </head>
 <body>
 <div id="app">
@@ -62,7 +62,7 @@
    <span>🚨 <b id="wanted">0</b></span>
   </div>
 
-  <canvas id="minimap" width="200" height="200"></canvas>
+  <div class="mapWrap"><canvas id="minimap" width="200" height="200"></canvas><button id="mapExpandBtn" class="mapExpandBtn">🗺️</button></div>
 
   <div class="missionCard">
    <small>AVENTURE</small>
@@ -107,6 +107,15 @@
   </div>
 
   <div id="toast" class="toast hidden"></div>
+
+  <div id="mapOverlay" class="mapOverlay hidden">
+   <div class="mapOverlayBox">
+    <div class="sheetHead"><h2>Grande mini-carte</h2><button id="closeMapOverlay" class="roundBtn">✕</button></div>
+    <canvas id="bigMinimap" width="640" height="640"></canvas>
+    <p class="sub" style="margin-top:10px">Astuce PC : clic dans le jeu pour activer la souris, M pour ouvrir cette carte, E pour interagir.</p>
+   </div>
+  </div>
+
  </div>
 
  <nav class="bottomNav">

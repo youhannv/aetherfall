@@ -82,11 +82,11 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0
+ landOwned:false,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[]
 };
 let state=loadState();
-function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v7')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v7',JSON.stringify(state))}
+function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v8')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
+function save(){localStorage.setItem('sq3d-v8',JSON.stringify(state))}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
@@ -108,7 +108,7 @@ function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.i
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
 let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],clouds=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight;
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},desktopPointer=false;
 
 async function init(){
  try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
@@ -122,7 +122,7 @@ async function init(){
  const sun=new THREE.DirectionalLight(0xffefd0,2.0);sun.name='sun';sun.position.set(45,75,28);scene.add(sun);
  const fill=new THREE.DirectionalLight(0x8dc8ff,.32);fill.position.set(-35,30,-25);scene.add(fill);
  textures=createTextures();weaponRig=createWeaponRig();camera.add(weaponRig);scene.add(camera);
- createAtmosphere();setupWorldTap();
+ createAtmosphere();setupWorldTap();setupDesktopControls();setupMapUI();
  ensureChunks(true);updateHUD();animate();
  addEventListener('resize',()=>{camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight)});
  if(window.visualViewport){
@@ -217,16 +217,18 @@ function makeRoad(g,x0,z0){
 
  for(const [lx,lz] of [[15,20],[15,55],[40,15],[60,15],[69,38],[38,69]])addLamp(g,x0+lx,z0+lz);
  addBench(g,x0+18,z0+20);
- addTrafficLight(g,x0+13.2,z0+13.2,'vertical');
- addTrafficLight(g,x0+16.2,z0+13.2,'horizontal')
+ // Feux placés au coin des trottoirs, pas au milieu du passage.
+ addTrafficLight(g,x0+11.9,z0+11.9,'vertical',0);
+ addTrafficLight(g,x0+15.6,z0+11.9,'horizontal',Math.PI/2);
 }
-function addTrafficLight(g,x,z,axis){
+function addTrafficLight(g,x,z,axis,rot=0){
  const group=new THREE.Group();
- const pole=new THREE.Mesh(new THREE.CylinderGeometry(.065,.085,2.8,8),new THREE.MeshStandardMaterial({color:0x252d32,metalness:.55}));pole.position.y=1.4;group.add(pole);
- const box=new THREE.Mesh(new THREE.BoxGeometry(.38,.92,.32),new THREE.MeshStandardMaterial({color:0x1a2024}));box.position.y=2.55;group.add(box);
- const red=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),new THREE.MeshBasicMaterial({color:0x52151b}));red.position.set(0,2.82,-.17);group.add(red);
- const green=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),new THREE.MeshBasicMaterial({color:0x16462b}));green.position.set(0,2.30,-.17);group.add(green);
- group.position.set(x,0,z);g.add(group);trafficLights.push({group,red,green,axis})
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.065,.085,2.85,8),new THREE.MeshStandardMaterial({color:0x252d32,metalness:.55}));pole.position.y=1.42;group.add(pole);
+ const arm=new THREE.Mesh(new THREE.BoxGeometry(.68,.08,.08),new THREE.MeshStandardMaterial({color:0x252d32,metalness:.55}));arm.position.set(.29,2.82,0);group.add(arm);
+ const box=new THREE.Mesh(new THREE.BoxGeometry(.38,.92,.32),new THREE.MeshStandardMaterial({color:0x1a2024}));box.position.set(.6,2.55,0);group.add(box);
+ const red=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),new THREE.MeshBasicMaterial({color:0x52151b}));red.position.set(.6,2.82,.17);group.add(red);
+ const green=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),new THREE.MeshBasicMaterial({color:0x16462b}));green.position.set(.6,2.30,.17);group.add(green);
+ group.position.set(x,0,z);group.rotation.y=rot;g.add(group);trafficLights.push({group,red,green,axis})
 }
 function createChunk(cx,cz){
  const key=ck(cx,cz);if(chunks.has(key))return;const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
@@ -364,9 +366,12 @@ function createPerson(role,key,x,z,r,path=null){
    const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.09,10),new THREE.MeshStandardMaterial({color:0x153b63}));cap.position.y=1.96;group.add(cap);
    const badge=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.025),new THREE.MeshBasicMaterial({color:0xffd260}));badge.position.set(.12,1.25,-.27);group.add(badge)
  }
+ const armMat=new THREE.MeshStandardMaterial({color:0x232b34});
+ const a1=new THREE.Mesh(new THREE.BoxGeometry(.13,.58,.13),armMat),a2=a1.clone();
+ a1.position.set(-.34,1.12,0);a2.position.set(.34,1.12,0);group.add(a1,a2);
  const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);
- const hasCash=r()<.58;
- const n={key,group,role,hostile,isPolice,axis:path?.axis||(r()<.5?'x':'z'),pathMin:path?.min??null,pathMax:path?.max??null,speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:hasCash?(7+Math.floor(r()*48)):0,legs:[l1,l2],phase:r()*6.2,name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0};
+ const hasCash=r()<.52;
+ const n={key,group,role,hostile,isPolice,axis:path?.axis||(r()<.5?'x':'z'),pathMin:path?.min??null,pathMax:path?.max??null,speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:hasCash?(2+Math.floor(r()*36)):0,legs:[l1,l2],arms:[a1,a2],phase:r()*6.2,name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false};
  group.traverse(o=>{o.userData.person=n});return n
 }
 function createCarVisual(color){
@@ -378,9 +383,18 @@ function createCarVisual(color){
  return group
 }
 function addCar(g,key,x0,z0,r,i){
- const vertical=r()<.5,group=createCarVisual(choice([0xc44b4b,0x4b6fc4,0x444b52,0xe0d3b4,0x4f9c68,0x9c7443]));
- group.position.set(vertical?x0+3.1:x0+17+i*17,0,vertical?z0+18+i*18:z0+3.1);if(!vertical)group.rotation.y=Math.PI/2;g.add(group);
- cars.push({key,group,vertical,dir:r()<.5?-1:1,speed:4.2+r()*2.2,x0,z0,lastHit:0})
+ const mode=r()<.5?'v':'h',dir=mode==='v'?(r()<.5?-1:1):(r()<.5?-1:1),group=createCarVisual(choice([0xc44b4b,0x4b6fc4,0x444b52,0xe0d3b4,0x4f9c68,0x9c7443]));
+ if(mode==='v'){
+   const laneX=dir>0?x0+3.2:x0+7.8;
+   group.position.set(laneX,0,z0+18+i*18);
+   group.rotation.y=dir>0?Math.PI:0;
+ }else{
+   const laneZ=dir>0?z0+7.8:z0+3.2;
+   group.position.set(x0+18+i*17,0,laneZ);
+   group.rotation.y=dir>0?-Math.PI/2:Math.PI/2;
+ }
+ g.add(group);
+ cars.push({key,group,mode,dir,speed:4.1+r()*2.1,lastHit:0,turnCooldown:.6+Math.random(),turnSeed:Math.random()})
 }
 
 function unload(key){
@@ -423,24 +437,51 @@ function updateTrafficLights(t){
 function updateCars(dt,t){
  const verticalGreen=updateTrafficLights(t);
  for(const c of cars){
-   const approaching=c.vertical
-      ? Math.abs((c.group.position.z-c.z0)-11.5)<5
-      : Math.abs((c.group.position.x-c.x0)-11.5)<5;
-   const hasGreen=c.vertical?verticalGreen:!verticalGreen;
-   const speed=(approaching&&!hasGreen)?0:c.speed;
-   if(c.vertical){
-     c.group.position.z+=c.dir*speed*dt;
-     if(c.group.position.z<c.z0+8||c.group.position.z>c.z0+CHUNK-6)c.dir*=-1;
-     // Car local front/headlights point to -Z.
-     c.group.rotation.y=c.dir>0?Math.PI:0
+   c.turnCooldown=Math.max(0,(c.turnCooldown||0)-dt);
+   const cx=Math.floor(c.group.position.x/CHUNK),cz=Math.floor(c.group.position.z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
+   c.key=ck(cx,cz);
+   const localX=c.group.position.x-x0,localZ=c.group.position.z-z0;
+   if(c.mode==='v'){
+     const laneX=c.dir>0?x0+3.2:x0+7.8;
+     c.group.position.x += (laneX-c.group.position.x)*Math.min(1,dt*7);
+     const approaching=Math.abs(localZ-6.0)<2.4;
+     if(approaching&&!verticalGreen){/* red light: stop */}
+     else{
+       c.group.position.z += c.dir*c.speed*dt;
+       if(approaching&&c.turnCooldown<=0&&Math.random()<.42){
+         const turnRight=Math.random()<.55;
+         if(c.dir>0){ // southbound
+           c.mode='h';c.dir=turnRight?-1:1;c.group.position.z=turnRight?z0+3.2:z0+7.8;c.group.position.x=turnRight?x0+4.6:x0+6.4;
+         }else{ // northbound
+           c.mode='h';c.dir=turnRight?1:-1;c.group.position.z=turnRight?z0+7.8:z0+3.2;c.group.position.x=turnRight?x0+6.4:x0+4.6;
+         }
+         c.turnCooldown=1.2;
+       }
+     }
+     c.group.rotation.y=c.dir>0?Math.PI:0;
    }else{
-     c.group.position.x+=c.dir*speed*dt;
-     if(c.group.position.x<c.x0+8||c.group.position.x>c.x0+CHUNK-6)c.dir*=-1;
-     c.group.rotation.y=c.dir>0?-Math.PI/2:Math.PI/2
+     const laneZ=c.dir>0?z0+7.8:z0+3.2;
+     c.group.position.z += (laneZ-c.group.position.z)*Math.min(1,dt*7);
+     const approaching=Math.abs(localX-6.0)<2.4;
+     if(approaching&&verticalGreen){/* red light for horizontal traffic */}
+     else{
+       c.group.position.x += c.dir*c.speed*dt;
+       if(approaching&&c.turnCooldown<=0&&Math.random()<.42){
+         const turnRight=Math.random()<.55;
+         if(c.dir>0){ // eastbound
+           c.mode='v';c.dir=turnRight?1:-1;c.group.position.x=turnRight?x0+3.2:x0+7.8;c.group.position.z=turnRight?z0+6.4:z0+4.6;
+         }else{ // westbound
+           c.mode='v';c.dir=turnRight?-1:1;c.group.position.x=turnRight?x0+7.8:x0+3.2;c.group.position.z=turnRight?z0+4.6:z0+6.4;
+         }
+         c.turnCooldown=1.2;
+       }
+     }
+     c.group.rotation.y=c.dir>0?-Math.PI/2:Math.PI/2;
    }
+
    if(!state.interior&&t-c.lastHit>1250){
      const dx=Math.abs(state.pos.x-c.group.position.x),dz=Math.abs(state.pos.z-c.group.position.z);
-     const hit=c.vertical?(dx<1.15&&dz<2.15):(dx<2.15&&dz<1.15);
+     const hit=c.mode==='v'?(dx<1.15&&dz<2.15):(dx<2.15&&dz<1.15);
      if(hit){c.lastHit=t;hitByCar(c)}
    }
  }
@@ -460,25 +501,80 @@ function setHeading(n,dx,dz){
 function patrolPerson(n,dt){
  const current=n.axis==='x'?n.group.position.x:n.group.position.z;
  if(n.pathMin!=null&&n.pathMax!=null){
-   if(current<n.pathMin+.3)n.dir=1;
-   if(current>n.pathMax-.3)n.dir=-1
+   if(current<n.pathMin+.35){
+     if(!reroutePedestrian(n))n.dir=1
+   }
+   if(current>n.pathMax-.35){
+     if(!reroutePedestrian(n))n.dir=-1
+   }
  }else{
    const off=n.axis==='x'?n.group.position.x-n.home.x:n.group.position.z-n.home.z;if(Math.abs(off)>19)n.dir*=-1
  }
  const dx=n.axis==='x'?n.dir*n.speed*dt:0,dz=n.axis==='z'?n.dir*n.speed*dt:0;
  if(moveEntity(n,dx,dz,.3))setHeading(n,dx,dz)
 }
+
+function reroutePedestrian(n){
+ const cx=Math.floor(n.group.position.x/CHUNK),cz=Math.floor(n.group.position.z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
+ if(n.axis==='z'){
+   const west=n.group.position.x<x0+CHUNK/2,south=n.group.position.z<z0+CHUNK/2;
+   if(Math.random()<.62){
+     n.axis='x';n.pathMin=x0+17;n.pathMax=x0+CHUNK-5;
+     n.group.position.z=south?z0+12.5:z0+CHUNK-1.5;
+     n.group.position.x=west?x0+17:x0+CHUNK-5;
+     n.dir=west?1:-1;
+     return true
+   }
+ }else{
+   const west=n.group.position.x<x0+CHUNK/2,south=n.group.position.z<z0+CHUNK/2;
+   if(Math.random()<.62){
+     n.axis='z';n.pathMin=z0+17;n.pathMax=z0+CHUNK-5;
+     n.group.position.x=west?x0+12.5:x0+CHUNK-1.5;
+     n.group.position.z=south?z0+17:z0+CHUNK-5;
+     n.dir=south?1:-1;
+     return true
+   }
+ }
+ return false
+}
+function updateAngryCivilian(n,dt,t){
+ const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);
+ n.aggroTime=Math.max(0,n.aggroTime-dt);
+ if(!n.calledPolice){n.calledPolice=true;toast('🗣️ Au voleur !');callNearbyPolice(n,t)}
+ if(dist>1.05){
+   const sx=dx/(dist||1)*n.speed*1.35*dt,sz=dz/(dist||1)*n.speed*1.35*dt;
+   if(moveEntity(n,sx,sz,.32))setHeading(n,sx,sz)
+ }else if(t-n.lastHit>900){
+   n.lastHit=t;
+   const raw=5+Math.floor(Math.random()*5),abs=Math.min(state.armor,Math.floor(raw*.35));
+   state.armor-=abs;state.hp-=raw-abs;toast(`👊 ${n.name} te frappe ! -${raw-abs} PV`);
+   if(state.hp<=0){state.hp=state.maxHp;state.wanted=0;state.pos={x:2,z:8};clearTarget();toast('K.O. — retour au refuge')}
+ }
+ if(n.aggroTime<=0){n.calledPolice=false;n.caught=true}
+}
+function callNearbyPolice(n,t){
+ let found=false;
+ for(const p of police){
+   const d=Math.hypot(p.group.position.x-n.group.position.x,p.group.position.z-n.group.position.z);
+   if(d<18){p.chasing=true;p.lastSeen=t;found=true}
+ }
+ if(found)state.wanted=Math.max(2,state.wanted); else state.wanted=Math.max(1,state.wanted)
+}
+
 function updatePeople(dt,t){
  policeSeeing=false;
  for(const n of npcs){
-   patrolPerson(n,dt);
-   n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x
+   if(n.aggroTime>0) updateAngryCivilian(n,dt,t);
+   else patrolPerson(n,dt);
+   n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x;
+   if(n.arms){n.arms[0].rotation.x=-n.legs[0].rotation.x*.7;n.arms[1].rotation.x=-n.legs[1].rotation.x*.7}
  }
  for(const n of enemies){
    if(n===activeEnemyEntity)continue;
    const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);
    if(dist<8){const sx=dx/(dist||1)*n.speed*1.18*dt,sz=dz/(dist||1)*n.speed*1.18*dt;if(moveEntity(n,sx,sz,.3))setHeading(n,sx,sz);if(dist<1.5&&!activeEnemy)startCombat(n)}else patrolPerson(n,dt);
-   n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x
+   n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x;
+   if(n.arms){n.arms[0].rotation.x=-n.legs[0].rotation.x*.7;n.arms[1].rotation.x=-n.legs[1].rotation.x*.7}
  }
  for(const p of police){
    const dx=state.pos.x-p.group.position.x,dz=state.pos.z-p.group.position.z,dist=Math.hypot(dx,dz);
@@ -489,7 +585,8 @@ function updatePeople(dt,t){
      const sx=dx/(dist||1)*p.speed*1.75*dt,sz=dz/(dist||1)*p.speed*1.75*dt;if(moveEntity(p,sx,sz,.32))setHeading(p,sx,sz);
      if(dist<1.35)policeCatch(p)
    }else{p.chasing=false;patrolPerson(p,dt)}
-   p.legs[0].rotation.x=Math.sin(t*.006*p.speed+p.phase)*.55;p.legs[1].rotation.x=-p.legs[0].rotation.x
+   p.legs[0].rotation.x=Math.sin(t*.006*p.speed+p.phase)*.55;p.legs[1].rotation.x=-p.legs[0].rotation.x;
+   if(p.arms){p.arms[0].rotation.x=-p.legs[0].rotation.x*.7;p.arms[1].rotation.x=-p.legs[1].rotation.x*.7}
  }
  updateTailTheft(dt,t);
  if(state.wanted>0){
@@ -519,7 +616,13 @@ function policeCatch(){
 }function animatePickups(dt,t){for(const p of pickups){if(!p.parent)continue;p.rotation.y+=dt;p.position.y=(p.userData.type==='artifact'?.72:.43)+Math.sin(t/450+p.position.x)*.07}}
 function animate(){
  if(!renderer)return;requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta()),t=performance.now();
- const forward=-moveStick.y,strafe=moveStick.x,fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);movePlayer((fx*forward+rx*strafe)*4.8*dt,(fz*forward+rz*strafe)*4.8*dt);state.yaw+=lookStick.x*1.8*dt;state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1);
+ const keyForward=(keys['ArrowUp']||keys['KeyW']?1:0)-(keys['ArrowDown']||keys['KeyS']?1:0);
+ const keyStrafe=(keys['ArrowRight']||keys['KeyD']?1:0)-(keys['ArrowLeft']||keys['KeyA']?1:0);
+ const forward=clamp(-moveStick.y+keyForward,-1,1),strafe=clamp(moveStick.x+keyStrafe,-1,1);
+ const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);
+ movePlayer((fx*forward+rx*strafe)*4.8*dt,(fz*forward+rz*strafe)*4.8*dt);
+ state.yaw+=lookStick.x*1.8*dt;
+ if(!desktopPointer){state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)}
  updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();renderer.render(scene,camera)
 }
 
@@ -577,13 +680,24 @@ function checkInteraction(){
 function setPrompt(t,d,b,fn){currentInteractFn=fn;$('#promptTitle').textContent=t;$('#promptText').textContent=d;$('#promptBtn').textContent=b;$('#promptBtn').onclick=fn;$('#prompt').classList.remove('hidden')}
 function hidePrompt(){currentInteractFn=null;$('#prompt').classList.add('hidden')}
 function pickupName(t){return{medkit:'Kit de soin',rare:'Cache de matériel',artifact:city().artifact}[t]}
+function artifactLabel(id){return (CITIES.find(c=>c.id===id)||{artifact:id}).artifact}
+function artifactCount(id){return state.artifactBag.filter(x=>x===id).length}
+function sellArtifact(id){
+ const idx=state.artifactBag.indexOf(id);
+ if(idx<0)return toast('Aucun artefact à vendre');
+ state.artifactBag.splice(idx,1);
+ state.coins+=500;
+ save();toast(`${artifactLabel(id)} vendu : +500 crédits`);
+ if($('#sheetTitle')?.textContent===SHOPS[state.interior?.shopType]?.name){$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
+ else openSheet('bag')
+}
 function collectPickup(m){
  const{id,type}=m.userData;if(state.collected.includes(id))return;
  if(type==='medkit'&&invCount()>=state.bagMax)return toast('Sac plein');
  state.collected.push(id);
  if(type==='medkit'){addInv('medkit');toast('Kit de soin récupéré')}
  if(type==='rare'){state.xp+=35;if(Math.random()<.45&&invCount()<state.bagMax){addInv('medkit');toast('Cache : kit de soin + XP')}else{state.armor=clamp(state.armor+12,0,100);toast('Cache : matériel de protection + XP')}}
- if(type==='artifact'&&!state.artifacts.includes(state.cityId)){state.artifacts.push(state.cityId);state.xp+=180;toast(`${city().artifact} récupéré !`)}
+ if(type==='artifact'&&!state.artifacts.includes(state.cityId)){state.artifacts.push(state.cityId);state.artifactBag.push(state.cityId);state.xp+=180;toast(`${city().artifact} récupéré ! Tu peux le vendre 500 crédits en boutique.`)}
  if(m.parent)m.parent.remove(m);pickups=pickups.filter(x=>x!==m);levelCheck();checkQuests();save();hidePrompt()
 }
 function openContainer(m){
@@ -605,7 +719,7 @@ function talkNPC(n){
 }
 function showNpcChoices(n){
  $('#dialogue').classList.add('hidden');
- openSheet('npc');$('#sheetTitle').textContent=n.name;$('#sheetBody').innerHTML=`<div class="card"><h3>Que faire ?</h3><div class="grid2"><button class="menuBtn primary" id="talkAgain">💬 Discuter</button><button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Faire les poches<small>${n.pickpocketed?'Déjà fouillé':n.caught?'Sur ses gardes':'Sélectionne-la puis suis-la discrètement.'}</small></button></div></div>`;
+ openSheet('npc');$('#sheetTitle').textContent=n.name;$('#sheetBody').innerHTML=`<div class="card"><h3>Que faire ?</h3><div class="grid2"><button class="menuBtn primary" id="talkAgain">💬 Discuter</button><button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Faire les poches<small>${n.pickpocketed?'Déjà fouillé':n.caught?'Sur ses gardes':'Tu la sélectionnes puis la fouille démarre quand tu restes derrière elle.'}</small></button></div></div>`;
  $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'Profite du quartier, il y a toujours quelque chose à découvrir.',hideDialogue)};const pp=$('#pickpocket');if(pp)pp.onclick=()=>{closeSheet();selectTarget(n);toast('Cible sélectionnée : suis-la et place-toi derrière.')}
 }
 function assignNpcMission(n){const opts=[{kind:'pockets',text:'récupère 30 crédits sur des passants',target:30,start:state.stolenCoins,reward:90},{kind:'container',text:'fouille 2 caches ou poubelles',target:2,start:state.containersOpened,reward:110},{kind:'explore',text:'découvre 2 nouveaux quartiers',target:2,start:state.seenDistricts.length,reward:120}];state.activeNpcMission={...choice(opts),giver:n.name};save()}
@@ -662,7 +776,9 @@ function updateTailTheft(dt,t){
  updateTargetHUD();save()
 }
 function targetNotices(){
- const n=tailTheft.npc;n.caught=true;state.wanted=Math.max(1,state.wanted);stopTailTheft(`${n.name} s’est aperçu du vol !`,true);n.speed*=1.5
+ const n=tailTheft.npc;
+ n.caught=true;n.aggroTime=8+Math.random()*3;n.calledPolice=false;state.wanted=Math.max(1,state.wanted);
+ stopTailTheft(`${n.name} s’est aperçu du vol !`,true);n.speed=Math.max(n.speed,1.25)
 }
 function theftSpottedByPolice(){
  state.wanted=Math.max(1,state.wanted);stopTailTheft('Un policier t’a vu faire les poches !',true)
@@ -745,7 +861,14 @@ function buildHomeInterior(){
 }
 function exitInterior(){leaveInterior()}
 function leaveInterior(){if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}for(const[,g]of chunks)g.visible=true;state.interior=null;state.pos=state.returnPos||{x:2,z:8};state.returnPos=null;save();hidePrompt()}
-function physicalShopHTML(){const s=SHOPS[state.interior.shopType];return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits disponibles. ${state.reputation?`Réputation ${state.reputation} : remise jusqu’à ${Math.min(15,state.reputation)}%.`:''}</p></div><div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price} crédits</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir de la boutique</button>`}
+function physicalShopHTML(){
+ const s=SHOPS[state.interior.shopType];
+ const arts=[...new Set(state.artifactBag)];
+ return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits disponibles. ${state.reputation?`Réputation ${state.reputation} : remise jusqu’à ${Math.min(15,state.reputation)}%.`:''}</p></div>
+ <div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price} crédits</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div>
+ <div class="card"><h3>💎 Vente d’artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>En sac ×${artifactCount(id)} • 500 crédits pièce</small></div><button class="menuBtn sellArtifact" data-id="${id}">Vendre</button></div>`).join(''):'<p class="sub">Aucun artefact à vendre pour le moment.</p>'}</div>
+ <button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir de la boutique</button>`
+}
 function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),finalPrice=Math.max(1,Math.round(price*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(id==='snack'){state.hp=clamp(state.hp+15,0,state.maxHp)}if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;if(HOME_ITEMS[id])addHomeItem(id);save();updateHUD();toast('Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
 function bindShop(){$$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));$('#leaveShop').onclick=()=>{closeSheet();leaveInterior()}}
 
@@ -803,33 +926,65 @@ function scan(){
  const max=state.scanner?140:70;if(art&&bd<max)toast(`Artefact ${bd<10?'TRÈS PROCHE':bd<30?'PROCHE':'DANS LE SECTEUR'} • ${Math.round(bd)} m`);else toast(`Scanner : ${state.scanner?'longue':'courte'} portée — aucun artefact détecté ici`)
 }
 
-function drawMap(){
- const c=$('#minimap'),q=c.getContext('2d'),W=c.width,H=c.height,S=2.0,R=45;q.clearRect(0,0,W,H);q.fillStyle='#07111d';q.fillRect(0,0,W,H);q.save();q.translate(W/2,H/2);
- if(state.interior){q.fillStyle='#8594a0';q.fillRect(-35,-35,70,70);q.fillStyle='#fff';q.beginPath();q.arc(0,0,4,0,Math.PI*2);q.fill();q.restore();return}
- q.strokeStyle='#47555e';q.lineWidth=11*S;const minCx=Math.floor((state.pos.x-R)/CHUNK)-1,maxCx=Math.floor((state.pos.x+R)/CHUNK)+1,minCz=Math.floor((state.pos.z-R)/CHUNK)-1,maxCz=Math.floor((state.pos.z+R)/CHUNK)+1;
+function renderMapTo(canvas,zoom=2.0){
+ if(!canvas)return;
+ const q=canvas.getContext('2d'),W=canvas.width,H=canvas.height,S=zoom,R=W/(zoom*2.2);
+ q.clearRect(0,0,W,H);q.fillStyle='#07111d';q.fillRect(0,0,W,H);q.save();q.translate(W/2,H/2);
+ if(state.interior){q.fillStyle='#8594a0';q.fillRect(-W*.18,-H*.18,W*.36,H*.36);q.fillStyle='#fff';q.beginPath();q.arc(0,0,6,0,Math.PI*2);q.fill();q.restore();return}
+ q.strokeStyle='#47555e';q.lineWidth=11*(zoom/2);const minCx=Math.floor((state.pos.x-R)/CHUNK)-1,maxCx=Math.floor((state.pos.x+R)/CHUNK)+1,minCz=Math.floor((state.pos.z-R)/CHUNK)-1,maxCz=Math.floor((state.pos.z+R)/CHUNK)+1;
  for(let cx=minCx;cx<=maxCx;cx++){const x=(cx*CHUNK-state.pos.x)*S;q.beginPath();q.moveTo(x,-H);q.lineTo(x,H);q.stroke()}for(let cz=minCz;cz<=maxCz;cz++){const y=(cz*CHUNK-state.pos.z)*S;q.beginPath();q.moveTo(-W,y);q.lineTo(W,y);q.stroke()}
  q.fillStyle='#6a7680';for(const b of colliders){const x=(b.minX-state.pos.x)*S,y=(b.minZ-state.pos.z)*S,w=(b.maxX-b.minX)*S,h=(b.maxZ-b.minZ)*S;if(Math.abs(x)>W||Math.abs(y)>H)continue;q.fillRect(x,y,w,h)}
- q.fillStyle='#63e2b0';for(const s of shops){const dx=(s.x-state.pos.x)*S,dz=(s.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,5,0,Math.PI*2);q.fill()}}
- q.fillStyle='#f0cf63';for(const h of homePlots){const dx=(h.x-state.pos.x)*S,dz=(h.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.fillRect(dx-4,dz-4,8,8)}}
- q.fillStyle='#ff6c7e';for(const e of enemies){const dx=(e.group.position.x-state.pos.x)*S,dz=(e.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,3,0,Math.PI*2);q.fill()}}
+ q.fillStyle='#63e2b0';for(const s of shops){const dx=(s.x-state.pos.x)*S,dz=(s.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,5*(zoom/2),0,Math.PI*2);q.fill()}}
+ q.fillStyle='#f0cf63';for(const h of homePlots){const dx=(h.x-state.pos.x)*S,dz=(h.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.fillRect(dx-4*(zoom/2),dz-4*(zoom/2),8*(zoom/2),8*(zoom/2))}}
+ q.fillStyle='#ff6c7e';for(const e of enemies){const dx=(e.group.position.x-state.pos.x)*S,dz=(e.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,3*(zoom/2),0,Math.PI*2);q.fill()}}
  q.fillStyle='#4ea8ff';for(const p of police){
    const dx=(p.group.position.x-state.pos.x)*S,dz=(p.group.position.z-state.pos.z)*S;
    if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){
      if(state.wanted>0||tailTheft?.active){
        const ang=p.heading-Math.PI/2,len=20*S;q.fillStyle='rgba(78,168,255,.12)';q.beginPath();q.moveTo(dx,dz);q.arc(dx,dz,len,ang-.34,ang+.34);q.closePath();q.fill();q.fillStyle='#4ea8ff'
      }
-     q.beginPath();q.arc(dx,dz,3.5,0,Math.PI*2);q.fill()
+     q.beginPath();q.arc(dx,dz,3.5*(zoom/2),0,Math.PI*2);q.fill()
    }
  }
- q.fillStyle='#7ccf9c';for(const n of npcs){const dx=(n.group.position.x-state.pos.x)*S,dz=(n.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,2.3,0,Math.PI*2);q.fill()}}
- if(selectedNPC?.group?.parent){const dx=(selectedNPC.group.position.x-state.pos.x)*S,dz=(selectedNPC.group.position.z-state.pos.z)*S;q.strokeStyle='#8ee8ff';q.lineWidth=2;q.beginPath();q.arc(dx,dz,6,0,Math.PI*2);q.stroke()}
- q.rotate(state.yaw);q.fillStyle='#fff';q.beginPath();q.moveTo(0,-8);q.lineTo(5,6);q.lineTo(0,3);q.lineTo(-5,6);q.closePath();q.fill();q.restore()
+ q.fillStyle='#7ccf9c';for(const n of npcs){const dx=(n.group.position.x-state.pos.x)*S,dz=(n.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,2.3*(zoom/2),0,Math.PI*2);q.fill()}}
+ if(selectedNPC?.group?.parent){const dx=(selectedNPC.group.position.x-state.pos.x)*S,dz=(selectedNPC.group.position.z-state.pos.z)*S;q.strokeStyle='#8ee8ff';q.lineWidth=2*(zoom/2);q.beginPath();q.arc(dx,dz,6*(zoom/2),0,Math.PI*2);q.stroke()}
+ q.rotate(state.yaw);q.fillStyle='#fff';q.beginPath();q.moveTo(0,-8*(zoom/2));q.lineTo(5*(zoom/2),6*(zoom/2));q.lineTo(0,3*(zoom/2));q.lineTo(-5*(zoom/2),6*(zoom/2));q.closePath();q.fill();q.restore()
 }
+function drawMap(){renderMapTo($('#minimap'),2.0);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),4.2)}
 function updateHUD(){
  const {cx,cz}=currentChunk(),d=districtFor(cx,cz),aq=activeQuest(),prog=Math.min(aq.target,progress(aq.goal));$('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;$('#level').textContent=state.level;$('#wanted').textContent=state.wanted;
  $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
  const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️',period=state.timeOfDay<6||state.timeOfDay>20?'NUIT':state.timeOfDay<9?'MATIN':state.timeOfDay>17?'SOIR':'JOUR';$('#weatherChip').textContent=`${icon} ${period}`;
  maybeCompleteNpcMission();updateTargetHUD()
+}
+
+
+function setupMapUI(){
+ const open=()=>{$('#mapOverlay').classList.remove('hidden');drawMap()};
+ const close=()=>$('#mapOverlay').classList.add('hidden');
+ $('#mapExpandBtn').onclick=open;$('#minimap').onclick=open;$('#closeMapOverlay').onclick=close;$('#mapOverlay').onclick=e=>e.target===$('#mapOverlay')&&close()
+}
+function setupDesktopControls(){
+ const isDesktop=matchMedia('(pointer:fine)').matches;
+ const canvas=renderer.domElement;
+ document.addEventListener('keydown',e=>{
+   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)||/^Key[WASDMIEQ]$/.test(e.code))e.preventDefault();
+   keys[e.code]=true;
+   if(e.code==='KeyE'&&currentInteractFn)currentInteractFn();
+   if(e.code==='KeyM'){const overlay=$('#mapOverlay');overlay.classList.toggle('hidden');if(!overlay.classList.contains('hidden'))drawMap()}
+   if(e.code==='KeyI')openSheet('bag');
+   if(e.code==='Escape'&&document.pointerLockElement===canvas)document.exitPointerLock?.();
+ });
+ document.addEventListener('keyup',e=>{keys[e.code]=false});
+ if(isDesktop){
+   canvas.addEventListener('click',()=>{canvas.requestPointerLock?.()});
+   document.addEventListener('pointerlockchange',()=>{desktopPointer=document.pointerLockElement===canvas});
+   document.addEventListener('mousemove',e=>{
+     if(!desktopPointer)return;
+     state.yaw -= e.movementX*.0026;
+     state.pitch = clamp(state.pitch-e.movementY*.0021,-.85,.65)
+   });
+ }
 }
 
 function makeJoy(baseSel,knobSel,target){
@@ -859,10 +1014,18 @@ function openSheet(panel){
  bindSheet(panel)
 }
 function worldHTML(){return `<div class="card"><h3>Exploration chill</h3><p class="sub">Explore sans chronomètre. Les quartiers se chargent au fur et à mesure, avec voitures, habitants, boutiques, appartements, parcs, terrain personnel et secrets.</p></div><div class="card"><h3>Voyager</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div>`}
-function bagHTML(){const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join(''),meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';return `<div class="card"><h3>Armes</h3>${ws}</div><div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div><div class="card"><h3>Discrétion</h3><p class="sub">${state.pickpockets} vols réussis • ${state.stolenCoins} crédits récupérés dans les poches • niveau de recherche ${state.wanted}/5 • ${state.policeCaught||0} arrestations.</p><p class="sub">Coffre maison : ${state.homeBank||0} crédits • ${state.homeStorage.medkit||0} medkits.</p></div>`}
+function bagHTML(){
+ const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join('');
+ const meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';
+ const arts=[...new Set(state.artifactBag)];
+ return `<div class="card"><h3>Armes</h3>${ws}</div>
+ <div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div>
+ <div class="card"><h3>Artefacts transportés</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • valeur 500 crédits pièce en boutique</small></div></div>`).join(''):'<p class="sub">Aucun artefact sur toi.</p>'}</div>
+ <div class="card"><h3>Discrétion</h3><p class="sub">${state.pickpockets} vols réussis • ${state.stolenCoins} crédits récupérés dans les poches • niveau de recherche ${state.wanted}/5 • ${state.policeCaught||0} arrestations.</p><p class="sub">Coffre maison : ${state.homeBank||0} crédits • ${state.homeStorage.medkit||0} medkits.</p></div>`
+}
 function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
 function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. Ta base te permet de sécuriser tes gains pendant l’aventure.</p></div>`}
-function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div><div class="warning">V7 corrige l’orientation des visages et phares, ajoute trottoirs bilatéraux, passages piétons, feux, trajectoires PNJ de trottoir, base améliorable et verrouillage anti-zoom renforcé.</div>`}
+function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div><div class="card"><h3>Commandes PC</h3><p class="sub">Flèches directionnelles ou ZQSD/WASD pour bouger. Clique dans le jeu pour activer la souris et orienter la caméra. E = interagir, M = grande carte, I = sac, Échap = libérer la souris.</p><span class="armHint">V8 ajoute aussi des bras aux PNJ, une grande mini-carte, des voitures qui tournent et des victimes qui peuvent se défendre.</span></div><div class="warning">V8 améliore encore le trafic, les feux, la discrétion, la vente d’artefacts et la jouabilité PC/mobile.</div>`}
 function bindSheet(panel){
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
  if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
@@ -877,7 +1040,7 @@ function bindSheet(panel){
    $$('.depositMed').forEach(b=>b.onclick=depositMedkit);$$('.withdrawMed').forEach(b=>b.onclick=withdrawMedkit)
  }
  if(panel==='districts'){const x=$('#secureDistrict'); if(x)x.onclick=secureDistrict}
- if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v7');location.reload()}};
+ if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v8');location.reload()}};
  if(panel==='physicalShop')bindShop()
 }
 function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
@@ -888,6 +1051,6 @@ let toastTimer;function toast(m){const t=$('#toast');t.textContent=m;t.classList
 
 
 $('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
-document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
 init();
