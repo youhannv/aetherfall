@@ -10,7 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V4</title>
+<title>StreetQuest 3D V4.1</title>
 </head>
 <body>
 <div id="app">
@@ -43,6 +43,24 @@
    <div class="portrait" id="dialogueIcon">🙂</div>
    <div class="dialogueMain"><b id="dialogueName"></b><p id="dialogueText"></p></div>
    <button id="dialogueNext" class="smallBtn">Suite</button>
+  </div>
+
+
+  <div id="theft" class="theft hidden">
+   <div class="theftHead">
+    <div><small>VOL À LA TIRE</small><b id="theftName">Passant</b></div>
+    <span id="theftRisk">RISQUE</span>
+   </div>
+   <p id="theftText">Maintiens le bouton puis relâche au bon moment.</p>
+   <div class="theftTrack">
+    <i id="theftBar"></i>
+    <em id="theftSweet"></em>
+   </div>
+   <div id="theftStatus">Prêt…</div>
+   <div class="theftButtons">
+    <button id="theftHold" class="theftHold">🫳 MAINTENIR</button>
+    <button id="theftCancel" class="normalBtn">ANNULER</button>
+   </div>
   </div>
 
   <div id="prompt" class="prompt hidden">

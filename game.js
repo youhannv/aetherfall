@@ -42,7 +42,7 @@ const SHOPS={
  ]}
 };
 const QUESTS=[
- {id:'welcome',title:'Premiers pas',text:'Trouve 100 crédits dans la ville.',goal:'coinsEarned',target:100,reward:100},
+ {id:'welcome',title:'Premiers pas',text:'Récupère 50 crédits en faisant les poches des passants.',goal:'stolenCoins',target:50,reward:100},
  {id:'helper',title:'Bon voisin',text:'Accomplis une mission donnée par un PNJ.',goal:'npcMissions',target:1,reward:140},
  {id:'explorer',title:'Explorateur',text:'Découvre 6 quartiers.',goal:'districtsSeen',target:6,reward:180},
  {id:'treasure',title:'Chasseur de caches',text:'Ouvre 5 coffres ou poubelles.',goal:'containersOpened',target:5,reward:160},
@@ -51,13 +51,13 @@ const QUESTS=[
 const base={
  cityId:'paris',hp:100,maxHp:100,armor:0,coins:120,level:1,xp:0,wanted:0,
  pos:{x:2,z:8},yaw:0,pitch:0,inventory:[],bagMax:20,ownedWeapons:['fists'],equipped:'fists',
- stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,
+ stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null
 };
 let state=loadState();
-function loadState(){try{return {...structuredClone(base),...JSON.parse(localStorage.getItem('sq3d-v4')||'{}')}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v4',JSON.stringify(state))}
+function loadState(){try{return {...structuredClone(base),...JSON.parse(localStorage.getItem('sq3d-v4-1')||'{}')}}catch{return structuredClone(base)}}
+function save(){localStorage.setItem('sq3d-v4-1',JSON.stringify(state))}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
@@ -68,7 +68,7 @@ function ck(cx,cz){return `${state.cityId}:${cx}:${cz}`}
 function currentChunk(){return{cx:Math.floor(state.pos.x/CHUNK),cz:Math.floor(state.pos.z/CHUNK)}}
 function districtFor(cx,cz){const idx=Math.abs((cx*7+cz*11)%DISTRICTS.length);return DISTRICTS[idx]}
 function districtId(cx,cz){return `${state.cityId}:${cx}:${cz}`}
-function progress(goal){if(goal==='coinsEarned')return state.coinsEarned;if(goal==='npcMissions')return state.npcMissions;if(goal==='districtsSeen')return state.seenDistricts.length;if(goal==='containersOpened')return state.containersOpened;if(goal==='districtsOwned')return state.ownedDistricts.length;return 0}
+function progress(goal){if(goal==='stolenCoins')return state.stolenCoins;if(goal==='coinsEarned')return state.coinsEarned;if(goal==='npcMissions')return state.npcMissions;if(goal==='districtsSeen')return state.seenDistricts.length;if(goal==='containersOpened')return state.containersOpened;if(goal==='districtsOwned')return state.ownedDistricts.length;return 0}
 function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.id))||{id:'free',title:'Légende urbaine',text:'Explore librement, collectionne les artefacts et sécurise les quartiers.',goal:'districtsOwned',target:999}}
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
@@ -134,7 +134,7 @@ function createChunk(cx,cz){
  // bins / chests
  const cont=1+Math.floor(r()*3);for(let i=0;i<cont;i++){const p=randomSidewalk(x0,z0,r),type=r()<.72?'bin':'chest',idc=`${key}:container:${i}`;if(!state.collected.includes(idc))addContainer(g,key,idc,p.x,p.z,type)}
  // loot
- const lootN=2+Math.floor(r()*4);for(let i=0;i<lootN;i++){const p=randomSidewalk(x0,z0,r),type=r()<.62?'coins':r()<.84?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
+ const lootN=2+Math.floor(r()*4);for(let i=0;i<lootN;i++){const p=randomSidewalk(x0,z0,r),type=r()<.68?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
  // artifact, sparse, across city
  if(!state.artifacts.includes(state.cityId)&&((Math.abs(cx)+Math.abs(cz)>1&&r()<.055)||(cx===3&&cz===-2))){const p=randomSidewalk(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')}
  // NPCs, more civilians, much fewer enemies
@@ -154,7 +154,7 @@ function addContainer(g,key,id,x,z,type){const mesh=new THREE.Mesh(type==='bin'?
 function addPickup(g,key,id,x,z,type){const color={coins:0xffd15b,medkit:0x62e3a4,rare:0xa68cff,artifact:0x60d8ff}[type],geo=type==='artifact'?new THREE.OctahedronGeometry(.65):type==='coins'?new THREE.CylinderGeometry(.34,.34,.12,16):new THREE.BoxGeometry(.6,.6,.6),m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,emissive:type==='artifact'?0x15536a:0x000000,emissiveIntensity:1}));m.position.set(x,type==='artifact'?.72:.43,z);m.userData={key,id,type};g.add(m);pickups.push(m)}
 function addNPC(g,key,x,z,r){const n=createPerson(false,key,x,z,r);g.add(n.group);npcs.push(n)}
 function addEnemy(g,key,x,z,r){const n=createPerson(true,key,x,z,r);n.speed*=1.1;g.add(n.group);enemies.push(n)}
-function createPerson(hostile,key,x,z,r){const group=new THREE.Group(),cloth=new THREE.MeshStandardMaterial({color:hostile?0x6d2434:choice([0x315f7b,0x486d45,0x6a4e75,0x785f42])}),skin=new THREE.MeshStandardMaterial({color:0xd5a47c}),body=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.72,5,8),cloth);body.position.y=1.05;group.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.24,9,9),skin);head.position.y=1.72;group.add(head);const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);return{key,group,hostile,axis:r()<.5?'x':'z',speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:6+Math.floor(r()*45),legs:[l1,l2],phase:r()*6.2,name:hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam']),missionGiven:false,caught:false}}
+function createPerson(hostile,key,x,z,r){const group=new THREE.Group(),cloth=new THREE.MeshStandardMaterial({color:hostile?0x6d2434:choice([0x315f7b,0x486d45,0x6a4e75,0x785f42])}),skin=new THREE.MeshStandardMaterial({color:0xd5a47c}),body=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.72,5,8),cloth);body.position.y=1.05;group.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.24,9,9),skin);head.position.y=1.72;group.add(head);const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);const hasCash=r()<.56;return{key,group,hostile,axis:r()<.5?'x':'z',speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:hasCash?(5+Math.floor(r()*46)):0,legs:[l1,l2],phase:r()*6.2,name:hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam']),missionGiven:false,caught:false,pickpocketed:false}}
 function addCar(g,key,x0,z0,r,i){const vertical=r()<.5,group=new THREE.Group(),body=new THREE.Mesh(new THREE.BoxGeometry(1.65,.65,3.4),new THREE.MeshStandardMaterial({color:choice([0xc44b4b,0x4b6fc4,0x444b52,0xe0d3b4,0x4f9c68]),metalness:.25,roughness:.45}));body.position.y=.65;group.add(body);const top=new THREE.Mesh(new THREE.BoxGeometry(1.4,.55,1.75),new THREE.MeshStandardMaterial({color:0x607b8c,transparent:true,opacity:.82}));top.position.set(0,1.18,-.15);group.add(top);group.position.set(vertical?x0+3.2:x0+15+i*14,.0,vertical?z0+18+i*18:z0+3.2);if(!vertical)group.rotation.y=Math.PI/2;g.add(group);cars.push({key,group,vertical,dir:r()<.5?-1:1,speed:4+r()*2.3,x0,z0})}
 
 function unload(key){const g=chunks.get(key);if(!g)return;scene.remove(g);chunks.delete(key);colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key)}
@@ -176,10 +176,34 @@ function animate(){
  updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}state.wanted=Math.max(0,state.wanted-dt*.5);updateHUD();renderer.render(scene,camera)
 }
 
-function nearest(arr,max){let best=null,d0=max;for(const x of arr){const p=x.group?x.group.position:x.position,d=Math.hypot(state.pos.x-p.x,state.pos.z-p.z);if(d<d0){best=x;d0=d}}return best}
+function entityPos(x){
+ if(!x)return null;
+ if(x.group?.position)return x.group.position;
+ if(x.position)return x.position;
+ if(Number.isFinite(x.x)&&Number.isFinite(x.z))return x;
+ if(x.door&&Number.isFinite(x.door.x)&&Number.isFinite(x.door.z))return x.door;
+ return null
+}
+function nearest(arr,max){
+ let best=null,d0=max;
+ for(const x of arr){
+   const p=entityPos(x);if(!p)continue;
+   const d=Math.hypot(state.pos.x-p.x,state.pos.z-p.z);
+   if(d<d0){best=x;d0=d}
+ }
+ return best
+}
 function checkInteraction(){
- if(activeEnemy||!$('#dialogue').classList.contains('hidden'))return hidePrompt();
- if(state.interior){return setPrompt('Sortie','Retourner dans la rue.','SORTIR',exitInterior)}
+ if(activeEnemy||!$('#dialogue').classList.contains('hidden')||!$('#theft').classList.contains('hidden'))return hidePrompt();
+ if(state.interior){
+   if(state.interior.type==='shop'){
+     if(state.pos.z<-4.6)return setPrompt('Comptoir',`Voir le stock de ${SHOPS[state.interior.shopType].name}.`,'ACHETER',()=>openSheet('physicalShop'));
+     if(state.pos.z>5.5)return setPrompt('Sortie','Retourner dans la rue.','SORTIR',leaveInterior);
+     return hidePrompt()
+   }
+   if(state.pos.z>5.5)return setPrompt('Sortie','Retourner dans la rue.','SORTIR',leaveInterior);
+   return hidePrompt()
+ }
  const p=nearest(pickups.filter(x=>x.parent),1.6);if(p)return setPrompt(pickupName(p.userData.type),'Objet trouvé dans la rue.','RAMASSER',()=>collectPickup(p));
  const c=nearest(containers.filter(x=>x.parent),1.7);if(c)return setPrompt(c.userData.type==='bin'?'Poubelle':'Coffre',c.userData.type==='bin'?'Fouiller discrètement.':'Ouvrir le coffre.','FOUILLER',()=>openContainer(c));
  const s=shops.reduce((b,x)=>{const d=Math.hypot(state.pos.x-x.door.x,state.pos.z-x.door.z);return !b||d<b.d?{x,d}:b},null);if(s&&s.d<1.8)return setPrompt(SHOPS[s.x.type].name,'Entrer réellement dans la boutique.','ENTRER',()=>enterInterior('shop',s.x));
@@ -189,9 +213,25 @@ function checkInteraction(){
 }
 function setPrompt(t,d,b,fn){$('#promptTitle').textContent=t;$('#promptText').textContent=d;$('#promptBtn').textContent=b;$('#promptBtn').onclick=fn;$('#prompt').classList.remove('hidden')}
 function hidePrompt(){$('#prompt').classList.add('hidden')}
-function pickupName(t){return{coins:'Crédits',medkit:'Kit de soin',rare:'Cache rare',artifact:city().artifact}[t]}
-function collectPickup(m){const{id,type}=m.userData;if(state.collected.includes(id))return;if(type==='medkit'&&invCount()>=state.bagMax)return toast('Sac plein');state.collected.push(id);if(type==='coins'){const n=10+Math.floor(Math.random()*35);state.coins+=n;state.coinsEarned+=n;toast(`+${n} crédits`)}if(type==='medkit'){addInv('medkit');toast('Kit de soin récupéré')}if(type==='rare'){const n=55+Math.floor(Math.random()*85);state.coins+=n;state.coinsEarned+=n;state.xp+=35;toast(`Cache rare : +${n} crédits`)}if(type==='artifact'&&!state.artifacts.includes(state.cityId)){state.artifacts.push(state.cityId);state.coins+=250;state.coinsEarned+=250;state.xp+=180;toast(`${city().artifact} récupéré !`)}if(m.parent)m.parent.remove(m);pickups=pickups.filter(x=>x!==m);levelCheck();checkQuests();save();hidePrompt()}
-function openContainer(m){const{id,type}=m.userData;if(state.collected.includes(id))return;state.collected.push(id);state.containersOpened++;const n=type==='chest'?35+Math.floor(Math.random()*70):5+Math.floor(Math.random()*28);state.coins+=n;state.coinsEarned+=n;if(Math.random()<.22&&invCount()<state.bagMax)addInv('medkit');if(m.parent)m.parent.remove(m);containers=containers.filter(x=>x!==m);toast(`${type==='chest'?'Coffre':'Poubelle'} : +${n} crédits`);checkQuests();save();hidePrompt()}
+function pickupName(t){return{medkit:'Kit de soin',rare:'Cache de matériel',artifact:city().artifact}[t]}
+function collectPickup(m){
+ const{id,type}=m.userData;if(state.collected.includes(id))return;
+ if(type==='medkit'&&invCount()>=state.bagMax)return toast('Sac plein');
+ state.collected.push(id);
+ if(type==='medkit'){addInv('medkit');toast('Kit de soin récupéré')}
+ if(type==='rare'){state.xp+=35;if(Math.random()<.45&&invCount()<state.bagMax){addInv('medkit');toast('Cache : kit de soin + XP')}else{state.armor=clamp(state.armor+12,0,100);toast('Cache : matériel de protection + XP')}}
+ if(type==='artifact'&&!state.artifacts.includes(state.cityId)){state.artifacts.push(state.cityId);state.xp+=180;toast(`${city().artifact} récupéré !`)}
+ if(m.parent)m.parent.remove(m);pickups=pickups.filter(x=>x!==m);levelCheck();checkQuests();save();hidePrompt()
+}
+function openContainer(m){
+ const{id,type}=m.userData;if(state.collected.includes(id))return;
+ state.collected.push(id);state.containersOpened++;
+ const roll=Math.random();
+ if(roll<.38&&invCount()<state.bagMax){addInv('medkit');toast(`${type==='chest'?'Coffre':'Poubelle'} : kit de soin`)}
+ else if(roll<.72){state.armor=clamp(state.armor+(type==='chest'?16:7),0,100);toast(`${type==='chest'?'Coffre':'Poubelle'} : matériel de protection`)}
+ else{state.xp+=type==='chest'?35:15;toast(`${type==='chest'?'Coffre':'Poubelle'} : matériel ancien + XP`)}
+ if(m.parent)m.parent.remove(m);containers=containers.filter(x=>x!==m);checkQuests();save();hidePrompt()
+}
 
 function talkNPC(n){
  const lines=[`Salut ! ${city().name} est tranquille si tu prends le temps de l’explorer.`,`J’ai entendu parler d’une cache dans le quartier.`,`Les commerces changent selon les secteurs.`,`Évite les rôdeurs, ils sont rares mais parfois coriaces.`];
@@ -202,13 +242,77 @@ function talkNPC(n){
 }
 function showNpcChoices(n){
  $('#dialogue').classList.add('hidden');
- openSheet('npc');$('#sheetTitle').textContent=n.name;$('#sheetBody').innerHTML=`<div class="card"><h3>Que faire ?</h3><div class="grid2"><button class="menuBtn primary" id="talkAgain">💬 Discuter</button><button class="menuBtn" id="pickpocket">🫳 Faire les poches<small>Risque d’être repéré.</small></button></div></div>`;
- $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'Profite du quartier, il y a toujours quelque chose à découvrir.',hideDialogue)};$('#pickpocket').onclick=()=>{closeSheet();pickpocket(n)}
+ openSheet('npc');$('#sheetTitle').textContent=n.name;$('#sheetBody').innerHTML=`<div class="card"><h3>Que faire ?</h3><div class="grid2"><button class="menuBtn primary" id="talkAgain">💬 Discuter</button><button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Faire les poches<small>${n.pickpocketed?'Déjà fouillé':n.caught?'Sur ses gardes':'Maintiens puis relâche au bon moment.'}</small></button></div></div>`;
+ $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'Profite du quartier, il y a toujours quelque chose à découvrir.',hideDialogue)};const pp=$('#pickpocket');if(pp)pp.onclick=()=>{closeSheet();startPickpocket(n)}
 }
-function assignNpcMission(n){const opts=[{kind:'coins',text:'retrouve 60 crédits dans la rue',target:60,start:state.coinsEarned,reward:90},{kind:'container',text:'fouille 2 caches ou poubelles',target:2,start:state.containersOpened,reward:110},{kind:'explore',text:'découvre 2 nouveaux quartiers',target:2,start:state.seenDistricts.length,reward:120}];state.activeNpcMission={...choice(opts),giver:n.name};save()}
-function npcMissionProgress(){const m=state.activeNpcMission;if(!m)return null;const now=m.kind==='coins'?state.coinsEarned:m.kind==='container'?state.containersOpened:state.seenDistricts.length;return now-m.start}
+function assignNpcMission(n){const opts=[{kind:'pockets',text:'récupère 30 crédits sur des passants',target:30,start:state.stolenCoins,reward:90},{kind:'container',text:'fouille 2 caches ou poubelles',target:2,start:state.containersOpened,reward:110},{kind:'explore',text:'découvre 2 nouveaux quartiers',target:2,start:state.seenDistricts.length,reward:120}];state.activeNpcMission={...choice(opts),giver:n.name};save()}
+function npcMissionProgress(){const m=state.activeNpcMission;if(!m)return null;const now=m.kind==='pockets'?state.stolenCoins:m.kind==='container'?state.containersOpened:state.seenDistricts.length;return now-m.start}
 function maybeCompleteNpcMission(){const m=state.activeNpcMission;if(!m)return;if(npcMissionProgress()>=m.target){state.coins+=m.reward;state.npcMissions++;toast(`Mission de ${m.giver} terminée +${m.reward}`);state.activeNpcMission=null;checkQuests();save()}}
-function pickpocket(n){if(n.caught)return toast('Cette personne est sur ses gardes');const chance=clamp(.62+state.stealth*.10-state.wanted*.004,.24,.9);if(Math.random()<chance){const amount=n.money;state.coins+=amount;state.coinsEarned+=amount;state.pickpockets++;n.money=0;n.caught=true;toast(`Vol réussi : +${amount} crédits`)}else{n.caught=true;state.wanted=clamp(state.wanted+1,0,5);toast('Repéré ! Niveau de recherche augmenté')}checkQuests();save()}
+let theftState=null,theftRAF=0;
+function startPickpocket(n){
+ if(n.pickpocketed)return toast('Tu as déjà vérifié ses poches');
+ if(n.caught)return toast('Cette personne est sur ses gardes');
+ const distance=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
+ if(distance>1.8)return toast('Approche-toi davantage');
+ hidePrompt();
+ n._theftSpeed=n.speed;n.speed=0;
+ const required=950+Math.random()*420-Math.min(260,state.stealth*85);
+ const detection=Math.max(required+380,required+650+Math.random()*850+state.stealth*150-state.wanted*80);
+ theftState={npc:n,required,detection,start:0,holding:false};
+ $('#theftName').textContent=n.name;$('#theftText').textContent='Maintiens le bouton. Relâche dans la zone verte. Trop tôt = rien, trop tard = repéré.';
+ $('#theftBar').style.width='0%';
+ const sweetStart=required/detection*100;
+ const sweetWidth=Math.max(10,Math.min(28,(detection-required)/detection*100));
+ $('#theftSweet').style.left=`${sweetStart}%`;$('#theftSweet').style.width=`${sweetWidth}%`;
+ $('#theftStatus').textContent='Prêt…';$('#theftHold').className='theftHold';$('#theft').classList.remove('hidden')
+}
+function theftBegin(e){
+ if(!theftState||theftState.holding)return;
+ e.preventDefault();theftState.holding=true;theftState.start=performance.now();$('#theftStatus').textContent='Doucement…';theftLoop()
+}
+function theftRelease(e){
+ if(!theftState||!theftState.holding)return;
+ e?.preventDefault();const elapsed=performance.now()-theftState.start;theftState.holding=false;cancelAnimationFrame(theftRAF);
+ if(elapsed<theftState.required){
+   $('#theftBar').style.width='0%';$('#theftStatus').textContent='Trop tôt. Réessaie sans traîner.';$('#theftHold').className='theftHold';return
+ }
+ if(elapsed<theftState.detection)return theftSuccess()
+}
+function theftLoop(){
+ if(!theftState||!theftState.holding)return;
+ const n=theftState.npc,dist=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
+ if(dist>1.95)return cancelTheft('Tu t’es trop éloigné.');
+ const elapsed=performance.now()-theftState.start,pct=clamp(elapsed/theftState.detection*100,0,100);
+ $('#theftBar').style.width=`${pct}%`;
+ if(elapsed>=theftState.required){$('#theftStatus').textContent='BON MOMENT — RELÂCHE !';$('#theftHold').className='theftHold ready'}
+ else if(elapsed>theftState.required*.7){$('#theftStatus').textContent='Presque…';$('#theftHold').className='theftHold'}
+ if(elapsed>=theftState.detection)return theftCaught();
+ theftRAF=requestAnimationFrame(theftLoop)
+}
+function theftSuccess(){
+ const n=theftState.npc,amount=n.money;n.pickpocketed=true;n.money=0;restoreTheftNPC();
+ $('#theft').classList.add('hidden');theftState=null;
+ if(amount>0){state.coins+=amount;state.coinsEarned+=amount;state.stolenCoins+=amount;state.pickpockets++;toast(`Poches réussies : +${amount} crédits`)}
+ else toast('Poches vides — cette personne n’avait pas d’argent.');
+ checkQuests();maybeCompleteNpcMission();save()
+}
+function theftCaught(){
+ const n=theftState.npc;n.caught=true;n.pickpocketed=true;restoreTheftNPC(true);
+ state.wanted=clamp(state.wanted+1,0,5);$('#theft').classList.add('hidden');theftState=null;
+ toast('Trop long ! Tu as été repéré 🚨');
+ if(state.wanted>=2)spawnSecurity();
+ save()
+}
+function cancelTheft(msg='Vol annulé'){
+ if(!theftState)return;cancelAnimationFrame(theftRAF);restoreTheftNPC();theftState=null;$('#theft').classList.add('hidden');toast(msg)
+}
+function restoreTheftNPC(run=false){
+ if(!theftState?.npc)return;const n=theftState.npc;n.speed=n._theftSpeed||n.speed;if(run)n.speed*=1.8;delete n._theftSpeed
+}
+function spawnSecurity(){
+ const {cx,cz}=currentChunk(),key=ck(cx,cz),g=chunks.get(key);if(!g||!THREE)return;
+ const r=rngFor(key+':security:'+Math.floor(performance.now())),n=createPerson(true,key,state.pos.x+5,state.pos.z+5,r);n.name='Agent de sécurité';n.speed=1.35;g.add(n.group);enemies.push(n)
+}
 
 function showDialogue(name,text,next){$('#dialogueName').textContent=name;$('#dialogueText').textContent=text;$('#dialogueIcon').textContent='🙂';$('#dialogue').classList.remove('hidden');$('#dialogueNext').onclick=next}
 function hideDialogue(){$('#dialogue').classList.add('hidden')}
@@ -219,11 +323,11 @@ function enterInterior(type,obj){
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(18,18),new THREE.MeshStandardMaterial({color:type==='shop'?0x786f60:0x6b665f,roughness:1}));floor.rotation.x=-Math.PI/2;interiorGroup.add(floor);
  const wallM=new THREE.MeshStandardMaterial({color:type==='shop'?0xc8c0aa:0xd2cbc1});[[0,2.5,-9,18,.25],[0,2.5,9,18,.25],[-9,2.5,0,.25,18],[9,2.5,0,.25,18]].forEach(w=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],5,w[4]),wallM);m.position.set(w[0],w[1],w[2]);interiorGroup.add(m)});
  if(type==='shop')buildShopInterior(obj.type);else buildApartmentInterior();
- state.pos={x:0,z:6.5};state.yaw=Math.PI;state.pitch=0;hidePrompt();save()
+ state.pos={x:0,z:6.5};state.yaw=0;state.pitch=0;hidePrompt();save()
 }
 function buildShopInterior(type){const shelfM=new THREE.MeshStandardMaterial({color:0x4c3c2d});for(let i=-1;i<=1;i++){const s=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.8,5),shelfM);s.position.set(i*4,1,0);interiorGroup.add(s)}const counter=new THREE.Mesh(new THREE.BoxGeometry(5,1.2,1.2),new THREE.MeshStandardMaterial({color:0x2f4855}));counter.position.set(0,.6,-6);interiorGroup.add(counter);const sign=makeSign(`${SHOPS[type].icon} ${SHOPS[type].name}`);sign.position.set(0,3,-8.5);interiorGroup.add(sign)}
 function buildApartmentInterior(){const couch=new THREE.Mesh(new THREE.BoxGeometry(3,.8,1.1),new THREE.MeshStandardMaterial({color:0x5a6675}));couch.position.set(-3,.5,-3);interiorGroup.add(couch);const table=new THREE.Mesh(new THREE.BoxGeometry(1.6,.7,1.2),new THREE.MeshStandardMaterial({color:0x6e523a}));table.position.set(2,.4,-2);interiorGroup.add(table);const plant=new THREE.Group();const pot=new THREE.Mesh(new THREE.CylinderGeometry(.3,.4,.5,10),new THREE.MeshStandardMaterial({color:0x80543a}));pot.position.y=.25;plant.add(pot);const leaf=new THREE.Mesh(new THREE.SphereGeometry(.65,9,8),new THREE.MeshStandardMaterial({color:0x3f7c4d}));leaf.position.y=1.15;plant.add(leaf);plant.position.set(4,0,3);interiorGroup.add(plant)}
-function exitInterior(){if(state.interior?.type==='shop'){openSheet('physicalShop');return}leaveInterior()}
+function exitInterior(){leaveInterior()}
 function leaveInterior(){if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}for(const[,g]of chunks)g.visible=true;state.interior=null;state.pos=state.returnPos||{x:2,z:8};state.returnPos=null;save();hidePrompt()}
 function physicalShopHTML(){const s=SHOPS[state.interior.shopType];return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits disponibles.</p></div><div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price} crédits</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir de la boutique</button>`}
 function buy(id,price){if(state.coins<price)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');state.coins-=price;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(id==='snack'){state.hp=clamp(state.hp+15,0,state.maxHp)}if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;save();updateHUD();toast('Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
@@ -232,7 +336,7 @@ function bindShop(){$$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(
 function startCombat(n){activeEnemyEntity=n;activeEnemy={name:n.name||'Rôdeur',level:Math.max(1,state.level+choice([-1,0,0,1])),hp:38+state.level*15,maxHp:38+state.level*15,damage:5+state.level*3,reward:22+state.level*14};$('#combat').classList.remove('hidden');renderCombat()}
 function renderCombat(){if(!activeEnemy)return;$('#enemyName').textContent=activeEnemy.name;$('#enemyLvl').textContent=`Niv. ${activeEnemy.level}`;$('#enemyBar').style.width=`${Math.max(0,activeEnemy.hp/activeEnemy.maxHp*100)}%`}
 function animateAttack(){if(!weaponRig)return;weaponRig.rotation.x=-.8;weaponRig.position.z=-.15;setTimeout(()=>{weaponRig.rotation.x=0;weaponRig.position.z=0},120)}
-function attack(){if(!activeEnemy)return;animateAttack();const dmg=weapon().damage+state.level*2+Math.floor(Math.random()*7);activeEnemy.hp-=dmg;if(activeEnemy.hp<=0){state.coins+=activeEnemy.reward;state.coinsEarned+=activeEnemy.reward;state.xp+=50+activeEnemy.level*10;state.kills++;if(activeEnemyEntity?.group.parent)activeEnemyEntity.group.parent.remove(activeEnemyEntity.group);enemies=enemies.filter(x=>x!==activeEnemyEntity);activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');levelCheck();checkQuests();return}let hit=activeEnemy.damage+Math.floor(Math.random()*4),a=Math.min(state.armor,hit);state.armor-=a;hit-=a;state.hp-=hit;if(state.hp<=0){state.hp=state.maxHp;state.coins=Math.max(0,state.coins-60);state.wanted=0;activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');state.pos={x:2,z:8};toast('K.O. — retour au refuge')}else renderCombat();save()}
+function attack(){if(!activeEnemy)return;animateAttack();const dmg=weapon().damage+state.level*2+Math.floor(Math.random()*7);activeEnemy.hp-=dmg;if(activeEnemy.hp<=0){state.xp+=50+activeEnemy.level*10;if(Math.random()<.25&&invCount()<state.bagMax)addInv('medkit');state.kills++;if(activeEnemyEntity?.group.parent)activeEnemyEntity.group.parent.remove(activeEnemyEntity.group);enemies=enemies.filter(x=>x!==activeEnemyEntity);activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');levelCheck();checkQuests();return}let hit=activeEnemy.damage+Math.floor(Math.random()*4),a=Math.min(state.armor,hit);state.armor-=a;hit-=a;state.hp-=hit;if(state.hp<=0){state.hp=state.maxHp;state.coins=Math.max(0,state.coins-60);state.wanted=0;activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');state.pos={x:2,z:8};toast('K.O. — retour au refuge')}else renderCombat();save()}
 function flee(){if(Math.random()<.75){activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');toast('Tu t’éloignes sans problème')}else attack()}
 function levelCheck(){const n=1+Math.floor(state.xp/230);if(n>state.level){state.level=n;state.maxHp+=7;state.hp=state.maxHp;toast(`Niveau ${n} !`)}}
 
@@ -279,7 +383,7 @@ function openSheet(panel){
  bindSheet(panel)
 }
 function worldHTML(){return `<div class="card"><h3>Exploration chill</h3><p class="sub">Explore sans chronomètre. Les quartiers se chargent au fur et à mesure, avec voitures, habitants, boutiques, appartements, parcs et secrets.</p></div><div class="card"><h3>Voyager</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div>`}
-function bagHTML(){const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join(''),meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';return `<div class="card"><h3>Armes</h3>${ws}</div><div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div>`}
+function bagHTML(){const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join(''),meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';return `<div class="card"><h3>Armes</h3>${ws}</div><div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div><div class="card"><h3>Discrétion</h3><p class="sub">${state.pickpockets} vols réussis • ${state.stolenCoins} crédits récupérés dans les poches • niveau de recherche ${state.wanted}/5.</p></div>`}
 function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
 function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. La conquête apporte des récompenses, mais n’empêche jamais l’exploration libre.</p></div>`}
 function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div><div class="warning">Street View n’est pas intégré dans cette V4 : j’ai privilégié un monde 3D texturé, procédural et réellement jouable sans dépendre d’une API externe.</div>`}
@@ -287,13 +391,21 @@ function bindSheet(panel){
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
  if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
  if(panel==='districts')$('#secureDistrict').onclick=secureDistrict;
- if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v4');location.reload()}};
+ if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v4-1');location.reload()}};
  if(panel==='physicalShop')bindShop()
 }
 function switchCity(id){state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
 function useMed(){const x=state.inventory.find(i=>i.id==='medkit');if(!x)return toast('Aucun kit');if(state.hp>=state.maxHp)return toast('PV déjà au maximum');x.qty--;state.hp=clamp(state.hp+40,0,state.maxHp);if(x.qty<=0)state.inventory=state.inventory.filter(i=>i!==x);save();openSheet('bag')}
 function closeSheet(){$('#sheet').classList.add('hidden')}
 let toastTimer;function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.add('hidden'),2200)}
+
+
+const theftHold=$('#theftHold');
+theftHold.addEventListener('pointerdown',theftBegin);
+theftHold.addEventListener('pointerup',theftRelease);
+theftHold.addEventListener('pointercancel',theftRelease);
+theftHold.addEventListener('pointerleave',e=>{if(theftState?.holding)theftRelease(e)});
+$('#theftCancel').onclick=()=>cancelTheft();
 
 $('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>toast('Approche-toi d’un objet, d’un habitant, d’une boutique ou d’un appartement.');$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTouch<320)e.preventDefault();lastTouch=n},{passive:false});

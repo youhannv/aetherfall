@@ -43,3 +43,20 @@ icon-512.png
 README.md
 
 Puis Commit changes et attendre le déploiement GitHub Pages.
+
+
+## V4.1 — correctif critique
+- Correction de l'écran noir : `nearest()` sait maintenant gérer les objets `{x,z}`, notamment les entrées d'appartements.
+- Nouvelle sauvegarde `sq3d-v4-1` pour repartir sur un état propre.
+- L'argent n'apparaît plus au sol ni dans les poubelles/coffres.
+- Certains passants ont de l'argent, d'autres ont les poches vides.
+- Nouveau mini-jeu de vol à la tire :
+  - maintenir le bouton,
+  - attendre la fenêtre verte,
+  - relâcher au bon moment,
+  - trop tôt = échec sans vol,
+  - trop tard = repéré et niveau de recherche augmenté.
+- À partir d'un certain niveau de recherche, un agent de sécurité peut arriver.
+- Les coffres/poubelles donnent désormais du matériel, des soins ou de l'XP, pas d'argent.
+- Les ennemis donnent surtout XP/matériel, pas d'argent.
+- Intérieurs de boutique corrigés : arrivée face au magasin, comptoir interactif, sortie distincte.
