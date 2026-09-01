@@ -10,91 +10,78 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D</title>
+<title>StreetQuest 3D V4</title>
 </head>
 <body>
 <div id="app">
-  <div id="viewport">
-    <div id="threeHost"></div>
-    <div id="streetHost" class="hidden"></div>
+ <div id="viewport">
+  <div id="threeHost"></div>
+  <header class="topHud">
+   <div class="brand"><b>STREETQUEST 3D</b><small id="district">PARIS • CENTRE</small></div>
+   <button id="menuBtn" class="roundBtn">☰</button>
+  </header>
 
-    <header class="topHud">
-      <div class="brand"><b>STREETQUEST 3D</b><small id="district">PARIS • SECTEUR 0,0</small></div>
-      <button class="roundBtn" id="menuBtn">☰</button>
-    </header>
-
-    <div class="stats">
-      <span>❤️ <b id="hp">100</b></span>
-      <span>🛡️ <b id="armor">0</b></span>
-      <span>🪙 <b id="coins">150</b></span>
-      <span>🚨 <b id="alert">0</b>%</span>
-    </div>
-
-    <canvas id="minimap" width="180" height="180" aria-label="Mini carte"></canvas>
-
-    <div class="mission">
-      <small>MISSION ACTIVE</small>
-      <b id="missionTitle"></b>
-      <span id="missionText"></span>
-    </div>
-
-    <div id="prompt" class="prompt hidden">
-      <div><b id="promptTitle"></b><small id="promptText"></small></div>
-      <button id="promptBtn" class="promptBtn">INTERAGIR</button>
-    </div>
-
-    <div id="combat" class="combat hidden">
-      <div class="combatHead"><b id="enemyName"></b><span id="enemyLvl"></span></div>
-      <div class="hpbar"><i id="enemyBar"></i></div>
-      <div class="combatBtns">
-        <button id="attackBtn" class="dangerBtn">⚔️ ATTAQUER</button>
-        <button id="fleeBtn" class="normalBtn">🏃 FUIR</button>
-      </div>
-    </div>
-
-    <div id="streetControls" class="streetControls hidden">
-      <button id="stLeft">↶</button><button id="stForward" class="main">↑</button>
-      <button id="stRight">↷</button><button id="stScan">📡</button>
-    </div>
-
-    <div id="controls" class="controls">
-      <div class="joyWrap">
-        <small>MARCHER</small>
-        <div class="joystick" id="moveJoy"><div class="knob" id="moveKnob"></div></div>
-      </div>
-      <div class="centerActions">
-        <button id="scanBtn" class="actionCircle">📡</button>
-        <button id="interactBtn" class="actionCircle large">✋</button>
-      </div>
-      <div class="joyWrap">
-        <small>REGARDER</small>
-        <div class="joystick" id="lookJoy"><div class="knob" id="lookKnob"></div></div>
-      </div>
-    </div>
-
-    <div id="toast" class="toast hidden"></div>
+  <div class="stats">
+   <span>❤️ <b id="hp">100</b></span>
+   <span>🛡️ <b id="armor">0</b></span>
+   <span>🪙 <b id="coins">100</b></span>
+   <span>⭐ <b id="level">1</b></span>
+   <span>🚨 <b id="wanted">0</b></span>
   </div>
 
-  <nav class="bottomNav">
-    <button data-panel="world" class="nav active">🌍<small>Monde</small></button>
-    <button data-panel="bag" class="nav">🎒<small>Sac</small></button>
-    <button data-panel="shops" class="nav">🛒<small>Boutiques</small></button>
-    <button data-panel="quests" class="nav">📜<small>Quêtes</small></button>
-    <button data-panel="settings" class="nav">⚙️<small>Réglages</small></button>
-  </nav>
+  <canvas id="minimap" width="200" height="200"></canvas>
 
-  <div id="sheet" class="sheet hidden">
-    <div class="sheetBox">
-      <div class="handle"></div>
-      <div class="sheetHead"><h2 id="sheetTitle"></h2><button id="closeSheet" class="roundBtn">✕</button></div>
-      <div id="sheetBody"></div>
-    </div>
+  <div class="missionCard">
+   <small>AVENTURE</small>
+   <b id="missionTitle">Chargement…</b>
+   <span id="missionText"></span>
   </div>
+
+  <div id="weatherChip" class="weatherChip">☀️ JOUR</div>
+
+  <div id="dialogue" class="dialogue hidden">
+   <div class="portrait" id="dialogueIcon">🙂</div>
+   <div class="dialogueMain"><b id="dialogueName"></b><p id="dialogueText"></p></div>
+   <button id="dialogueNext" class="smallBtn">Suite</button>
+  </div>
+
+  <div id="prompt" class="prompt hidden">
+   <div><b id="promptTitle"></b><small id="promptText"></small></div>
+   <button id="promptBtn" class="promptBtn">INTERAGIR</button>
+  </div>
+
+  <div id="combat" class="combat hidden">
+   <div class="combatHead"><b id="enemyName"></b><span id="enemyLvl"></span></div>
+   <div class="hpbar"><i id="enemyBar"></i></div>
+   <div class="combatBtns"><button id="attackBtn" class="dangerBtn">⚔️ ATTAQUER</button><button id="fleeBtn" class="normalBtn">🏃 FUIR</button></div>
+  </div>
+
+  <div class="controls">
+   <div class="joyWrap"><small>MARCHER</small><div class="joystick" id="moveJoy"><div class="knob" id="moveKnob"></div></div></div>
+   <div class="centerActions"><button id="scanBtn" class="actionCircle">📡</button><button id="interactBtn" class="actionCircle large">✋</button></div>
+   <div class="joyWrap"><small>REGARDER</small><div class="joystick" id="lookJoy"><div class="knob" id="lookKnob"></div></div></div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+ </div>
+
+ <nav class="bottomNav">
+  <button data-panel="world" class="nav active">🌍<small>Monde</small></button>
+  <button data-panel="bag" class="nav">🎒<small>Sac</small></button>
+  <button data-panel="quests" class="nav">📜<small>Quêtes</small></button>
+  <button data-panel="districts" class="nav">🏙️<small>Quartiers</small></button>
+  <button data-panel="settings" class="nav">⚙️<small>Réglages</small></button>
+ </nav>
+
+ <div id="sheet" class="sheet hidden">
+  <div class="sheetBox">
+   <div class="handle"></div>
+   <div class="sheetHead"><h2 id="sheetTitle"></h2><button id="closeSheet" class="roundBtn">✕</button></div>
+   <div id="sheetBody"></div>
+  </div>
+ </div>
 </div>
-
 <script type="module" src="game.js"></script>
-<script>
-if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
-</script>
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}</script>
 </body>
 </html>

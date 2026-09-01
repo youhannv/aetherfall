@@ -1,28 +1,45 @@
-# StreetQuest 3D V3
+# StreetQuest 3D V4
 
-Version portrait iPhone.
+V4 pensée comme un jeu d'aventure/exploration chill en portrait pour iPhone.
 
-## Nouveautés V3
-- joystick gauche corrigé : haut = avancer, bas = reculer, droite = droite, gauche = gauche
-- deuxième joystick pour regarder autour de soi
-- ville procédurale pratiquement infinie, chargée par quartiers
-- génération et suppression dynamique des chunks autour du joueur
-- minimap temps réel
-- bâtiments avec collisions
-- textures procédurales sur façades, sol, trottoirs et routes
-- argent et objets répartis dans tous les quartiers
-- artefacts pouvant apparaître loin du point de départ
-- boutiques physiques visibles dans les rues
-- PNJ civils qui marchent
-- adversaires qui patrouillent et peuvent poursuivre le joueur
-- système de combat, armes, XP, niveaux
-- vol à la tire sur PNJ virtuels avec chance d'échec et niveau d'alerte
-- inventaire, soins, armure, améliorations et discrétion
-- Street View optionnel
+## Principales nouveautés
+- routes et trottoirs mieux séparés
+- bâtiments cantonnés aux lots constructibles, sans empiéter sur routes/trottoirs
+- passages piétons
+- circulation automobile
+- végétation, arbres, petits parcs
+- plusieurs styles de quartiers
+- cycle jour/nuit
+- météo dynamique simplifiée
+- PNJ avec dialogues
+- missions données par les PNJ
+- adversaires beaucoup plus rares
+- IA de poursuite locale
+- boutiques physiques avec véritable intérieur 3D
+- plusieurs types de boutiques et stocks différents
+- appartements visitables
+- coffres et poubelles fouillables
+- argent caché et caches rares
+- arme visible à l'écran
+- animation d'attaque
+- inventaire, niveaux, armure, soins
+- système de recherche après vol à la tire
+- conquête douce de quartiers
+- série de quêtes et progression globale
+- mini-carte
+- ville procédurale chargée par quartiers
 
-## Street View
-Dans Réglages, ajouter une clé Google Maps JavaScript API.
-Restreindre la clé à l'URL du site GitHub Pages et à Maps JavaScript API.
+Aucune mécanique de paiement ou de minuterie punitive : la progression repose sur l'exploration, les quêtes et la découverte.
 
-## Installation GitHub Pages
-Remplacer les fichiers du dépôt par ceux du ZIP puis commit.
+## Installation
+Remplacer les fichiers du dépôt GitHub Pages par :
+index.html
+game.js
+style.css
+manifest.json
+sw.js
+icon-192.png
+icon-512.png
+README.md
+
+Puis Commit changes et attendre le déploiement GitHub Pages.

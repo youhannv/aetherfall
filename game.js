@@ -1,9 +1,14 @@
 const THREE_URL='https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
 let THREE=null;
-const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), choice=a=>a[Math.floor(Math.random()*a.length)];
-const CHUNK=64, LOAD_RADIUS=2, UNLOAD_RADIUS=3, PLAYER_RADIUS=.34;
-
+const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),choice=a=>a[Math.floor(Math.random()*a.length)];
+const CHUNK=72,LOAD=2,UNLOAD=3,RADIUS=.34;
+const DISTRICTS=[
+ {id:'central',name:'Centre',style:'urban',bonus:'Commerces fréquents'},
+ {id:'garden',name:'Quartier des Jardins',style:'green',bonus:'Plus de caches et de PNJ amicaux'},
+ {id:'harbor',name:'Canal',style:'industrial',bonus:'Butin rare et adversaires légèrement plus présents'},
+ {id:'old',name:'Vieille Ville',style:'old',bonus:'Quêtes et appartements'}
+];
 const CITIES=[
  {id:'paris',name:'Paris',artifact:'Fragment d’Azur'},
  {id:'rome',name:'Rome',artifact:'Sceau solaire'},
@@ -18,401 +23,279 @@ const WEAPONS={
  pulse:{id:'pulse',name:'Carabine à impulsion',icon:'✨',damage:38,price:780},
  relic:{id:'relic',name:'Lame relique',icon:'🗡️',damage:55,price:1450}
 };
-const SHOP_ITEMS=[
- {id:'medkit',name:'Kit de soin',icon:'🩹',price:55,type:'consumable',desc:'+40 PV'},
- {id:'armor',name:'Plaque d’armure',icon:'🛡️',price:85,type:'consumable',desc:'+30 armure'},
- ...Object.values(WEAPONS).filter(x=>x.price).map(x=>({...x,type:'weapon',desc:`Dégâts ${x.damage}`})),
- {id:'bag',name:'Extension de sac',icon:'🎒',price:240,type:'upgrade',desc:'+5 places'},
- {id:'stealth',name:'Gants discrets',icon:'🧤',price:420,type:'upgrade',desc:'Réduit le risque de détection'}
+const SHOPS={
+ corner:{name:'Épicerie Nova',icon:'🥤',stock:[
+  {id:'medkit',name:'Kit de soin',icon:'🩹',price:55,desc:'+40 PV'},
+  {id:'snack',name:'Snack énergétique',icon:'🥪',price:22,desc:'+15 PV'},
+  {id:'bag',name:'Sac renforcé',icon:'🎒',price:240,desc:'+5 places'}
+ ]},
+ gear:{name:'Atelier Horizon',icon:'🧰',stock:[
+  {id:'armor',name:'Plaque d’armure',icon:'🛡️',price:85,desc:'+30 armure'},
+  {id:'baton',name:'Bâton électrique',icon:'⚡',price:120,desc:'15 dégâts'},
+  {id:'blaster',name:'Blaster ionique',icon:'🔫',price:360,desc:'24 dégâts'},
+  {id:'stealth',name:'Gants discrets',icon:'🧤',price:420,desc:'Meilleure discrétion'}
+ ]},
+ rare:{name:'Relics & Co',icon:'💎',stock:[
+  {id:'pulse',name:'Carabine à impulsion',icon:'✨',price:780,desc:'38 dégâts'},
+  {id:'relic',name:'Lame relique',icon:'🗡️',price:1450,desc:'55 dégâts'},
+  {id:'map',name:'Scanner longue portée',icon:'📡',price:600,desc:'Scanner amélioré'}
+ ]}
+};
+const QUESTS=[
+ {id:'welcome',title:'Premiers pas',text:'Trouve 100 crédits dans la ville.',goal:'coinsEarned',target:100,reward:100},
+ {id:'helper',title:'Bon voisin',text:'Accomplis une mission donnée par un PNJ.',goal:'npcMissions',target:1,reward:140},
+ {id:'explorer',title:'Explorateur',text:'Découvre 6 quartiers.',goal:'districtsSeen',target:6,reward:180},
+ {id:'treasure',title:'Chasseur de caches',text:'Ouvre 5 coffres ou poubelles.',goal:'containersOpened',target:5,reward:160},
+ {id:'conquer',title:'Conquête tranquille',text:'Sécurise 3 quartiers en réalisant leurs objectifs.',goal:'districtsOwned',target:3,reward:350}
 ];
 const base={
- cityId:'paris',hp:100,maxHp:100,armor:0,coins:130,alert:0,level:1,xp:0,
- inventory:[],bagMax:20,ownedWeapons:['fists'],equipped:'fists',stealth:0,
- collected:[],artifacts:[],kills:0,pickpockets:0,googleKey:'',mode:'3d',
- pos:{x:0,z:4},yaw:0,pitch:0,streetCounter:0
+ cityId:'paris',hp:100,maxHp:100,armor:0,coins:120,level:1,xp:0,wanted:0,
+ pos:{x:2,z:8},yaw:0,pitch:0,inventory:[],bagMax:20,ownedWeapons:['fists'],equipped:'fists',
+ stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,
+ npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
+ activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null
 };
 let state=loadState();
-function loadState(){try{return {...structuredClone(base),...JSON.parse(localStorage.getItem('sq3d-v3')||'{}')}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v3',JSON.stringify(state))}
+function loadState(){try{return {...structuredClone(base),...JSON.parse(localStorage.getItem('sq3d-v4')||'{}')}}catch{return structuredClone(base)}}
+function save(){localStorage.setItem('sq3d-v4',JSON.stringify(state))}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
-function addInv(id,qty=1){let x=state.inventory.find(i=>i.id===id);x?x.qty+=qty:state.inventory.push({id,qty})}
+function addInv(id,qty=1){const x=state.inventory.find(i=>i.id===id);x?x.qty+=qty:state.inventory.push({id,qty})}
 function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 function rngFor(s){let a=hashStr(s);return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
-function chunkKey(cx,cz){return `${state.cityId}:${cx}:${cz}`}
-function currentChunk(){return {cx:Math.floor(state.pos.x/CHUNK),cz:Math.floor(state.pos.z/CHUNK)}}
-function mission(){const c=city();return state.artifacts.includes(c.id)?{t:`${c.name} sécurisé`,d:'Artefact trouvé. Continue d’explorer ou change de ville.'}:{t:`Retrouver : ${c.artifact}`,d:'L’objet peut apparaître dans n’importe quel quartier. Le scanner indique sa proximité lorsqu’il est généré.'}}
-function levelCheck(){const n=1+Math.floor(state.xp/220);if(n>state.level){state.level=n;state.maxHp+=8;state.hp=state.maxHp;toast(`Niveau ${n} — PV maximum augmentés`)}} 
+function ck(cx,cz){return `${state.cityId}:${cx}:${cz}`}
+function currentChunk(){return{cx:Math.floor(state.pos.x/CHUNK),cz:Math.floor(state.pos.z/CHUNK)}}
+function districtFor(cx,cz){const idx=Math.abs((cx*7+cz*11)%DISTRICTS.length);return DISTRICTS[idx]}
+function districtId(cx,cz){return `${state.cityId}:${cx}:${cz}`}
+function progress(goal){if(goal==='coinsEarned')return state.coinsEarned;if(goal==='npcMissions')return state.npcMissions;if(goal==='districtsSeen')return state.seenDistricts.length;if(goal==='containersOpened')return state.containersOpened;if(goal==='districtsOwned')return state.ownedDistricts.length;return 0}
+function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.id))||{id:'free',title:'Légende urbaine',text:'Explore librement, collectionne les artefacts et sécurise les quartiers.',goal:'districtsOwned',target:999}}
+function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
-let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],npcs=[],enemies=[],activeEnemy=null,activeEnemyEntity=null;
-let moveStick={x:0,y:0},lookStick={x:0,y:0},minimapTick=0,spawnTick=0;
+let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],cars=[];
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0;
 
 async function init(){
- try{THREE=await import(THREE_URL)}catch{toast('Connexion requise au premier lancement du moteur 3D.');return}
- const host=$('#threeHost');
- scene=new THREE.Scene();scene.background=new THREE.Color(0x87a8bd);scene.fog=new THREE.Fog(0x87a8bd,55,185);
- camera=new THREE.PerspectiveCamera(73,host.clientWidth/host.clientHeight,.06,240);
- renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
- renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(host.clientWidth,host.clientHeight);renderer.shadowMap.enabled=false;host.appendChild(renderer.domElement);
- clock=new THREE.Clock();
- scene.add(new THREE.HemisphereLight(0xc9e8ff,0x314132,2.15));
- const sun=new THREE.DirectionalLight(0xfff5dd,1.7);sun.position.set(40,80,30);scene.add(sun);
- textures=createTextures();
- ensureChunks(true);updateCamera();updateHUD();animate();
+ try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
+ const host=$('#threeHost');scene=new THREE.Scene();scene.background=new THREE.Color(0x8facbd);scene.fog=new THREE.Fog(0x8facbd,70,220);
+ camera=new THREE.PerspectiveCamera(72,host.clientWidth/host.clientHeight,.06,260);
+ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(host.clientWidth,host.clientHeight);host.appendChild(renderer.domElement);clock=new THREE.Clock();
+ scene.add(new THREE.HemisphereLight(0xd8eeff,0x334030,2.1));const sun=new THREE.DirectionalLight(0xfff0ce,1.9);sun.name='sun';sun.position.set(50,80,30);scene.add(sun);
+ textures=createTextures();weaponRig=createWeaponRig();camera.add(weaponRig);scene.add(camera);
+ ensureChunks(true);updateHUD();animate();
  addEventListener('resize',()=>{camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight)});
 }
-
-function canvasTex(draw,repeatX=4,repeatY=4){
- const c=document.createElement('canvas');c.width=256;c.height=256;const ctx=c.getContext('2d');draw(ctx,c.width,c.height);
- const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(repeatX,repeatY);t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return t
-}
+function tex(draw,rx=4,ry=4){const c=document.createElement('canvas');c.width=c.height=256;const q=c.getContext('2d');draw(q,256,256);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);return t}
 function createTextures(){
- const asphalt=canvasTex((x,w,h)=>{x.fillStyle='#2d3337';x.fillRect(0,0,w,h);for(let i=0;i<1800;i++){let g=35+Math.random()*35;x.fillStyle=`rgb(${g},${g},${g})`;x.fillRect(Math.random()*w,Math.random()*h,1,1)}},5,5);
- const pavement=canvasTex((x,w,h)=>{x.fillStyle='#9b9990';x.fillRect(0,0,w,h);x.strokeStyle='#7e7c75';x.lineWidth=2;for(let i=0;i<8;i++){x.beginPath();x.moveTo(i*w/8,0);x.lineTo(i*w/8,h);x.stroke()}for(let i=0;i<8;i++){x.beginPath();x.moveTo(0,i*h/8);x.lineTo(w,i*h/8);x.stroke()}},6,6);
- const grass=canvasTex((x,w,h)=>{x.fillStyle='#35573e';x.fillRect(0,0,w,h);for(let i=0;i<2000;i++){x.fillStyle=Math.random()>.5?'#436b4a':'#2d4b34';x.fillRect(Math.random()*w,Math.random()*h,1,3)}},7,7);
- const facades=['#8b6558','#6d7886','#837b69','#725c67'].map(base=>canvasTex((x,w,h)=>{
-   x.fillStyle=base;x.fillRect(0,0,w,h);
-   for(let yy=12;yy<h;yy+=34)for(let xx=10;xx<w;xx+=30){
-     x.fillStyle=Math.random()>.25?'#9ec3d4':'#273544';x.fillRect(xx,yy,16,18);
-     x.fillStyle='#17232c';x.fillRect(xx+2,yy+2,12,2)
-   }
-   x.strokeStyle='#0002';x.lineWidth=2;for(let yy=0;yy<h;yy+=32){x.beginPath();x.moveTo(0,yy);x.lineTo(w,yy);x.stroke()}
- },3,4));
- return {asphalt,pavement,grass,facades}
+ const asphalt=tex(q=>{q.fillStyle='#30363a';q.fillRect(0,0,256,256);for(let i=0;i<1800;i++){const g=40+Math.random()*35;q.fillStyle=`rgb(${g},${g},${g})`;q.fillRect(Math.random()*256,Math.random()*256,1,1)}},5,5);
+ const pave=tex(q=>{q.fillStyle='#a39f95';q.fillRect(0,0,256,256);q.strokeStyle='#77736b';q.lineWidth=2;for(let i=0;i<9;i++){q.beginPath();q.moveTo(i*32,0);q.lineTo(i*32,256);q.stroke();q.beginPath();q.moveTo(0,i*32);q.lineTo(256,i*32);q.stroke()}},6,6);
+ const grass=tex(q=>{q.fillStyle='#416a48';q.fillRect(0,0,256,256);for(let i=0;i<1700;i++){q.fillStyle=Math.random()>.5?'#527b55':'#345c3d';q.fillRect(Math.random()*256,Math.random()*256,1,3)}},7,7);
+ const brick=tex(q=>{q.fillStyle='#7c5f57';q.fillRect(0,0,256,256);q.strokeStyle='#523e39';for(let y=0;y<256;y+=22){q.beginPath();q.moveTo(0,y);q.lineTo(256,y);q.stroke();for(let x=(y/22)%2?16:0;x<256;x+=32){q.beginPath();q.moveTo(x,y);q.lineTo(x,y+22);q.stroke()}}for(let y=10;y<250;y+=44)for(let x=10;x<245;x+=42){q.fillStyle='#92b6c8';q.fillRect(x,y,18,20)}},3,4);
+ const modern=tex(q=>{q.fillStyle='#657584';q.fillRect(0,0,256,256);for(let y=8;y<250;y+=34)for(let x=8;x<250;x+=30){q.fillStyle=Math.random()>.2?'#9fc5d9':'#2e3b48';q.fillRect(x,y,17,20);q.fillStyle='#d7e5ec44';q.fillRect(x+2,y+2,13,3)}},3,4);
+ return{asphalt,pave,grass,brick,modern}
+}
+function createWeaponRig(){
+ const g=new THREE.Group();const mat=new THREE.MeshStandardMaterial({color:0x38424d,metalness:.6,roughness:.35});
+ const body=new THREE.Mesh(new THREE.BoxGeometry(.18,.18,.72),mat);body.position.set(.31,-.26,-.72);body.rotation.x=-.08;g.add(body);
+ const grip=new THREE.Mesh(new THREE.BoxGeometry(.12,.32,.13),new THREE.MeshStandardMaterial({color:0x171b20}));grip.position.set(.31,-.39,-.53);grip.rotation.x=-.3;g.add(grip);g.visible=state.equipped!=='fists';return g
 }
 
+function makeRoad(g,x0,z0){
+ const roadM=new THREE.MeshStandardMaterial({map:textures.asphalt,roughness:1}),paveM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:1});
+ const roadW=11,walk=3;
+ let a=new THREE.Mesh(new THREE.PlaneGeometry(roadW,CHUNK),roadM);a.rotation.x=-Math.PI/2;a.position.set(x0+roadW/2,.01,z0+CHUNK/2);g.add(a);
+ a=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,roadW),roadM);a.rotation.x=-Math.PI/2;a.position.set(x0+CHUNK/2,.012,z0+roadW/2);g.add(a);
+ a=new THREE.Mesh(new THREE.PlaneGeometry(walk,CHUNK-roadW),paveM);a.rotation.x=-Math.PI/2;a.position.set(x0+roadW+walk/2,.02,z0+(CHUNK+roadW)/2);g.add(a);
+ a=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK-roadW,walk),paveM);a.rotation.x=-Math.PI/2;a.position.set(x0+(CHUNK+roadW)/2,.021,z0+roadW+walk/2);g.add(a);
+ const white=new THREE.MeshBasicMaterial({color:0xe9e4d0});
+ for(let i=0;i<6;i++){let m=new THREE.Mesh(new THREE.PlaneGeometry(.16,4),white);m.rotation.x=-Math.PI/2;m.position.set(x0+roadW/2,.025,z0+17+i*9);g.add(m);m=new THREE.Mesh(new THREE.PlaneGeometry(4,.16),white);m.rotation.x=-Math.PI/2;m.position.set(x0+17+i*9,.026,z0+roadW/2);g.add(m)}
+ // crosswalks
+ for(let k=0;k<5;k++){let s=new THREE.Mesh(new THREE.PlaneGeometry(.7,4.7),white);s.rotation.x=-Math.PI/2;s.position.set(x0+13+k*1.4,.027,z0+7.6);g.add(s);let t=new THREE.Mesh(new THREE.PlaneGeometry(4.7,.7),white);t.rotation.x=-Math.PI/2;t.position.set(x0+7.6,.028,z0+13+k*1.4);g.add(t)}
+}
 function createChunk(cx,cz){
- const key=chunkKey(cx,cz);if(chunks.has(key))return;
- const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
- const x0=cx*CHUNK,z0=cz*CHUNK,road=10,walk=3;
+ const key=ck(cx,cz);if(chunks.has(key))return;const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
+ const x0=cx*CHUNK,z0=cz*CHUNK,d=districtFor(cx,cz),grass=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));grass.rotation.x=-Math.PI/2;grass.position.set(x0+CHUNK/2,-.04,z0+CHUNK/2);g.add(grass);makeRoad(g,x0,z0);
+ const id=districtId(cx,cz);if(!state.seenDistricts.includes(id))state.seenDistricts.push(id);
 
- const ground=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));
- ground.rotation.x=-Math.PI/2;ground.position.set(x0+CHUNK/2,-.05,z0+CHUNK/2);g.add(ground);
-
- const roadMat=new THREE.MeshStandardMaterial({map:textures.asphalt,roughness:1});
- const rx=new THREE.Mesh(new THREE.PlaneGeometry(road,CHUNK),roadMat);rx.rotation.x=-Math.PI/2;rx.position.set(x0+road/2,.01,z0+CHUNK/2);g.add(rx);
- const rz=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,road),roadMat);rz.rotation.x=-Math.PI/2;rz.position.set(x0+CHUNK/2,.012,z0+road/2);g.add(rz);
-
- const pavMat=new THREE.MeshStandardMaterial({map:textures.pavement,roughness:1});
- const sx=new THREE.Mesh(new THREE.PlaneGeometry(walk,CHUNK-road),pavMat);sx.rotation.x=-Math.PI/2;sx.position.set(x0+road+walk/2,.02,z0+(CHUNK+road)/2);g.add(sx);
- const sz=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK-road,walk),pavMat);sz.rotation.x=-Math.PI/2;sz.position.set(x0+(CHUNK+road)/2,.021,z0+road+walk/2);g.add(sz);
-
- // lane markings
- const lineMat=new THREE.MeshBasicMaterial({color:0xe9dfab});
- for(let i=0;i<7;i++){
-   const m=new THREE.Mesh(new THREE.PlaneGeometry(.18,4),lineMat);m.rotation.x=-Math.PI/2;m.position.set(x0+road/2,.025,z0+12+i*8);g.add(m);
-   const n=new THREE.Mesh(new THREE.PlaneGeometry(4,.18),lineMat);n.rotation.x=-Math.PI/2;n.position.set(x0+12+i*8,.026,z0+road/2);g.add(n)
- }
-
- // 4 building lots
- const lots=[[20,20],[44,20],[20,44],[44,44]];
- lots.forEach((p,idx)=>{
-   if(r()<.18&&!(cx===0&&cz===0&&idx===0))return;
-   const w=13+r()*7,d=13+r()*7,h=7+r()*24,x=x0+p[0]+(r()-.5)*3,z=z0+p[1]+(r()-.5)*3;
-   const mat=new THREE.MeshStandardMaterial({map:textures.facades[Math.floor(r()*textures.facades.length)],roughness:.9});
-   const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);b.position.set(x,h/2,z);g.add(b);
-   addCollider(key,x,z,w,d,'building')
+ // building lots are always INSIDE blocks, never roads or sidewalks
+ const lots=[[25,25],[51,25],[25,51],[51,51]];
+ lots.forEach((p,i)=>{
+   if(r()<.19){addPark(g,x0+p[0],z0+p[1],r);return}
+   const w=14+r()*6,dep=14+r()*6,h=(d.style==='central'?16:8)+r()*(d.style==='central'?24:18);
+   const x=x0+p[0]+(r()-.5)*2,z=z0+p[1]+(r()-.5)*2;
+   const mat=new THREE.MeshStandardMaterial({map:d.style==='old'?textures.brick:(r()<.5?textures.modern:textures.brick),roughness:.87});
+   const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),mat);b.position.set(x,h/2,z);g.add(b);colliders.push({key,minX:x-w/2-.35,maxX:x+w/2+.35,minZ:z-dep/2-.35,maxZ:z+dep/2+.35,type:'building'});
+   if(i===0&&r()<.34)addApartmentDoor(g,key,x,z,dep);
  });
+ // shops are separate storefronts placed in reserved lot edge, not sidewalks/roads
+ if((cx===0&&cz===0)||r()<.25)addShop(g,key,x0+19,z0+20,r);
+ // vegetation
+ const trees=3+Math.floor(r()*(d.style==='green'?10:5));for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);addTree(g,p.x,p.z,r)}
+ // bins / chests
+ const cont=1+Math.floor(r()*3);for(let i=0;i<cont;i++){const p=randomSidewalk(x0,z0,r),type=r()<.72?'bin':'chest',idc=`${key}:container:${i}`;if(!state.collected.includes(idc))addContainer(g,key,idc,p.x,p.z,type)}
+ // loot
+ const lootN=2+Math.floor(r()*4);for(let i=0;i<lootN;i++){const p=randomSidewalk(x0,z0,r),type=r()<.62?'coins':r()<.84?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
+ // artifact, sparse, across city
+ if(!state.artifacts.includes(state.cityId)&&((Math.abs(cx)+Math.abs(cz)>1&&r()<.055)||(cx===3&&cz===-2))){const p=randomSidewalk(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')}
+ // NPCs, more civilians, much fewer enemies
+ const npcN=3+Math.floor(r()*4);for(let i=0;i<npcN;i++){const p=randomSidewalk(x0,z0,r);addNPC(g,key,p.x,p.z,r)}
+ if(r()<.10){const p=randomSidewalk(x0,z0,r);addEnemy(g,key,p.x,p.z,r)}
+ // traffic
+ const carN=1+Math.floor(r()*2);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
+}
+function randomSidewalk(x0,z0,r){return r()<.5?{x:x0+14.2,z:z0+17+r()*(CHUNK-22)}:{x:x0+17+r()*(CHUNK-22),z:z0+14.2}}
+function randomGreenPoint(x0,z0,r){return{x:x0+19+r()*(CHUNK-24),z:z0+19+r()*(CHUNK-24)}}
+function addPark(g,x,z,r){const m=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));m.rotation.x=-Math.PI/2;m.position.set(x,.025,z);g.add(m);for(let i=0;i<4;i++)addTree(g,x+(r()-.5)*15,z+(r()-.5)*15,r)}
+function addTree(g,x,z,r){const tree=new THREE.Group(),trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.24,2.4,8),new THREE.MeshStandardMaterial({color:0x684834}));trunk.position.y=1.2;tree.add(trunk);const crown=new THREE.Mesh(new THREE.SphereGeometry(1.15+r()*.6,10,8),new THREE.MeshStandardMaterial({color:choice([0x3f7c4c,0x4d8b57,0x356a43])}));crown.position.y=2.8;tree.add(crown);tree.position.set(x,0,z);g.add(tree)}
+function makeSign(text,color='#ffdb77'){const c=document.createElement('canvas');c.width=512;c.height=128;const q=c.getContext('2d');q.fillStyle='#10222a';q.fillRect(0,0,512,128);q.fillStyle=color;q.font='bold 44px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(text,256,64);const t=new THREE.CanvasTexture(c),s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.scale.set(5.2,1.3,1);return s}
+function addShop(g,key,x,z,r){const type=choice(Object.keys(SHOPS)),shop=SHOPS[type],group=new THREE.Group(),body=new THREE.Mesh(new THREE.BoxGeometry(9,5,8),new THREE.MeshStandardMaterial({color:type==='corner'?0x3d6e57:type==='gear'?0x4f5964:0x5c4768,roughness:.75}));body.position.y=2.5;group.add(body);const glass=new THREE.Mesh(new THREE.PlaneGeometry(4,2.5),new THREE.MeshBasicMaterial({color:0x8ed5ee,transparent:true,opacity:.5}));glass.position.set(0,1.8,4.01);group.add(glass);const sign=makeSign(`${shop.icon} ${shop.name}`);sign.position.set(0,4.6,4.12);group.add(sign);group.position.set(x,0,z);g.add(group);colliders.push({key,minX:x-4.6,maxX:x+4.6,minZ:z-4.2,maxZ:z+4.2,type:'shop'});shops.push({key,x,z,type,group,door:{x,z:z+4.7}})}
+function addApartmentDoor(g,key,x,z,dep){const door=new THREE.Mesh(new THREE.PlaneGeometry(1.5,2.5),new THREE.MeshBasicMaterial({color:0x35271f}));door.position.set(x,1.35,z+dep/2+.011);g.add(door);apartments.push({key,x,z:z+dep/2+.9,id:`${key}:apt`})}
+function addContainer(g,key,id,x,z,type){const mesh=new THREE.Mesh(type==='bin'?new THREE.CylinderGeometry(.42,.48,.9,10):new THREE.BoxGeometry(.9,.55,.65),new THREE.MeshStandardMaterial({color:type==='bin'?0x335d45:0x74572e}));mesh.position.set(x,type==='bin'?.45:.28,z);mesh.userData={key,id,type};g.add(mesh);containers.push(mesh)}
+function addPickup(g,key,id,x,z,type){const color={coins:0xffd15b,medkit:0x62e3a4,rare:0xa68cff,artifact:0x60d8ff}[type],geo=type==='artifact'?new THREE.OctahedronGeometry(.65):type==='coins'?new THREE.CylinderGeometry(.34,.34,.12,16):new THREE.BoxGeometry(.6,.6,.6),m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,emissive:type==='artifact'?0x15536a:0x000000,emissiveIntensity:1}));m.position.set(x,type==='artifact'?.72:.43,z);m.userData={key,id,type};g.add(m);pickups.push(m)}
+function addNPC(g,key,x,z,r){const n=createPerson(false,key,x,z,r);g.add(n.group);npcs.push(n)}
+function addEnemy(g,key,x,z,r){const n=createPerson(true,key,x,z,r);n.speed*=1.1;g.add(n.group);enemies.push(n)}
+function createPerson(hostile,key,x,z,r){const group=new THREE.Group(),cloth=new THREE.MeshStandardMaterial({color:hostile?0x6d2434:choice([0x315f7b,0x486d45,0x6a4e75,0x785f42])}),skin=new THREE.MeshStandardMaterial({color:0xd5a47c}),body=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.72,5,8),cloth);body.position.y=1.05;group.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.24,9,9),skin);head.position.y=1.72;group.add(head);const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);return{key,group,hostile,axis:r()<.5?'x':'z',speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:6+Math.floor(r()*45),legs:[l1,l2],phase:r()*6.2,name:hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam']),missionGiven:false,caught:false}}
+function addCar(g,key,x0,z0,r,i){const vertical=r()<.5,group=new THREE.Group(),body=new THREE.Mesh(new THREE.BoxGeometry(1.65,.65,3.4),new THREE.MeshStandardMaterial({color:choice([0xc44b4b,0x4b6fc4,0x444b52,0xe0d3b4,0x4f9c68]),metalness:.25,roughness:.45}));body.position.y=.65;group.add(body);const top=new THREE.Mesh(new THREE.BoxGeometry(1.4,.55,1.75),new THREE.MeshStandardMaterial({color:0x607b8c,transparent:true,opacity:.82}));top.position.set(0,1.18,-.15);group.add(top);group.position.set(vertical?x0+3.2:x0+15+i*14,.0,vertical?z0+18+i*18:z0+3.2);if(!vertical)group.rotation.y=Math.PI/2;g.add(group);cars.push({key,group,vertical,dir:r()<.5?-1:1,speed:4+r()*2.3,x0,z0})}
 
- // physical shop, guaranteed origin and common elsewhere
- if((cx===0&&cz===0)||r()<.28){
-   const x=x0+16,z=z0+16;
-   const shop=createShopMesh(key,x,z,r);g.add(shop.group);shops.push(shop);
- }
- // street props
- for(let i=0;i<4;i++){
-   const lamp=new THREE.Group(),pole=new THREE.Mesh(new THREE.CylinderGeometry(.08,.1,3.2,8),new THREE.MeshStandardMaterial({color:0x343b42,metalness:.6}));
-   pole.position.y=1.6;lamp.add(pole);const light=new THREE.Mesh(new THREE.SphereGeometry(.16,8,8),new THREE.MeshBasicMaterial({color:0xffe9a8}));light.position.y=3.2;lamp.add(light);
-   lamp.position.set(x0+12+i*14,0,z0+12);g.add(lamp)
- }
-
- // loot everywhere in the city
- const lootCount=2+Math.floor(r()*5);
- for(let i=0;i<lootCount;i++){
-   const p=randomWalkablePoint(x0,z0,r),type=r()<.48?'coins':r()<.72?'scrap':r()<.9?'medkit':'rare';
-   const id=`${key}:loot:${i}`;if(state.collected.includes(id))continue;
-   const mesh=createPickupMesh(type);mesh.position.set(p.x,.45,p.z);mesh.userData={id,type,key};g.add(mesh);pickups.push(mesh)
- }
-
- // Artifact can spawn in many chunks, deterministic but not only origin
- if(!state.artifacts.includes(state.cityId) && ((Math.abs(cx)+Math.abs(cz)>1 && r()<.09)||(cx===2&&cz===-1))){
-   const id=`${key}:artifact`;
-   if(!state.collected.includes(id)){
-     const p=randomWalkablePoint(x0,z0,r),mesh=createPickupMesh('artifact');mesh.position.set(p.x,.7,p.z);mesh.userData={id,type:'artifact',key};g.add(mesh);pickups.push(mesh)
-   }
- }
-
- // civilians
- const npcCount=2+Math.floor(r()*4);
- for(let i=0;i<npcCount;i++){const p=randomSidewalkPoint(x0,z0,r);const n=createPerson(false,key,p.x,p.z,r);g.add(n.group);npcs.push(n)}
- // adversaries
- if(r()<.48){const p=randomSidewalkPoint(x0,z0,r);const e=createPerson(true,key,p.x,p.z,r);g.add(e.group);enemies.push(e)}
+function unload(key){const g=chunks.get(key);if(!g)return;scene.remove(g);chunks.delete(key);colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key)}
+function ensureChunks(force=false){if(state.interior)return;const {cx,cz}=currentChunk();for(let x=cx-LOAD;x<=cx+LOAD;x++)for(let z=cz-LOAD;z<=cz+LOAD;z++)createChunk(x,z);for(const[k,g]of chunks){if(Math.abs(g.userData.cx-cx)>UNLOAD||Math.abs(g.userData.cz-cz)>UNLOAD)unload(k)}if(force)drawMap()}
+function collides(x,z){if(state.interior)return Math.abs(x)>8.5||z<-8.5||z>8.5;return colliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ)}
+function movePlayer(dx,dz){const nx=state.pos.x+dx,nz=state.pos.z+dz;if(!collides(nx,state.pos.z))state.pos.x=nx;if(!collides(state.pos.x,nz))state.pos.z=nz}
+function updateCamera(t=0){const bob=(Math.abs(moveStick.x)+Math.abs(moveStick.y)>.15)?Math.sin(t*.012)*.022:0;camera.position.set(state.pos.x,1.72+bob,state.pos.z);const cp=Math.cos(state.pitch),sp=Math.sin(state.pitch),sy=Math.sin(state.yaw),cy=Math.cos(state.yaw);camera.lookAt(state.pos.x+sy*cp,1.72+sp+bob,state.pos.z-cy*cp)}
+function updateWorldLight(dt){
+ state.timeOfDay=(state.timeOfDay+dt*.028)%24;const sun=scene.getObjectByName('sun'),day=Math.max(.08,Math.sin((state.timeOfDay-6)/24*Math.PI*2)*.5+.5);sun.intensity=.15+day*1.9;scene.children.find(x=>x.isHemisphereLight).intensity=.35+day*1.8;
+ const sky=new THREE.Color().setRGB(.05+.45*day,.08+.58*day,.12+.62*day);scene.background.copy(sky);scene.fog.color.copy(sky);
+ if(performance.now()-lastWeatherTick>45000){lastWeatherTick=performance.now();const r=Math.random();state.weather=r<.68?'clear':r<.85?'cloudy':'rain'}
 }
-function randomWalkablePoint(x0,z0,r){
- if(r()<.5)return{x:x0+11+r()*(CHUNK-15),z:z0+5+(r()-.5)*4};
- return{x:x0+5+(r()-.5)*4,z:z0+11+r()*(CHUNK-15)}
-}
-function randomSidewalkPoint(x0,z0,r){
- if(r()<.5)return{x:x0+11.5,z:z0+14+r()*(CHUNK-18)};
- return{x:x0+14+r()*(CHUNK-18),z:z0+11.5}
-}
-function createShopMesh(key,x,z,r){
- const group=new THREE.Group();
- const body=new THREE.Mesh(new THREE.BoxGeometry(8,4.6,7),new THREE.MeshStandardMaterial({color:0x225d58,roughness:.75}));body.position.y=2.3;group.add(body);
- const awn=new THREE.Mesh(new THREE.BoxGeometry(8.4,.35,1.3),new THREE.MeshStandardMaterial({color:0xe8b84f}));awn.position.set(0,3.1,3.7);group.add(awn);
- const door=new THREE.Mesh(new THREE.PlaneGeometry(2,2.8),new THREE.MeshBasicMaterial({color:0x102935}));door.position.set(0,1.55,3.515);group.add(door);
- const sign=makeSign('BOUTIQUE');sign.position.set(0,4.25,3.65);group.add(sign);group.position.set(x,0,z);
- addCollider(key,x,z,8,7,'shop');
- return{key,x,z,group,id:`${key}:shop`}
-}
-function makeSign(text){
- const c=document.createElement('canvas');c.width=512;c.height=128;const q=c.getContext('2d');q.fillStyle='#10222a';q.fillRect(0,0,512,128);q.fillStyle='#ffdb77';q.font='bold 48px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(text,256,64);
- const t=new THREE.CanvasTexture(c),s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.scale.set(5.5,1.35,1);return s
-}
-function createPickupMesh(type){
- const color={coins:0xffcf52,scrap:0xb4c0ca,medkit:0x62e3a4,rare:0xa58cff,artifact:0x62d7ff}[type];
- const geo=type==='artifact'?new THREE.OctahedronGeometry(.65):type==='coins'?new THREE.CylinderGeometry(.36,.36,.12,16):new THREE.BoxGeometry(.62,.62,.62);
- const m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,emissive:type==='artifact'?0x15546c:0x000000,emissiveIntensity:1}));if(type==='coins')m.rotation.x=Math.PI/2;return m
-}
-function createPerson(hostile,key,x,z,r){
- const group=new THREE.Group();
- const skin=new THREE.MeshStandardMaterial({color:0xd5a47c}),cloth=new THREE.MeshStandardMaterial({color:hostile?0x6c2331:choice([0x315f7b,0x486d45,0x6a4e75,0x785f42])});
- const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28,.75,5,8),cloth);body.position.y=1.05;group.add(body);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.25,10,10),skin);head.position.y=1.75;group.add(head);
- const legMat=new THREE.MeshStandardMaterial({color:0x222b34});
- const l1=new THREE.Mesh(new THREE.BoxGeometry(.16,.68,.18),legMat),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);
- group.position.set(x,0,z);
- const axis=r()<.5?'x':'z',speed=.7+r()*.65,dir=r()<.5?-1:1;
- return{key,group,hostile,axis,speed,dir,home:{x,z},money:8+Math.floor(r()*48),caught:false,legs:[l1,l2],phase:r()*6.28}
-}
-function addCollider(key,x,z,w,d,type){colliders.push({key,minX:x-w/2-.4,maxX:x+w/2+.4,minZ:z-d/2-.4,maxZ:z+d/2+.4,type})}
-function unloadChunk(key){
- const g=chunks.get(key);if(!g)return;scene.remove(g);chunks.delete(key);
- colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key)
-}
-function ensureChunks(force=false){
- const {cx,cz}=currentChunk();
- for(let x=cx-LOAD_RADIUS;x<=cx+LOAD_RADIUS;x++)for(let z=cz-LOAD_RADIUS;z<=cz+LOAD_RADIUS;z++)createChunk(x,z);
- for(const [key,g] of chunks){if(Math.abs(g.userData.cx-cx)>UNLOAD_RADIUS||Math.abs(g.userData.cz-cz)>UNLOAD_RADIUS)unloadChunk(key)}
- if(force)drawMinimap()
-}
-
-function collides(x,z){return colliders.some(c=>x+PLAYER_RADIUS>c.minX&&x-PLAYER_RADIUS<c.maxX&&z+PLAYER_RADIUS>c.minZ&&z-PLAYER_RADIUS<c.maxZ)}
-function movePlayer(dx,dz){let nx=state.pos.x+dx,nz=state.pos.z+dz;if(!collides(nx,state.pos.z))state.pos.x=nx;if(!collides(state.pos.x,nz))state.pos.z=nz}
-function updateCamera(t=0){
- const bob=(Math.abs(moveStick.x)+Math.abs(moveStick.y)>.1)?Math.sin(t*.012)*.025:0;
- camera.position.set(state.pos.x,1.72+bob,state.pos.z);
- const cp=Math.cos(state.pitch),sp=Math.sin(state.pitch),sy=Math.sin(state.yaw),cy=Math.cos(state.yaw);
- camera.lookAt(state.pos.x+sy*cp,1.72+sp+bob,state.pos.z-cy*cp)
-}
+function updateCars(dt){for(const c of cars){if(c.vertical){c.group.position.z+=c.dir*c.speed*dt;if(c.group.position.z<c.z0+8||c.group.position.z>c.z0+CHUNK-6)c.dir*=-1}else{c.group.position.x+=c.dir*c.speed*dt;if(c.group.position.x<c.x0+8||c.group.position.x>c.x0+CHUNK-6)c.dir*=-1}}}
+function updatePeople(dt,t){for(const n of [...npcs,...enemies]){if(n===activeEnemyEntity)continue;const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);if(n.hostile&&dist<8.5){n.group.position.x+=dx/(dist||1)*n.speed*1.25*dt;n.group.position.z+=dz/(dist||1)*n.speed*1.25*dt;if(dist<1.55&&!activeEnemy)startCombat(n)}else{const off=n.axis==='x'?n.group.position.x-n.home.x:n.group.position.z-n.home.z;if(Math.abs(off)>19)n.dir*=-1;if(n.axis==='x')n.group.position.x+=n.dir*n.speed*dt;else n.group.position.z+=n.dir*n.speed*dt}n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x}}
+function animatePickups(dt,t){for(const p of pickups){if(!p.parent)continue;p.rotation.y+=dt;p.position.y=(p.userData.type==='artifact'?.72:.43)+Math.sin(t/450+p.position.x)*.07}}
 function animate(){
- if(!renderer)return;requestAnimationFrame(animate);
- const dt=Math.min(.033,clock.getDelta()),now=performance.now();
- if(state.mode==='3d'){
-   // Correct axes: joystick up = forward, right = strafe right.
-   const forwardAmount=-moveStick.y,strafeAmount=moveStick.x;
-   const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);
-   movePlayer((fx*forwardAmount+rx*strafeAmount)*5.15*dt,(fz*forwardAmount+rz*strafeAmount)*5.15*dt);
-   // Right joystick: right looks right, up looks up.
-   state.yaw+=lookStick.x*2.05*dt;
-   state.pitch=clamp(state.pitch-lookStick.y*1.55*dt,-1.08,1.08);
-   updateCamera(now);updateNPCs(dt,now);animatePickups(dt,now);
-   if(now-spawnTick>700){ensureChunks();spawnTick=now}
-   checkInteractions();
-   if(now-minimapTick>100){drawMinimap();minimapTick=now}
-   state.alert=Math.max(0,state.alert-dt*1.5);
-   renderer.render(scene,camera);updateHUD();
- }
+ if(!renderer)return;requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta()),t=performance.now();
+ const forward=-moveStick.y,strafe=moveStick.x,fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);movePlayer((fx*forward+rx*strafe)*4.8*dt,(fz*forward+rz*strafe)*4.8*dt);state.yaw+=lookStick.x*2.0*dt;state.pitch=clamp(state.pitch-lookStick.y*1.5*dt,-1.06,1.06);
+ updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}state.wanted=Math.max(0,state.wanted-dt*.5);updateHUD();renderer.render(scene,camera)
 }
-function animatePickups(dt,now){for(const m of pickups){if(!m.parent)continue;m.rotation.y+=dt;m.position.y=(m.userData.type==='artifact'?.7:.45)+Math.sin(now/450+m.position.x)*.08}}
-function updateNPCs(dt,now){
- for(const n of npcs){
-   const span=23,offset=n.axis==='x'?n.group.position.x-n.home.x:n.group.position.z-n.home.z;
-   if(Math.abs(offset)>span)n.dir*=-1;
-   if(n.axis==='x')n.group.position.x+=n.dir*n.speed*dt;else n.group.position.z+=n.dir*n.speed*dt;
-   n.group.rotation.y=n.axis==='x'?(n.dir>0?Math.PI/2:-Math.PI/2):(n.dir>0?0:Math.PI);
-   n.legs[0].rotation.x=Math.sin(now*.006*n.speed+n.phase)*.6;n.legs[1].rotation.x=-n.legs[0].rotation.x
- }
- for(const e of enemies){
-   if(e===activeEnemyEntity)continue;
-   const dx=state.pos.x-e.group.position.x,dz=state.pos.z-e.group.position.z,d=Math.hypot(dx,dz);
-   if(d<11||state.alert>65){
-     const s=e.speed*1.3*dt;e.group.position.x+=dx/(d||1)*s;e.group.position.z+=dz/(d||1)*s;e.group.rotation.y=Math.atan2(dx,dz);
-     if(d<1.65&&!activeEnemy)startCombat(e)
-   }else{
-     const span=18,off=e.axis==='x'?e.group.position.x-e.home.x:e.group.position.z-e.home.z;if(Math.abs(off)>span)e.dir*=-1;
-     if(e.axis==='x')e.group.position.x+=e.dir*e.speed*dt;else e.group.position.z+=e.dir*e.speed*dt
-   }
- }
-}
-function nearest(arr,maxD){
- let best=null,bd=maxD;
- for(const x of arr){const p=x.group?x.group.position:x.position,d=Math.hypot(state.pos.x-p.x,state.pos.z-p.z);if(d<bd){best=x;bd=d}}
- return best
-}
-function checkInteractions(){
- if(activeEnemy)return hidePrompt();
- const loot=nearest(pickups.filter(x=>x.parent),1.65);
- if(loot)return setPrompt(pickupName(loot.userData.type),pickupDesc(loot.userData.type),'RAMASSER',()=>collectPickup(loot));
- const shop=nearest(shops,2.45);
- if(shop)return setPrompt('Boutique de quartier','Entre pour acheter du matériel avec l’argent trouvé.','ENTRER',()=>openPhysicalShop(shop));
- const civ=nearest(npcs,1.55);
- if(civ)return setPrompt('Passant','Tu peux tenter de lui faire les poches. Risque de te faire repérer.','FAIRE LES POCHES',()=>pickpocket(civ));
+
+function nearest(arr,max){let best=null,d0=max;for(const x of arr){const p=x.group?x.group.position:x.position,d=Math.hypot(state.pos.x-p.x,state.pos.z-p.z);if(d<d0){best=x;d0=d}}return best}
+function checkInteraction(){
+ if(activeEnemy||!$('#dialogue').classList.contains('hidden'))return hidePrompt();
+ if(state.interior){return setPrompt('Sortie','Retourner dans la rue.','SORTIR',exitInterior)}
+ const p=nearest(pickups.filter(x=>x.parent),1.6);if(p)return setPrompt(pickupName(p.userData.type),'Objet trouvé dans la rue.','RAMASSER',()=>collectPickup(p));
+ const c=nearest(containers.filter(x=>x.parent),1.7);if(c)return setPrompt(c.userData.type==='bin'?'Poubelle':'Coffre',c.userData.type==='bin'?'Fouiller discrètement.':'Ouvrir le coffre.','FOUILLER',()=>openContainer(c));
+ const s=shops.reduce((b,x)=>{const d=Math.hypot(state.pos.x-x.door.x,state.pos.z-x.door.z);return !b||d<b.d?{x,d}:b},null);if(s&&s.d<1.8)return setPrompt(SHOPS[s.x.type].name,'Entrer réellement dans la boutique.','ENTRER',()=>enterInterior('shop',s.x));
+ const a=nearest(apartments,1.6);if(a)return setPrompt('Immeuble résidentiel','Entrer dans le hall et explorer un appartement.','ENTRER',()=>enterInterior('apartment',a));
+ const n=nearest(npcs,1.55);if(n)return setPrompt(n.name,'Parler, demander une mission ou tenter un vol à la tire.','PARLER',()=>talkNPC(n));
  hidePrompt()
 }
 function setPrompt(t,d,b,fn){$('#promptTitle').textContent=t;$('#promptText').textContent=d;$('#promptBtn').textContent=b;$('#promptBtn').onclick=fn;$('#prompt').classList.remove('hidden')}
 function hidePrompt(){$('#prompt').classList.add('hidden')}
-function pickupName(t){return{coins:'Billets trouvés',scrap:'Composant',medkit:'Kit de soin',rare:'Cache rare',artifact:city().artifact}[t]}
-function pickupDesc(t){return{coins:'Argent abandonné dans la rue.',scrap:'Se revend automatiquement.',medkit:'+40 PV dans le sac.',rare:'Contient des crédits et de l’XP.',artifact:'Objet principal de la ville.'}[t]}
-function collectPickup(m){
- const t=m.userData.type,id=m.userData.id;if(state.collected.includes(id))return;
- if((t==='medkit')&&invCount()>=state.bagMax)return toast('Sac plein.');
- state.collected.push(id);
- if(t==='coins'){const n=8+Math.floor(Math.random()*38);state.coins+=n;toast(`+${n} crédits`)}
- if(t==='scrap'){state.coins+=22;state.xp+=10;toast('+22 crédits')}
- if(t==='medkit'){addInv('medkit');toast('Kit de soin récupéré')}
- if(t==='rare'){const n=55+Math.floor(Math.random()*75);state.coins+=n;state.xp+=35;toast(`Cache rare : +${n} crédits`)}
- if(t==='artifact'&&!state.artifacts.includes(state.cityId)){state.artifacts.push(state.cityId);state.coins+=250;state.xp+=180;toast(`${city().artifact} récupéré ! +250 crédits`)}
- if(m.parent)m.parent.remove(m);pickups=pickups.filter(x=>x!==m);hidePrompt();levelCheck();save();updateHUD()
-}
+function pickupName(t){return{coins:'Crédits',medkit:'Kit de soin',rare:'Cache rare',artifact:city().artifact}[t]}
+function collectPickup(m){const{id,type}=m.userData;if(state.collected.includes(id))return;if(type==='medkit'&&invCount()>=state.bagMax)return toast('Sac plein');state.collected.push(id);if(type==='coins'){const n=10+Math.floor(Math.random()*35);state.coins+=n;state.coinsEarned+=n;toast(`+${n} crédits`)}if(type==='medkit'){addInv('medkit');toast('Kit de soin récupéré')}if(type==='rare'){const n=55+Math.floor(Math.random()*85);state.coins+=n;state.coinsEarned+=n;state.xp+=35;toast(`Cache rare : +${n} crédits`)}if(type==='artifact'&&!state.artifacts.includes(state.cityId)){state.artifacts.push(state.cityId);state.coins+=250;state.coinsEarned+=250;state.xp+=180;toast(`${city().artifact} récupéré !`)}if(m.parent)m.parent.remove(m);pickups=pickups.filter(x=>x!==m);levelCheck();checkQuests();save();hidePrompt()}
+function openContainer(m){const{id,type}=m.userData;if(state.collected.includes(id))return;state.collected.push(id);state.containersOpened++;const n=type==='chest'?35+Math.floor(Math.random()*70):5+Math.floor(Math.random()*28);state.coins+=n;state.coinsEarned+=n;if(Math.random()<.22&&invCount()<state.bagMax)addInv('medkit');if(m.parent)m.parent.remove(m);containers=containers.filter(x=>x!==m);toast(`${type==='chest'?'Coffre':'Poubelle'} : +${n} crédits`);checkQuests();save();hidePrompt()}
 
-function pickpocket(n){
- if(n.caught)return toast('Cette personne est déjà sur ses gardes.');
- const success=clamp(.62+state.stealth*.11-state.alert*.003,.25,.9);
- if(Math.random()<success){
-   const amount=n.money;state.coins+=amount;state.pickpockets++;n.money=0;n.caught=true;n.speed*=1.9;toast(`Vol réussi : +${amount} crédits`);
- }else{
-   n.caught=true;n.speed*=2.2;state.alert=clamp(state.alert+32,0,100);toast('Repéré ! Niveau d’alerte augmenté.');
-   if(state.alert>45)spawnHunterNearPlayer()
- }
- save();hidePrompt();updateHUD()
+function talkNPC(n){
+ const lines=[`Salut ! ${city().name} est tranquille si tu prends le temps de l’explorer.`,`J’ai entendu parler d’une cache dans le quartier.`,`Les commerces changent selon les secteurs.`,`Évite les rôdeurs, ils sont rares mais parfois coriaces.`];
+ showDialogue(n.name,choice(lines),()=>{
+  if(!n.missionGiven&&Math.random()<.55){n.missionGiven=true;assignNpcMission(n);showDialogue(n.name,`J’ai un service à te demander : ${state.activeNpcMission.text}`,hideDialogue)}
+  else showDialogue(n.name,'Bonne balade !',()=>showNpcChoices(n))
+ })
 }
-function spawnHunterNearPlayer(){
- if(!THREE)return;const {cx,cz}=currentChunk(),key=chunkKey(cx,cz),g=chunks.get(key);if(!g)return;
- const r=rngFor(key+':hunter:'+Date.now()),e=createPerson(true,key,state.pos.x+6,state.pos.z+5,r);e.speed=1.5;e.name='Sentinelle urbaine';g.add(e.group);enemies.push(e)
+function showNpcChoices(n){
+ $('#dialogue').classList.add('hidden');
+ openSheet('npc');$('#sheetTitle').textContent=n.name;$('#sheetBody').innerHTML=`<div class="card"><h3>Que faire ?</h3><div class="grid2"><button class="menuBtn primary" id="talkAgain">💬 Discuter</button><button class="menuBtn" id="pickpocket">🫳 Faire les poches<small>Risque d’être repéré.</small></button></div></div>`;
+ $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'Profite du quartier, il y a toujours quelque chose à découvrir.',hideDialogue)};$('#pickpocket').onclick=()=>{closeSheet();pickpocket(n)}
 }
+function assignNpcMission(n){const opts=[{kind:'coins',text:'retrouve 60 crédits dans la rue',target:60,start:state.coinsEarned,reward:90},{kind:'container',text:'fouille 2 caches ou poubelles',target:2,start:state.containersOpened,reward:110},{kind:'explore',text:'découvre 2 nouveaux quartiers',target:2,start:state.seenDistricts.length,reward:120}];state.activeNpcMission={...choice(opts),giver:n.name};save()}
+function npcMissionProgress(){const m=state.activeNpcMission;if(!m)return null;const now=m.kind==='coins'?state.coinsEarned:m.kind==='container'?state.containersOpened:state.seenDistricts.length;return now-m.start}
+function maybeCompleteNpcMission(){const m=state.activeNpcMission;if(!m)return;if(npcMissionProgress()>=m.target){state.coins+=m.reward;state.npcMissions++;toast(`Mission de ${m.giver} terminée +${m.reward}`);state.activeNpcMission=null;checkQuests();save()}}
+function pickpocket(n){if(n.caught)return toast('Cette personne est sur ses gardes');const chance=clamp(.62+state.stealth*.10-state.wanted*.004,.24,.9);if(Math.random()<chance){const amount=n.money;state.coins+=amount;state.coinsEarned+=amount;state.pickpockets++;n.money=0;n.caught=true;toast(`Vol réussi : +${amount} crédits`)}else{n.caught=true;state.wanted=clamp(state.wanted+1,0,5);toast('Repéré ! Niveau de recherche augmenté')}checkQuests();save()}
 
-function startCombat(entity){
- activeEnemyEntity=entity;activeEnemy={name:entity.name||choice(['Rôdeur hostile','Mercenaire','Sentinelle urbaine']),level:Math.max(1,state.level+choice([-1,0,0,1])),hp:42+state.level*16,maxHp:42+state.level*16,damage:6+state.level*3,reward:25+state.level*15};
- $('#combat').classList.remove('hidden');renderCombat();hidePrompt()
+function showDialogue(name,text,next){$('#dialogueName').textContent=name;$('#dialogueText').textContent=text;$('#dialogueIcon').textContent='🙂';$('#dialogue').classList.remove('hidden');$('#dialogueNext').onclick=next}
+function hideDialogue(){$('#dialogue').classList.add('hidden')}
+
+function enterInterior(type,obj){
+ state.returnPos={...state.pos};state.interior={type,shopType:obj.type||null};for(const[,g]of chunks)g.visible=false;
+ if(interiorGroup)scene.remove(interiorGroup);interiorGroup=new THREE.Group();scene.add(interiorGroup);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(18,18),new THREE.MeshStandardMaterial({color:type==='shop'?0x786f60:0x6b665f,roughness:1}));floor.rotation.x=-Math.PI/2;interiorGroup.add(floor);
+ const wallM=new THREE.MeshStandardMaterial({color:type==='shop'?0xc8c0aa:0xd2cbc1});[[0,2.5,-9,18,.25],[0,2.5,9,18,.25],[-9,2.5,0,.25,18],[9,2.5,0,.25,18]].forEach(w=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],5,w[4]),wallM);m.position.set(w[0],w[1],w[2]);interiorGroup.add(m)});
+ if(type==='shop')buildShopInterior(obj.type);else buildApartmentInterior();
+ state.pos={x:0,z:6.5};state.yaw=Math.PI;state.pitch=0;hidePrompt();save()
 }
+function buildShopInterior(type){const shelfM=new THREE.MeshStandardMaterial({color:0x4c3c2d});for(let i=-1;i<=1;i++){const s=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.8,5),shelfM);s.position.set(i*4,1,0);interiorGroup.add(s)}const counter=new THREE.Mesh(new THREE.BoxGeometry(5,1.2,1.2),new THREE.MeshStandardMaterial({color:0x2f4855}));counter.position.set(0,.6,-6);interiorGroup.add(counter);const sign=makeSign(`${SHOPS[type].icon} ${SHOPS[type].name}`);sign.position.set(0,3,-8.5);interiorGroup.add(sign)}
+function buildApartmentInterior(){const couch=new THREE.Mesh(new THREE.BoxGeometry(3,.8,1.1),new THREE.MeshStandardMaterial({color:0x5a6675}));couch.position.set(-3,.5,-3);interiorGroup.add(couch);const table=new THREE.Mesh(new THREE.BoxGeometry(1.6,.7,1.2),new THREE.MeshStandardMaterial({color:0x6e523a}));table.position.set(2,.4,-2);interiorGroup.add(table);const plant=new THREE.Group();const pot=new THREE.Mesh(new THREE.CylinderGeometry(.3,.4,.5,10),new THREE.MeshStandardMaterial({color:0x80543a}));pot.position.y=.25;plant.add(pot);const leaf=new THREE.Mesh(new THREE.SphereGeometry(.65,9,8),new THREE.MeshStandardMaterial({color:0x3f7c4d}));leaf.position.y=1.15;plant.add(leaf);plant.position.set(4,0,3);interiorGroup.add(plant)}
+function exitInterior(){if(state.interior?.type==='shop'){openSheet('physicalShop');return}leaveInterior()}
+function leaveInterior(){if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}for(const[,g]of chunks)g.visible=true;state.interior=null;state.pos=state.returnPos||{x:2,z:8};state.returnPos=null;save();hidePrompt()}
+function physicalShopHTML(){const s=SHOPS[state.interior.shopType];return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits disponibles.</p></div><div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price} crédits</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir de la boutique</button>`}
+function buy(id,price){if(state.coins<price)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');state.coins-=price;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(id==='snack'){state.hp=clamp(state.hp+15,0,state.maxHp)}if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;save();updateHUD();toast('Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
+function bindShop(){$$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));$('#leaveShop').onclick=()=>{closeSheet();leaveInterior()}}
+
+function startCombat(n){activeEnemyEntity=n;activeEnemy={name:n.name||'Rôdeur',level:Math.max(1,state.level+choice([-1,0,0,1])),hp:38+state.level*15,maxHp:38+state.level*15,damage:5+state.level*3,reward:22+state.level*14};$('#combat').classList.remove('hidden');renderCombat()}
 function renderCombat(){if(!activeEnemy)return;$('#enemyName').textContent=activeEnemy.name;$('#enemyLvl').textContent=`Niv. ${activeEnemy.level}`;$('#enemyBar').style.width=`${Math.max(0,activeEnemy.hp/activeEnemy.maxHp*100)}%`}
-function attack(){
- if(!activeEnemy)return;const dmg=weapon().damage+state.level*2+Math.floor(Math.random()*7);activeEnemy.hp-=dmg;toast(`${weapon().name} : ${dmg} dégâts`);
- if(activeEnemy.hp<=0){state.coins+=activeEnemy.reward;state.xp+=55+activeEnemy.level*10;state.kills++;if(activeEnemyEntity?.group.parent)activeEnemyEntity.group.parent.remove(activeEnemyEntity.group);enemies=enemies.filter(x=>x!==activeEnemyEntity);activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');levelCheck();save();return}
- let hit=activeEnemy.damage+Math.floor(Math.random()*4),absorbed=Math.min(state.armor,hit);state.armor-=absorbed;hit-=absorbed;state.hp-=hit;
- if(state.hp<=0){state.hp=state.maxHp;state.coins=Math.max(0,state.coins-75);state.alert=0;activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');state.pos={x:0,z:4};toast('K.O. — retour au refuge, -75 crédits')}else renderCombat();save()
-}
-function flee(){if(!activeEnemy)return;if(Math.random()<.7){activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');toast('Fuite réussie')}else{toast('Fuite ratée');attack()}}
+function animateAttack(){if(!weaponRig)return;weaponRig.rotation.x=-.8;weaponRig.position.z=-.15;setTimeout(()=>{weaponRig.rotation.x=0;weaponRig.position.z=0},120)}
+function attack(){if(!activeEnemy)return;animateAttack();const dmg=weapon().damage+state.level*2+Math.floor(Math.random()*7);activeEnemy.hp-=dmg;if(activeEnemy.hp<=0){state.coins+=activeEnemy.reward;state.coinsEarned+=activeEnemy.reward;state.xp+=50+activeEnemy.level*10;state.kills++;if(activeEnemyEntity?.group.parent)activeEnemyEntity.group.parent.remove(activeEnemyEntity.group);enemies=enemies.filter(x=>x!==activeEnemyEntity);activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');levelCheck();checkQuests();return}let hit=activeEnemy.damage+Math.floor(Math.random()*4),a=Math.min(state.armor,hit);state.armor-=a;hit-=a;state.hp-=hit;if(state.hp<=0){state.hp=state.maxHp;state.coins=Math.max(0,state.coins-60);state.wanted=0;activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');state.pos={x:2,z:8};toast('K.O. — retour au refuge')}else renderCombat();save()}
+function flee(){if(Math.random()<.75){activeEnemy=null;activeEnemyEntity=null;$('#combat').classList.add('hidden');toast('Tu t’éloignes sans problème')}else attack()}
+function levelCheck(){const n=1+Math.floor(state.xp/230);if(n>state.level){state.level=n;state.maxHp+=7;state.hp=state.maxHp;toast(`Niveau ${n} !`)}}
 
-function drawMinimap(){
- const c=$('#minimap'),ctx=c.getContext('2d'),W=c.width,H=c.height,scale=2.15,R=36;
- ctx.clearRect(0,0,W,H);ctx.fillStyle='#07111d';ctx.fillRect(0,0,W,H);
- ctx.save();ctx.translate(W/2,H/2);
- // roads
- const minX=state.pos.x-R,maxX=state.pos.x+R,minZ=state.pos.z-R,maxZ=state.pos.z+R;
- const cminX=Math.floor(minX/CHUNK)-1,cmaxX=Math.floor(maxX/CHUNK)+1,cminZ=Math.floor(minZ/CHUNK)-1,cmaxZ=Math.floor(maxZ/CHUNK)+1;
- ctx.strokeStyle='#3b4a54';ctx.lineWidth=18/scale;
- for(let cx=cminX;cx<=cmaxX;cx++){const x=(cx*CHUNK-state.pos.x)*scale;ctx.beginPath();ctx.moveTo(x,-H);ctx.lineTo(x,H);ctx.stroke()}
- for(let cz=cminZ;cz<=cmaxZ;cz++){const y=(cz*CHUNK-state.pos.z)*scale;ctx.beginPath();ctx.moveTo(-W,y);ctx.lineTo(W,y);ctx.stroke()}
- // nearby colliders/buildings
- ctx.fillStyle='#657583';
- colliders.forEach(b=>{const cx=(b.minX+b.maxX)/2,cz=(b.minZ+b.maxZ)/2;if(Math.abs(cx-state.pos.x)>R||Math.abs(cz-state.pos.z)>R)return;ctx.fillRect((b.minX-state.pos.x)*scale,(b.minZ-state.pos.z)*scale,(b.maxX-b.minX)*scale,(b.maxZ-b.minZ)*scale)});
- // shop
- ctx.fillStyle='#63e2b0';for(const s of shops){if(Math.abs(s.x-state.pos.x)<R&&Math.abs(s.z-state.pos.z)<R){ctx.beginPath();ctx.arc((s.x-state.pos.x)*scale,(s.z-state.pos.z)*scale,5,0,Math.PI*2);ctx.fill()}}
- // pickups
- for(const p of pickups){if(!p.parent)continue;const dx=p.position.x-state.pos.x,dz=p.position.z-state.pos.z;if(Math.abs(dx)>R||Math.abs(dz)>R)continue;ctx.fillStyle=p.userData.type==='artifact'?'#6edcff':p.userData.type==='coins'?'#ffd45d':'#a7b7c3';ctx.beginPath();ctx.arc(dx*scale,dz*scale,p.userData.type==='artifact'?4:2.5,0,Math.PI*2);ctx.fill()}
- // NPCs
- ctx.fillStyle='#79c995';for(const n of npcs){const dx=n.group.position.x-state.pos.x,dz=n.group.position.z-state.pos.z;if(Math.abs(dx)<R&&Math.abs(dz)<R){ctx.beginPath();ctx.arc(dx*scale,dz*scale,2.5,0,Math.PI*2);ctx.fill()}}
- ctx.fillStyle='#ff6078';for(const e of enemies){const dx=e.group.position.x-state.pos.x,dz=e.group.position.z-state.pos.z;if(Math.abs(dx)<R&&Math.abs(dz)<R){ctx.beginPath();ctx.arc(dx*scale,dz*scale,3,0,Math.PI*2);ctx.fill()}}
- // player arrow
- ctx.rotate(state.yaw);ctx.fillStyle='#fff';ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(5,6);ctx.lineTo(0,3);ctx.lineTo(-5,6);ctx.closePath();ctx.fill();ctx.restore();
+function secureDistrict(){
+ const {cx,cz}=currentChunk(),id=districtId(cx,cz);if(state.ownedDistricts.includes(id))return toast('Quartier déjà sécurisé');
+ const localContainers=state.collected.filter(x=>x.startsWith(ck(cx,cz)+':container')).length;
+ if(localContainers<1)return toast('Explore davantage : ouvre au moins une cache dans ce quartier');
+ state.ownedDistricts.push(id);state.coins+=90;state.xp+=55;toast('Quartier sécurisé +90 crédits');checkQuests();save()
 }
-
-function updateHUD(){
- const m=mission(),{cx,cz}=currentChunk();$('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;$('#alert').textContent=Math.round(state.alert);
- $('#district').textContent=`${city().name.toUpperCase()} • SECTEUR ${cx},${cz}`;$('#missionTitle').textContent=m.t;$('#missionText').textContent=m.d
-}
-
-function makeJoystick(baseSel,knobSel,target){
- const base=$(baseSel),knob=$(knobSel);let pid=null;
- const move=e=>{const r=base.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),max=30,len=Math.hypot(dx,dy)||1,k=Math.min(1,max/len);target.x=dx/max*k;target.y=dy/max*k;knob.style.transform=`translate(${dx*k}px,${dy*k}px)`};
- const reset=()=>{pid=null;target.x=target.y=0;knob.style.transform='translate(0,0)'};
- base.addEventListener('pointerdown',e=>{pid=e.pointerId;base.setPointerCapture(pid);move(e)});
- base.addEventListener('pointermove',e=>{if(e.pointerId===pid)move(e)});
- base.addEventListener('pointerup',reset);base.addEventListener('pointercancel',reset)
-}
-makeJoystick('#moveJoy','#moveKnob',moveStick);makeJoystick('#lookJoy','#lookKnob',lookStick);
-
 function scan(){
- let best=null,bd=999;
- for(const p of pickups){if(!p.parent)continue;const d=Math.hypot(state.pos.x-p.position.x,state.pos.z-p.position.z);if(p.userData.type==='artifact'&&d<bd){best=p;bd=d}}
- if(best)toast(`Artefact : ${bd<8?'TRÈS PROCHE':bd<22?'PROCHE':bd<50?'DANS LE QUARTIER':'LOINTAIN'} • ${Math.round(bd)} m`);
- else toast('Aucun signal d’artefact dans les quartiers chargés. Continue à explorer.')
+ let art=null,bd=999;for(const p of pickups){if(!p.parent||p.userData.type!=='artifact')continue;const d=Math.hypot(state.pos.x-p.position.x,state.pos.z-p.position.z);if(d<bd){art=p;bd=d}}
+ const max=state.scanner?140:70;if(art&&bd<max)toast(`Artefact ${bd<10?'TRÈS PROCHE':bd<30?'PROCHE':'DANS LE SECTEUR'} • ${Math.round(bd)} m`);else toast(`Scanner : ${state.scanner?'longue':'courte'} portée — aucun artefact détecté ici`)
 }
 
-function openPhysicalShop(shop){
- openSheet('physicalShop');$('#sheetTitle').textContent='Boutique de quartier';$('#sheetBody').innerHTML=shopItemsHTML();bindShopButtons()
+function drawMap(){
+ const c=$('#minimap'),q=c.getContext('2d'),W=c.width,H=c.height,S=2.0,R=45;q.clearRect(0,0,W,H);q.fillStyle='#07111d';q.fillRect(0,0,W,H);q.save();q.translate(W/2,H/2);
+ if(state.interior){q.fillStyle='#8594a0';q.fillRect(-35,-35,70,70);q.fillStyle='#fff';q.beginPath();q.arc(0,0,4,0,Math.PI*2);q.fill();q.restore();return}
+ q.strokeStyle='#47555e';q.lineWidth=11*S;const minCx=Math.floor((state.pos.x-R)/CHUNK)-1,maxCx=Math.floor((state.pos.x+R)/CHUNK)+1,minCz=Math.floor((state.pos.z-R)/CHUNK)-1,maxCz=Math.floor((state.pos.z+R)/CHUNK)+1;
+ for(let cx=minCx;cx<=maxCx;cx++){const x=(cx*CHUNK-state.pos.x)*S;q.beginPath();q.moveTo(x,-H);q.lineTo(x,H);q.stroke()}for(let cz=minCz;cz<=maxCz;cz++){const y=(cz*CHUNK-state.pos.z)*S;q.beginPath();q.moveTo(-W,y);q.lineTo(W,y);q.stroke()}
+ q.fillStyle='#6a7680';for(const b of colliders){const x=(b.minX-state.pos.x)*S,y=(b.minZ-state.pos.z)*S,w=(b.maxX-b.minX)*S,h=(b.maxZ-b.minZ)*S;if(Math.abs(x)>W||Math.abs(y)>H)continue;q.fillRect(x,y,w,h)}
+ q.fillStyle='#63e2b0';for(const s of shops){const dx=(s.x-state.pos.x)*S,dz=(s.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,5,0,Math.PI*2);q.fill()}}
+ q.fillStyle='#ff6c7e';for(const e of enemies){const dx=(e.group.position.x-state.pos.x)*S,dz=(e.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,3,0,Math.PI*2);q.fill()}}
+ q.fillStyle='#7ccf9c';for(const n of npcs){const dx=(n.group.position.x-state.pos.x)*S,dz=(n.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,2.3,0,Math.PI*2);q.fill()}}
+ q.rotate(state.yaw);q.fillStyle='#fff';q.beginPath();q.moveTo(0,-8);q.lineTo(5,6);q.lineTo(0,3);q.lineTo(-5,6);q.closePath();q.fill();q.restore()
 }
-function shopItemsHTML(){return `<div class="card"><span class="shopBadge">BOUTIQUE PHYSIQUE</span><h3 style="margin-top:7px">${state.coins} crédits disponibles</h3><p class="sub">Tu dois revenir près d’une boutique dans le monde pour acheter.</p></div><div class="card">${SHOP_ITEMS.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price} crédits</small></div><button class="menuBtn buy" data-id="${x.id}" ${x.type==='weapon'&&state.ownedWeapons.includes(x.id)?'disabled':''}>${x.type==='weapon'&&state.ownedWeapons.includes(x.id)?'Acheté':'Acheter'}</button></div>`).join('')}</div>`}
-function bindShopButtons(){$$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id))}
-function buy(id){
- const x=SHOP_ITEMS.find(i=>i.id===id);if(!x||state.coins<x.price)return toast('Pas assez de crédits');
- if(x.type==='weapon'&&state.ownedWeapons.includes(id))return;
- if(id==='medkit'&&invCount()>=state.bagMax)return toast('Sac plein');
- state.coins-=x.price;
- if(x.type==='weapon'){state.ownedWeapons.push(id);state.equipped=id}
- if(id==='medkit')addInv('medkit');if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;
- save();updateHUD();$('#sheetBody').innerHTML=shopItemsHTML();bindShopButtons();toast(`${x.name} acheté`)
+function updateHUD(){
+ const {cx,cz}=currentChunk(),d=districtFor(cx,cz),aq=activeQuest(),prog=Math.min(aq.target,progress(aq.goal));$('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;$('#level').textContent=state.level;$('#wanted').textContent=state.wanted;
+ $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
+ const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️',period=state.timeOfDay<6||state.timeOfDay>20?'NUIT':state.timeOfDay<9?'MATIN':state.timeOfDay>17?'SOIR':'JOUR';$('#weatherChip').textContent=`${icon} ${period}`;
+ maybeCompleteNpcMission()
 }
+
+function makeJoy(baseSel,knobSel,target){const b=$(baseSel),k=$(knobSel);let pid=null;const mv=e=>{const r=b.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),max=30,len=Math.hypot(dx,dy)||1,f=Math.min(1,max/len);target.x=dx/max*f;target.y=dy/max*f;k.style.transform=`translate(${dx*f}px,${dy*f}px)`},reset=()=>{pid=null;target.x=target.y=0;k.style.transform='translate(0,0)'};b.addEventListener('pointerdown',e=>{pid=e.pointerId;b.setPointerCapture(pid);mv(e)});b.addEventListener('pointermove',e=>e.pointerId===pid&&mv(e));b.addEventListener('pointerup',reset);b.addEventListener('pointercancel',reset)}
+makeJoy('#moveJoy','#moveKnob',moveStick);makeJoy('#lookJoy','#lookKnob',lookStick);
 
 function openSheet(panel){
- $('#sheet').classList.remove('hidden');$$('.nav').forEach(n=>n.classList.toggle('active',n.dataset.panel===panel));
- const title=$('#sheetTitle'),body=$('#sheetBody');
- if(panel==='world'){title.textContent='Monde';body.innerHTML=worldHTML()}
- if(panel==='bag'){title.textContent='Inventaire';body.innerHTML=bagHTML()}
- if(panel==='shops'){title.textContent='Boutiques';body.innerHTML=`<div class="card"><h3>Boutiques physiques</h3><p class="sub">Les boutiques sont directement dans les rues et apparaissent sur la mini-carte en vert. Approche-toi d’une enseigne BOUTIQUE puis appuie sur ENTRER.</p></div>`}
- if(panel==='quests'){title.textContent='Quêtes';body.innerHTML=questHTML()}
- if(panel==='settings'){title.textContent='Réglages';body.innerHTML=settingsHTML()}
+ $('#sheet').classList.remove('hidden');$$('.nav').forEach(n=>n.classList.toggle('active',n.dataset.panel===panel));const t=$('#sheetTitle'),b=$('#sheetBody');
+ if(panel==='world'){t.textContent='Monde';b.innerHTML=worldHTML()}
+ if(panel==='bag'){t.textContent='Inventaire';b.innerHTML=bagHTML()}
+ if(panel==='quests'){t.textContent='Quêtes';b.innerHTML=questsHTML()}
+ if(panel==='districts'){t.textContent='Quartiers';b.innerHTML=districtHTML()}
+ if(panel==='settings'){t.textContent='Réglages';b.innerHTML=settingsHTML()}
+ if(panel==='physicalShop'){t.textContent=SHOPS[state.interior.shopType].name;b.innerHTML=physicalShopHTML()}
  bindSheet(panel)
 }
-function worldHTML(){return `<div class="card"><h3>Ville procédurale</h3><p class="sub">La ville n’a plus de petite plateforme fermée : les quartiers se chargent et se déchargent autour de toi à mesure que tu avances.</p></div><div class="card"><h3>Changer de ville</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div><div class="card"><h3>Street View</h3><div class="grid2"><button class="menuBtn primary" id="streetMode">🧭 Street View<small>Nécessite une clé Google Maps.</small></button><button class="menuBtn" id="mode3d">🏙️ Mode 3D<small>Retour à la ville texturée.</small></button></div></div>`}
-function bagHTML(){
- const weps=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>Dégâts ${w.damage}</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join('');
- const meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';
- return `<div class="card"><h3>Armes</h3>${weps}</div><div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div><div class="card"><h3>Statistiques</h3><p class="sub">Niveau ${state.level} • ${state.kills} adversaires vaincus • ${state.pickpockets} vols réussis • discrétion +${state.stealth}</p></div>`
-}
-function questHTML(){return `<div class="card"><h3>${mission().t}</h3><p class="sub">${mission().d}</p></div><div class="card"><h3>Artefacts</h3>${CITIES.map(c=>`<div class="item"><div class="itemIcon">${state.artifacts.includes(c.id)?'✅':'❔'}</div><div class="itemMain"><b>${c.name}</b><small>${c.artifact}</small></div></div>`).join('')}</div>`}
-function settingsHTML(){return `<div class="warning">Street View est optionnel. Pour l’utiliser, ajoute une clé Google Maps JavaScript API restreinte à ton adresse GitHub Pages.</div><div class="card" style="margin-top:9px"><h3>Clé Google Maps</h3><input id="keyInput" class="codeInput" type="password" value="${state.googleKey||''}" placeholder="AIza…"><div class="grid2" style="margin-top:8px"><button class="menuBtn primary" id="saveKey">Enregistrer</button><button class="menuBtn red" id="clearKey">Effacer</button></div></div><div class="card"><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
+function worldHTML(){return `<div class="card"><h3>Exploration chill</h3><p class="sub">Explore sans chronomètre. Les quartiers se chargent au fur et à mesure, avec voitures, habitants, boutiques, appartements, parcs et secrets.</p></div><div class="card"><h3>Voyager</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div>`}
+function bagHTML(){const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join(''),meds=state.inventory.length?state.inventory.map(i=>`<div class="item"><div class="itemIcon">🩹</div><div class="itemMain"><b>Kit de soin</b><small>×${i.qty}</small></div><button class="menuBtn useMed">Utiliser</button></div>`).join(''):'<p class="sub">Aucun consommable.</p>';return `<div class="card"><h3>Armes</h3>${ws}</div><div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${meds}</div>`}
+function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
+function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. La conquête apporte des récompenses, mais n’empêche jamais l’exploration libre.</p></div>`}
+function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div><div class="warning">Street View n’est pas intégré dans cette V4 : j’ai privilégié un monde 3D texturé, procédural et réellement jouable sans dépendre d’une API externe.</div>`}
 function bindSheet(panel){
- if(panel==='world'){
-   $$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));$('#streetMode').onclick=enterStreet;$('#mode3d').onclick=exitStreet
- }
- if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
- if(panel==='settings'){ $('#saveKey').onclick=()=>{state.googleKey=$('#keyInput').value.trim();save();toast('Clé enregistrée sur cet appareil')};$('#clearKey').onclick=()=>{state.googleKey='';save();$('#keyInput').value=''};$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v3');location.reload()}}}
+ if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
+ if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
+ if(panel==='districts')$('#secureDistrict').onclick=secureDistrict;
+ if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v4');location.reload()}};
+ if(panel==='physicalShop')bindShop()
 }
-function switchCity(id){state.cityId=id;state.pos={x:0,z:4};state.yaw=0;state.pitch=0;for(const [k] of [...chunks])unloadChunk(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
-function useMed(){const x=state.inventory.find(i=>i.id==='medkit');if(!x)return toast('Aucun kit');if(state.hp>=state.maxHp)return toast('PV déjà au maximum');x.qty--;state.hp=clamp(state.hp+40,0,state.maxHp);if(x.qty<=0)state.inventory=state.inventory.filter(i=>i!==x);save();updateHUD();openSheet('bag')}
-
-let panorama=null;
-async function loadGoogle(){if(!state.googleKey)return toast('Ajoute une clé Google Maps dans Réglages'),false;if(window.google?.maps)return true;return new Promise(resolve=>{window.__sq3dGoogle=()=>resolve(true);const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(state.googleKey)}&callback=__sq3dGoogle&v=weekly`;s.async=true;s.onerror=()=>{toast('Impossible de charger Google Maps');resolve(false)};document.head.appendChild(s)})}
-async function enterStreet(){closeSheet();if(!(await loadGoogle()))return;state.mode='street';$('#threeHost').classList.add('hidden');$('#controls').classList.add('hidden');$('#streetHost').classList.remove('hidden');$('#streetControls').classList.remove('hidden');const presets={paris:{lat:48.8706,lng:2.3326},rome:{lat:41.8902,lng:12.4922},nyc:{lat:40.758,lng:-73.9855},tokyo:{lat:35.6595,lng:139.7005},london:{lat:51.5007,lng:-.1246}},p=presets[state.cityId];panorama=new google.maps.StreetViewPanorama($('#streetHost'),{position:p,pov:{heading:0,pitch:0},zoom:1,addressControl:false,fullscreenControl:false,motionTracking:false,motionTrackingControl:false});panorama.addListener('position_changed',streetEvent);save()}
-function exitStreet(){state.mode='3d';$('#streetHost').classList.add('hidden');$('#streetControls').classList.add('hidden');$('#threeHost').classList.remove('hidden');$('#controls').classList.remove('hidden');panorama=null;save();closeSheet()}
-function angleDiff(a,b){let d=Math.abs(a-b)%360;return d>180?360-d:d}
-function streetForward(){if(!panorama)return;const links=panorama.getLinks()||[];if(!links.length)return toast('Aucun passage disponible');const h=panorama.getPov().heading,b=links.reduce((a,x)=>angleDiff(x.heading,h)<angleDiff(a.heading,h)?x:a,links[0]);panorama.setPano(b.pano);panorama.setPov({heading:b.heading,pitch:0})}
-function streetTurn(dir){if(!panorama)return;const p=panorama.getPov();panorama.setPov({heading:(p.heading+dir*40+360)%360,pitch:p.pitch})}
-function streetEvent(){state.streetCounter++;if(state.streetCounter%4===0&&Math.random()<.55){const r=Math.random();if(r<.45){const n=8+Math.floor(Math.random()*35);state.coins+=n;toast(`Tu trouves ${n} crédits dans cette zone Street View`)}else if(r<.75)toast('Un objet virtuel est détecté dans cette zone');else toast('Présence hostile détectée dans le secteur')}save();updateHUD()}
-
+function switchCity(id){state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
+function useMed(){const x=state.inventory.find(i=>i.id==='medkit');if(!x)return toast('Aucun kit');if(state.hp>=state.maxHp)return toast('PV déjà au maximum');x.qty--;state.hp=clamp(state.hp+40,0,state.maxHp);if(x.qty<=0)state.inventory=state.inventory.filter(i=>i!==x);save();openSheet('bag')}
 function closeSheet(){$('#sheet').classList.add('hidden')}
 let toastTimer;function toast(m){const t=$('#toast');t.textContent=m;t.classList.remove('hidden');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.add('hidden'),2200)}
 
-$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>toast('Approche-toi d’un objet, d’un passant ou d’une boutique.');
-$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;
-$('#sheet').addEventListener('click',e=>{if(e.target===$('#sheet'))closeSheet()});$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
-$('#stForward').onclick=streetForward;$('#stLeft').onclick=()=>streetTurn(-1);$('#stRight').onclick=()=>streetTurn(1);$('#stScan').onclick=()=>toast('Scan Street View : événements virtuels apparaissent au fil de l’exploration.');
-document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});
-let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTouch<320)e.preventDefault();lastTouch=n},{passive:false});
+$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>toast('Approche-toi d’un objet, d’un habitant, d’une boutique ou d’un appartement.');$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
+document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});let lastTouch=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastTouch<320)e.preventDefault();lastTouch=n},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
-
-updateHUD();init();
+init();
