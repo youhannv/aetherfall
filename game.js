@@ -85,8 +85,8 @@ const base={
  landOwned:false,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[]
 };
 let state=loadState();
-function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v8')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v8',JSON.stringify(state))}
+function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v9')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
+function save(){localStorage.setItem('sq3d-v9',JSON.stringify(state))}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
@@ -107,8 +107,8 @@ function progress(goal){if(goal==='stolenCoins')return state.stolenCoins;if(goal
 function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.id))||{id:'free',title:'Légende urbaine',text:'Explore librement, collectionne les artefacts et sécurise les quartiers.',goal:'districtsOwned',target:999}}
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
-let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],clouds=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},desktopPointer=false;
+let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],clouds=[];
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={};
 
 async function init(){
  try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
@@ -176,11 +176,9 @@ function makeRoad(g,x0,z0){
  const paveM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:.98});
  const roadW=11,walk=3;
 
- // Roads run along the west/south edge of each chunk.
  let a=new THREE.Mesh(new THREE.PlaneGeometry(roadW,CHUNK),roadM);a.rotation.x=-Math.PI/2;a.position.set(x0+roadW/2,.01,z0+CHUNK/2);g.add(a);
  a=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,roadW),roadM);a.rotation.x=-Math.PI/2;a.position.set(x0+CHUNK/2,.012,z0+roadW/2);g.add(a);
 
- // Sidewalks on BOTH sides of each road. Far-edge sidewalks border the next chunk road.
  const sidewalks=[
    [x0+roadW+walk/2,z0+(CHUNK+roadW)/2,walk,CHUNK-roadW],
    [x0+CHUNK-walk/2,z0+(CHUNK+roadW)/2,walk,CHUNK-roadW],
@@ -198,85 +196,150 @@ function makeRoad(g,x0,z0){
  ];
  for(const c of curbs){const m=new THREE.Mesh(new THREE.BoxGeometry(c[2],.16,c[3]),curbM);m.position.set(c[0],.08,c[1]);g.add(m)}
 
- // Lane markings.
  const white=new THREE.MeshBasicMaterial({color:0xf4efda});
  for(let i=0;i<6;i++){
    let m=new THREE.Mesh(new THREE.PlaneGeometry(.16,4.2),white);m.rotation.x=-Math.PI/2;m.position.set(x0+roadW/2,.028,z0+20+i*8.5);g.add(m);
    m=new THREE.Mesh(new THREE.PlaneGeometry(4.2,.16),white);m.rotation.x=-Math.PI/2;m.position.set(x0+20+i*8.5,.029,z0+roadW/2);g.add(m)
  }
 
- // Very visible zebra crossings on BOTH approaches of the intersection.
  const zebra=new THREE.MeshBasicMaterial({color:0xffffff});
- for(let k=0;k<7;k++){
-   let s=new THREE.Mesh(new THREE.PlaneGeometry(roadW-.8,.58),zebra);s.rotation.x=-Math.PI/2;s.position.set(x0+roadW/2,.036,z0+13.0+k*.92);g.add(s);
-   let t=new THREE.Mesh(new THREE.PlaneGeometry(.58,roadW-.8),zebra);t.rotation.x=-Math.PI/2;t.position.set(x0+13.0+k*.92,.037,z0+roadW/2);g.add(t)
+ for(let k=0;k<8;k++){
+   let s=new THREE.Mesh(new THREE.PlaneGeometry(roadW-.75,.56),zebra);s.rotation.x=-Math.PI/2;s.position.set(x0+roadW/2,.038,z0+12.75+k*.83);g.add(s);
+   let t=new THREE.Mesh(new THREE.PlaneGeometry(.56,roadW-.75),zebra);t.rotation.x=-Math.PI/2;t.position.set(x0+12.75+k*.83,.039,z0+roadW/2);g.add(t)
  }
- // Stop lines.
- let stop=new THREE.Mesh(new THREE.PlaneGeometry(roadW-.6,.26),white);stop.rotation.x=-Math.PI/2;stop.position.set(x0+roadW/2,.038,z0+12.0);g.add(stop);
- stop=new THREE.Mesh(new THREE.PlaneGeometry(.26,roadW-.6),white);stop.rotation.x=-Math.PI/2;stop.position.set(x0+12.0,.039,z0+roadW/2);g.add(stop);
+ let stop=new THREE.Mesh(new THREE.PlaneGeometry(roadW-.6,.28),white);stop.rotation.x=-Math.PI/2;stop.position.set(x0+roadW/2,.041,z0+11.75);g.add(stop);
+ stop=new THREE.Mesh(new THREE.PlaneGeometry(.28,roadW-.6),white);stop.rotation.x=-Math.PI/2;stop.position.set(x0+11.75,.042,z0+roadW/2);g.add(stop);
 
- for(const [lx,lz] of [[15,20],[15,55],[40,15],[60,15],[69,38],[38,69]])addLamp(g,x0+lx,z0+lz);
+ for(const [lx,lz] of [[15,21],[15,53],[42,15],[61,15],[69,38],[38,69]])addLamp(g,x0+lx,z0+lz);
  addBench(g,x0+18,z0+20);
- // Feux placés au coin des trottoirs, pas au milieu du passage.
- addTrafficLight(g,x0+11.9,z0+11.9,'vertical',0);
- addTrafficLight(g,x0+15.6,z0+11.9,'horizontal',Math.PI/2);
+
+ // V9 : 4 feux distincts par intersection, un sur chacun des 4 coins.
+ // Les deux feux "vertical" commandent les deux sens de l'axe vertical.
+ // Les deux feux "horizontal" commandent les deux sens de l'axe horizontal.
+ addTrafficLight(g,x0+12.55,z0+12.55,'vertical',Math.PI);
+ addTrafficLight(g,x0-1.55,z0-1.55,'vertical',0);
+ addTrafficLight(g,x0-1.55,z0+12.55,'horizontal',-Math.PI/2);
+ addTrafficLight(g,x0+12.55,z0-1.55,'horizontal',Math.PI/2)
 }
 function addTrafficLight(g,x,z,axis,rot=0){
- const group=new THREE.Group();
- const pole=new THREE.Mesh(new THREE.CylinderGeometry(.065,.085,2.85,8),new THREE.MeshStandardMaterial({color:0x252d32,metalness:.55}));pole.position.y=1.42;group.add(pole);
- const arm=new THREE.Mesh(new THREE.BoxGeometry(.68,.08,.08),new THREE.MeshStandardMaterial({color:0x252d32,metalness:.55}));arm.position.set(.29,2.82,0);group.add(arm);
- const box=new THREE.Mesh(new THREE.BoxGeometry(.38,.92,.32),new THREE.MeshStandardMaterial({color:0x1a2024}));box.position.set(.6,2.55,0);group.add(box);
- const red=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),new THREE.MeshBasicMaterial({color:0x52151b}));red.position.set(.6,2.82,.17);group.add(red);
- const green=new THREE.Mesh(new THREE.SphereGeometry(.09,8,6),new THREE.MeshBasicMaterial({color:0x16462b}));green.position.set(.6,2.30,.17);group.add(green);
+ const group=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x252d32,metalness:.58,roughness:.48});
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.065,.085,2.9,8),metal);pole.position.y=1.45;group.add(pole);
+ const arm=new THREE.Mesh(new THREE.BoxGeometry(.86,.075,.075),metal);arm.position.set(.37,2.86,0);group.add(arm);
+ const box=new THREE.Mesh(new THREE.BoxGeometry(.40,.98,.36),new THREE.MeshStandardMaterial({color:0x11171a,roughness:.65}));box.position.set(.73,2.56,0);group.add(box);
+ const shade1=new THREE.Mesh(new THREE.BoxGeometry(.31,.12,.18),metal);shade1.position.set(.73,2.84,.19);group.add(shade1);
+ const shade2=shade1.clone();shade2.position.y=2.31;group.add(shade2);
+ const red=new THREE.Mesh(new THREE.SphereGeometry(.095,10,8),new THREE.MeshBasicMaterial({color:0x52151b}));red.position.set(.73,2.82,.20);group.add(red);
+ const green=new THREE.Mesh(new THREE.SphereGeometry(.095,10,8),new THREE.MeshBasicMaterial({color:0x16462b}));green.position.set(.73,2.30,.20);group.add(green);
  group.position.set(x,0,z);group.rotation.y=rot;g.add(group);trafficLights.push({group,red,green,axis})
 }
 function createChunk(cx,cz){
  const key=ck(cx,cz);if(chunks.has(key))return;const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
  const x0=cx*CHUNK,z0=cz*CHUNK,d=districtFor(cx,cz),grass=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));
  grass.rotation.x=-Math.PI/2;grass.position.set(x0+CHUNK/2,-.04,z0+CHUNK/2);g.add(grass);makeRoad(g,x0,z0);
+ addAlleyNetwork(g,key,x0,z0,d,r);
  const id=districtId(cx,cz);if(!state.seenDistricts.includes(id))state.seenDistricts.push(id);
 
- // Building centers are well inside the block: no overlap with roads or sidewalks.
- const lots=[[30,30],[55,30],[30,55],[55,55]];
  const startChunk=cx===0&&cz===0;
+ // Lots kept away from both major sidewalks and the central alley cross.
+ const lots=[
+  [21.5,21.5],[31.5,21.5],[53.5,21.5],[63.5,21.5],
+  [21.5,31.5],[63.5,31.5],
+  [21.5,53.5],[63.5,53.5],
+  [21.5,63.0],[31.5,63.0],[53.5,63.0],[63.5,63.0]
+ ];
+ let made=0;
  lots.forEach((p,i)=>{
-   if(startChunk&&i===0){addShop(g,key,x0+p[0],z0+p[1],r,'corner');return}
-   if(startChunk&&i===1){addShop(g,key,x0+p[0],z0+p[1],r,'home');return}
-   if(startChunk&&i===2){addHomePlot(g,key,x0+p[0],z0+p[1]);return}
-   if(r()<.18){addPark(g,x0+p[0],z0+p[1],r,key);return}
-   const w=9.5+r()*3.2,dep=9.5+r()*3.2,h=(d.style==='central'?14:8)+r()*(d.style==='central'?22:15);
-   const x=x0+p[0]+(r()-.5)*.5,z=z0+p[1]+(r()-.5)*.5;
-   const texChoice=d.style==='old'?textures.brick:(d.style==='harbor'?textures.stone:(r()<.55?textures.modern:textures.brick));
-   const mat=new THREE.MeshStandardMaterial({map:texChoice,roughness:.86,metalness:d.style==='harbor'?.05:0});
-   const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),mat);b.position.set(x,h/2,z);g.add(b);
-   addBuildingDetails(g,x,z,w,dep,h,r,d);
-   colliders.push({key,minX:x-w/2-.38,maxX:x+w/2+.38,minZ:z-dep/2-.38,maxZ:z+dep/2+.38,type:'building'});
-   if(i===3&&r()<.5)addApartmentDoor(g,key,x,z,dep)
+   if(startChunk&&i===0){addShop(g,key,x0+p[0],z0+p[1],r,'corner');made++;return}
+   if(startChunk&&i===2){addShop(g,key,x0+p[0],z0+p[1],r,'home');made++;return}
+   if(startChunk&&i===8){addHomePlot(g,key,x0+p[0],z0+p[1]);made++;return}
+   if(d.style==='green'&&r()<.11){addPocketGarden(g,key,x0+p[0],z0+p[1],r);return}
+   if(r()<.08&&made>5)return;
+   addDenseBuilding(g,key,x0+p[0],z0+p[1],d,r,i);
+   made++
  });
 
- const trees=4+Math.floor(r()*(d.style==='green'?9:4));for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);addTree(g,p.x,p.z,r)}
- for(let i=0;i<(d.style==='green'?6:2);i++){const p=randomGreenPoint(x0,z0,r);addBush(g,key,p.x,p.z,r)}
+ const trees=3+Math.floor(r()*(d.style==='green'?7:3));for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);addTree(g,p.x,p.z,r)}
+ for(let i=0;i<(d.style==='green'?5:2);i++){const p=randomGreenPoint(x0,z0,r);addBush(g,key,p.x,p.z,r)}
 
- const cont=1+Math.floor(r()*3);for(let i=0;i<cont;i++){const p=randomSidewalk(x0,z0,r),type=r()<.72?'bin':'chest',idc=`${key}:container:${i}`;if(!state.collected.includes(idc))addContainer(g,key,idc,p.x,p.z,type)}
- const lootN=1+Math.floor(r()*3);for(let i=0;i<lootN;i++){const p=randomSidewalk(x0,z0,r),type=r()<.67?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
- if(!state.artifacts.includes(state.cityId)&&((Math.abs(cx)+Math.abs(cz)>1&&r()<.055)||(cx===3&&cz===-2))){const p=randomSidewalk(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')}
+ const cont=1+Math.floor(r()*3);for(let i=0;i<cont;i++){const p=r()<.35?randomAlleyPoint(x0,z0,r):randomSidewalk(x0,z0,r),type=r()<.72?'bin':'chest',idc=`${key}:container:${i}`;if(!state.collected.includes(idc))addContainer(g,key,idc,p.x,p.z,type)}
+ const lootN=1+Math.floor(r()*3);for(let i=0;i<lootN;i++){const p=r()<.32?randomAlleyPoint(x0,z0,r):randomSidewalk(x0,z0,r),type=r()<.67?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
+ if(!state.artifacts.includes(state.cityId)&&((Math.abs(cx)+Math.abs(cz)>1&&r()<.055)||(cx===3&&cz===-2))){const p=randomAlleyPoint(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')}
 
- const npcN=4+Math.floor(r()*3);
- for(let i=0;i<npcN;i++){const p=randomSidewalk(x0,z0,r);addNPC(g,key,p.x,p.z,r,p)}
- if(r()<.055){const p=randomSidewalk(x0,z0,r);addEnemy(g,key,p.x,p.z,r,p)}
- if(r()<.12){const p=randomSidewalk(x0,z0,r);addPolice(g,key,p.x,p.z,r,p)}
+ const npcN=5+Math.floor(r()*4);
+ for(let i=0;i<npcN;i++){const p=randomPedestrianPath(x0,z0,r);addNPC(g,key,p.x,p.z,r,p)}
+ if(r()<.05){const p=randomPedestrianPath(x0,z0,r);addEnemy(g,key,p.x,p.z,r,p)}
+ if(r()<.12){const p=randomPedestrianPath(x0,z0,r);addPolice(g,key,p.x,p.z,r,p)}
 
- const carN=1+Math.floor(r()*2);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
- if(r()<.48)addParkedCar(g,key,x0,z0,r)
+ const carN=2+Math.floor(r()*2);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
+ if(r()<.55)addParkedCar(g,key,x0,z0,r)
 }
 function randomSidewalk(x0,z0,r){
  const side=Math.floor(r()*4);
- if(side===0)return{x:x0+12.5,z:z0+19+r()*(CHUNK-24),axis:'z',min:z0+17,max:z0+CHUNK-5};
- if(side===1)return{x:x0+CHUNK-1.5,z:z0+19+r()*(CHUNK-24),axis:'z',min:z0+17,max:z0+CHUNK-5};
- if(side===2)return{x:x0+19+r()*(CHUNK-24),z:z0+12.5,axis:'x',min:x0+17,max:x0+CHUNK-5};
- return{x:x0+19+r()*(CHUNK-24),z:z0+CHUNK-1.5,axis:'x',min:x0+17,max:x0+CHUNK-5}
+ if(side===0)return{x:x0+12.5,z:z0+18+r()*(CHUNK-24),axis:'z',min:z0+17,max:z0+CHUNK-5};
+ if(side===1)return{x:x0+CHUNK-1.5,z:z0+18+r()*(CHUNK-24),axis:'z',min:z0+17,max:z0+CHUNK-5};
+ if(side===2)return{x:x0+18+r()*(CHUNK-24),z:z0+12.5,axis:'x',min:x0+17,max:x0+CHUNK-5};
+ return{x:x0+18+r()*(CHUNK-24),z:z0+CHUNK-1.5,axis:'x',min:x0+17,max:x0+CHUNK-5}
+}
+function randomAlleyPoint(x0,z0,r){
+ if(r()<.5)return{x:x0+43,z:z0+18+r()*48};
+ return{x:x0+18+r()*48,z:z0+43}
+}
+function randomPedestrianPath(x0,z0,r){
+ // 75% boulevard loop, 25% ruelle loop. Waypoints create real turns without teleporting.
+ if(r()<.75){
+   const route=[
+    {x:x0+12.5,z:z0+18},{x:x0+12.5,z:z0+67},
+    {x:x0+67,z:z0+70.5},{x:x0+70.5,z:z0+67},
+    {x:x0+70.5,z:z0+18},{x:x0+67,z:z0+12.5},
+    {x:x0+18,z:z0+12.5},{x:x0+12.5,z:z0+18}
+   ];
+   const idx=Math.floor(r()*(route.length-1)),p=route[idx];
+   return{x:p.x,z:p.z,route,routeIndex:(idx+1)%route.length}
+ }
+ const route=[
+   {x:x0+43,z:z0+17},{x:x0+43,z:z0+43},{x:x0+66,z:z0+43},
+   {x:x0+66,z:z0+66},{x:x0+43,z:z0+66},{x:x0+43,z:z0+43},
+   {x:x0+20,z:z0+43},{x:x0+20,z:z0+20},{x:x0+43,z:z0+20}
+ ];
+ const idx=Math.floor(r()*route.length),p=route[idx];
+ return{x:p.x,z:p.z,route,routeIndex:(idx+1)%route.length}
 }
 function randomGreenPoint(x0,z0,r){return{x:x0+22+r()*(CHUNK-31),z:z0+22+r()*(CHUNK-31)}}
+
+function addAlleyNetwork(g,key,x0,z0,d,r){
+ const alleyM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:1});
+ const v=new THREE.Mesh(new THREE.PlaneGeometry(3.8,51),alleyM);v.rotation.x=-Math.PI/2;v.position.set(x0+43,.055,z0+43);g.add(v);
+ const h=new THREE.Mesh(new THREE.PlaneGeometry(51,3.8),alleyM);h.rotation.x=-Math.PI/2;h.position.set(x0+43,.056,z0+43);g.add(h);
+ // Small darker service lane branches.
+ if(r()<.7){
+   const branch=new THREE.Mesh(new THREE.PlaneGeometry(18,2.5),new THREE.MeshStandardMaterial({color:0x77766f,roughness:1}));
+   branch.rotation.x=-Math.PI/2;branch.position.set(x0+52,.057,z0+32);g.add(branch)
+ }
+ alleys.push({key,x:x0+43,z:z0+43})
+}
+function addDenseBuilding(g,key,x,z,d,r,i){
+ const central=d.style==='central',green=d.style==='green',old=d.style==='old';
+ const isHouse=green||old ? r()<.58 : r()<.16;
+ const w=isHouse?7.2+r()*1.8:7.8+r()*1.8,dep=isHouse?7.0+r()*1.8:7.8+r()*1.8;
+ const h=isHouse?(4.2+r()*3.0):(central?14+r()*25:9+r()*15);
+ const texChoice=old?textures.brick:(d.style==='harbor'?textures.stone:(r()<.6?textures.modern:textures.brick));
+ const mat=new THREE.MeshStandardMaterial({map:texChoice,roughness:.87,metalness:d.style==='harbor'?.04:0});
+ const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),mat);b.position.set(x,h/2,z);g.add(b);
+ addBuildingDetails(g,x,z,w,dep,h,r,d);
+ if(isHouse){
+   const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,dep)*.68,1.5,4),new THREE.MeshStandardMaterial({color:choice([0x58483f,0x4a5056,0x6a493c]),roughness:.96}));
+   roof.rotation.y=Math.PI/4;roof.position.set(x,h+.72,z);g.add(roof);
+   const door=new THREE.Mesh(new THREE.PlaneGeometry(.9,1.8),new THREE.MeshStandardMaterial({color:0x4b3427,roughness:.85}));
+   door.position.set(x,1.0,z-dep/2-.014);door.rotation.y=Math.PI;g.add(door)
+ }
+ colliders.push({key,minX:x-w/2-.28,maxX:x+w/2+.28,minZ:z-dep/2-.28,maxZ:z+dep/2+.28,type:isHouse?'house':'building'});
+ if(!isHouse&&i%5===0&&r()<.4)addApartmentDoor(g,key,x,z,dep)
+}
+function addPocketGarden(g,key,x,z,r){
+ const p=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));p.rotation.x=-Math.PI/2;p.position.set(x,.06,z);g.add(p);
+ addTree(g,x-1.7,z-1.6,r);addBush(g,key,x+1.4,z+1.3,r);addBench(g,x-1.3,z+1.8)
+}
+
 function addPark(g,x,z,r,key){
  const m=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));m.rotation.x=-Math.PI/2;m.position.set(x,.026,z);g.add(m);
  for(let i=0;i<4;i++)addTree(g,x+(r()-.5)*15,z+(r()-.5)*15,r);
@@ -352,27 +415,49 @@ function addPolice(g,key,x,z,r,path){const n=createPerson('police',key,x,z,r,pat
 function createPerson(role,key,x,z,r,path=null){
  const hostile=role==='hostile',isPolice=role==='police',group=new THREE.Group();
  const cloth=new THREE.MeshStandardMaterial({color:isPolice?0x1f4f83:(hostile?0x6d2434:choice([0x315f7b,0x486d45,0x6a4e75,0x785f42,0xa05d43])),roughness:.82});
- const skin=new THREE.MeshStandardMaterial({color:choice([0xd5a47c,0xc38e68,0xe0b18d])});
+ const skinColor=choice([0xd5a47c,0xc38e68,0xe0b18d,0xb97d5c]),skin=new THREE.MeshStandardMaterial({color:skinColor,roughness:.92});
  const body=new THREE.Mesh(new THREE.CapsuleGeometry(.27,.72,5,8),cloth);body.position.y=1.05;group.add(body);
- const head=new THREE.Mesh(new THREE.SphereGeometry(.24,12,10),skin);head.position.y=1.72;group.add(head);
- const hair=new THREE.Mesh(new THREE.SphereGeometry(.245,10,8),new THREE.MeshStandardMaterial({color:choice([0x31251f,0x5a4131,0x22262b,0x8d6a41])}));hair.scale.y=.55;hair.position.y=1.86;group.add(hair);
- const eyeMat=new THREE.MeshBasicMaterial({color:0x101317});
- const mouthMat=new THREE.MeshBasicMaterial({color:hostile?0x5a1720:0x8e4c52});
- const eyeL=new THREE.Mesh(new THREE.SphereGeometry(.022,8,8),eyeMat);eyeL.position.set(-.07,1.74,-.21);group.add(eyeL);
- const eyeR=eyeL.clone();eyeR.position.x=.07;group.add(eyeR);
- const mouth=new THREE.Mesh(new THREE.BoxGeometry(.09,.018,.012),mouthMat);mouth.position.set(0,1.64,-.226);group.add(mouth);
- const nose=new THREE.Mesh(new THREE.ConeGeometry(.026,.07,7),skin);nose.rotation.x=-Math.PI/2;nose.position.set(0,1.69,-.245);group.add(nose);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.24,14,12),skin);head.position.y=1.72;group.add(head);
+
+ const hair=new THREE.Mesh(new THREE.SphereGeometry(.247,11,9),new THREE.MeshStandardMaterial({color:choice([0x31251f,0x5a4131,0x22262b,0x8d6a41]),roughness:.95}));
+ hair.scale.y=.54;hair.position.set(0,1.865,.01);group.add(hair);
+
+ // V9: one face plane slightly in front of the head => no z-fighting / blinking eyes.
+ const fc=document.createElement('canvas');fc.width=96;fc.height=96;const f=fc.getContext('2d');
+ f.clearRect(0,0,96,96);f.fillStyle='#14181c';f.beginPath();f.arc(31,39,5,0,Math.PI*2);f.arc(65,39,5,0,Math.PI*2);f.fill();
+ f.strokeStyle=hostile?'#6b1e29':'#7e4047';f.lineWidth=5;f.lineCap='round';f.beginPath();f.moveTo(36,66);f.quadraticCurveTo(48,72,60,66);f.stroke();
+ const ft=new THREE.CanvasTexture(fc);ft.colorSpace=THREE.SRGBColorSpace;
+ const face=new THREE.Mesh(new THREE.PlaneGeometry(.235,.235),new THREE.MeshBasicMaterial({map:ft,transparent:true,depthWrite:false,alphaTest:.08}));
+ face.position.set(0,1.71,-.242);face.renderOrder=5;group.add(face);
+
  if(isPolice){
    const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.09,10),new THREE.MeshStandardMaterial({color:0x153b63}));cap.position.y=1.96;group.add(cap);
    const badge=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.025),new THREE.MeshBasicMaterial({color:0xffd260}));badge.position.set(.12,1.25,-.27);group.add(badge)
  }
- const armMat=new THREE.MeshStandardMaterial({color:0x232b34});
- const a1=new THREE.Mesh(new THREE.BoxGeometry(.13,.58,.13),armMat),a2=a1.clone();
- a1.position.set(-.34,1.12,0);a2.position.set(.34,1.12,0);group.add(a1,a2);
- const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);
- const hasCash=r()<.52;
- const n={key,group,role,hostile,isPolice,axis:path?.axis||(r()<.5?'x':'z'),pathMin:path?.min??null,pathMax:path?.max??null,speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},money:hasCash?(2+Math.floor(r()*36)):0,legs:[l1,l2],arms:[a1,a2],phase:r()*6.2,name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false};
- group.traverse(o=>{o.userData.person=n});return n
+
+ // Arms now use the SAME skin material as the face/head.
+ const a1=new THREE.Mesh(new THREE.BoxGeometry(.13,.58,.13),skin),a2=a1.clone();
+ a1.position.set(-.34,1.06,0);a2.position.set(.34,1.06,0);group.add(a1,a2);
+ // Small sleeves remain clothing-colored, but exposed arms are skin-colored.
+ const sl1=new THREE.Mesh(new THREE.BoxGeometry(.17,.25,.17),cloth),sl2=sl1.clone();
+ sl1.position.set(-.34,1.39,0);sl2.position.set(.34,1.39,0);group.add(sl1,sl2);
+
+ const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();
+ l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);
+
+ const hasCash=r()<.50;
+ const n={
+   key,group,role,hostile,isPolice,
+   axis:path?.axis||(r()<.5?'x':'z'),pathMin:path?.min??null,pathMax:path?.max??null,
+   route:path?.route||null,routeIndex:path?.routeIndex||0,
+   speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},
+   money:hasCash?(2+Math.floor(r()*34)):0,
+   legs:[l1,l2],arms:[a1,a2],phase:r()*6.2,
+   name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),
+   missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false
+ };
+ group.traverse(o=>{o.userData.person=n;o.frustumCulled=false});
+ return n
 }
 function createCarVisual(color){
  const group=new THREE.Group(),body=new THREE.Mesh(new THREE.BoxGeometry(1.75,.62,3.55),new THREE.MeshStandardMaterial({color,metalness:.35,roughness:.38}));body.position.y=.66;group.add(body);
@@ -401,7 +486,7 @@ function unload(key){
  const g=chunks.get(key);if(!g)return;
  if(selectedNPC?.key===key)clearTarget();
  scene.remove(g);chunks.delete(key);
- colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key);homePlots=homePlots.filter(x=>x.key!==key);trafficLights=trafficLights.filter(x=>x.group.parent!==g)
+ colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key);homePlots=homePlots.filter(x=>x.key!==key);trafficLights=trafficLights.filter(x=>x.group.parent!==g);alleys=alleys.filter(x=>x.key!==key)
 }
 function ensureChunks(force=false){if(state.interior)return;const {cx,cz}=currentChunk();for(let x=cx-LOAD;x<=cx+LOAD;x++)for(let z=cz-LOAD;z<=cz+LOAD;z++)createChunk(x,z);for(const[k,g]of chunks){if(Math.abs(g.userData.cx-cx)>UNLOAD||Math.abs(g.userData.cz-cz)>UNLOAD)unload(k)}if(force)drawMap()}
 function collides(x,z){if(state.interior)return Math.abs(x)>8.5||z<-8.5||z>8.5;return colliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ)}
@@ -438,45 +523,47 @@ function updateCars(dt,t){
  const verticalGreen=updateTrafficLights(t);
  for(const c of cars){
    c.turnCooldown=Math.max(0,(c.turnCooldown||0)-dt);
-   const cx=Math.floor(c.group.position.x/CHUNK),cz=Math.floor(c.group.position.z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
-   c.key=ck(cx,cz);
+
+   let cx=Math.floor(c.group.position.x/CHUNK),cz=Math.floor(c.group.position.z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
+   const newKey=ck(cx,cz);
+   if(newKey!==c.key&&chunks.has(newKey)){
+     chunks.get(newKey).add(c.group);
+     c.key=newKey
+   }
    const localX=c.group.position.x-x0,localZ=c.group.position.z-z0;
+
    if(c.mode==='v'){
-     const laneX=c.dir>0?x0+3.2:x0+7.8;
-     c.group.position.x += (laneX-c.group.position.x)*Math.min(1,dt*7);
-     const approaching=Math.abs(localZ-6.0)<2.4;
-     if(approaching&&!verticalGreen){/* red light: stop */}
-     else{
-       c.group.position.z += c.dir*c.speed*dt;
-       if(approaching&&c.turnCooldown<=0&&Math.random()<.42){
-         const turnRight=Math.random()<.55;
-         if(c.dir>0){ // southbound
-           c.mode='h';c.dir=turnRight?-1:1;c.group.position.z=turnRight?z0+3.2:z0+7.8;c.group.position.x=turnRight?x0+4.6:x0+6.4;
-         }else{ // northbound
-           c.mode='h';c.dir=turnRight?1:-1;c.group.position.z=turnRight?z0+7.8:z0+3.2;c.group.position.x=turnRight?x0+6.4:x0+4.6;
-         }
-         c.turnCooldown=1.2;
-       }
+     // +Z uses west lane, -Z uses east lane.
+     const laneX=c.dir>0?x0+3.0:x0+8.0;
+     c.group.position.x+=(laneX-c.group.position.x)*Math.min(1,dt*8);
+     const nearIntersection=localZ<11.2&&localZ>1.0;
+     const red=nearIntersection&&!verticalGreen;
+     if(!red)c.group.position.z+=c.dir*c.speed*dt;
+
+     const turnZone=Math.abs(localZ-5.5)<1.1;
+     if(turnZone&&c.turnCooldown<=0&&Math.random()<.055){
+       const right=Math.random()<.62;
+       if(c.dir>0){c.mode='h';c.dir=right?-1:1;c.group.position.z=right?z0+3.0:z0+8.0}
+       else{c.mode='h';c.dir=right?1:-1;c.group.position.z=right?z0+8.0:z0+3.0}
+       c.turnCooldown=2.2
      }
-     c.group.rotation.y=c.dir>0?Math.PI:0;
+     c.group.rotation.y=c.dir>0?Math.PI:0
    }else{
-     const laneZ=c.dir>0?z0+7.8:z0+3.2;
-     c.group.position.z += (laneZ-c.group.position.z)*Math.min(1,dt*7);
-     const approaching=Math.abs(localX-6.0)<2.4;
-     if(approaching&&verticalGreen){/* red light for horizontal traffic */}
-     else{
-       c.group.position.x += c.dir*c.speed*dt;
-       if(approaching&&c.turnCooldown<=0&&Math.random()<.42){
-         const turnRight=Math.random()<.55;
-         if(c.dir>0){ // eastbound
-           c.mode='v';c.dir=turnRight?1:-1;c.group.position.x=turnRight?x0+3.2:x0+7.8;c.group.position.z=turnRight?z0+6.4:z0+4.6;
-         }else{ // westbound
-           c.mode='v';c.dir=turnRight?-1:1;c.group.position.x=turnRight?x0+7.8:x0+3.2;c.group.position.z=turnRight?z0+4.6:z0+6.4;
-         }
-         c.turnCooldown=1.2;
-       }
+     // +X uses north lane, -X uses south lane.
+     const laneZ=c.dir>0?z0+8.0:z0+3.0;
+     c.group.position.z+=(laneZ-c.group.position.z)*Math.min(1,dt*8);
+     const nearIntersection=localX<11.2&&localX>1.0;
+     const red=nearIntersection&&verticalGreen;
+     if(!red)c.group.position.x+=c.dir*c.speed*dt;
+
+     const turnZone=Math.abs(localX-5.5)<1.1;
+     if(turnZone&&c.turnCooldown<=0&&Math.random()<.055){
+       const right=Math.random()<.62;
+       if(c.dir>0){c.mode='v';c.dir=right?1:-1;c.group.position.x=right?x0+3.0:x0+8.0}
+       else{c.mode='v';c.dir=right?-1:1;c.group.position.x=right?x0+8.0:x0+3.0}
+       c.turnCooldown=2.2
      }
-     c.group.rotation.y=c.dir>0?-Math.PI/2:Math.PI/2;
+     c.group.rotation.y=c.dir>0?-Math.PI/2:Math.PI/2
    }
 
    if(!state.interior&&t-c.lastHit>1250){
@@ -488,7 +575,7 @@ function updateCars(dt,t){
 }
 function hitByCar(c){
  const raw=18+Math.floor(Math.random()*11),abs=Math.min(state.armor,Math.floor(raw*.35));state.armor-=abs;state.hp-=raw-abs;
- const k=2.4;c.vertical?state.pos.z+=c.dir*k:state.pos.x+=c.dir*k;
+ const k=2.4;c.mode==='v'?state.pos.z+=c.dir*k:state.pos.x+=c.dir*k;
  toast(`🚗 Percuté ! -${raw-abs} PV`);
  if(state.hp<=0){state.hp=state.maxHp;state.wanted=0;state.pos={x:2,z:8};clearTarget();toast('K.O. après l’accident — retour au refuge')}
  save()
@@ -499,43 +586,25 @@ function setHeading(n,dx,dz){
  n.heading=Math.atan2(-dx,-dz);n.group.rotation.y=n.heading
 }
 function patrolPerson(n,dt){
+ if(n.route?.length){
+   let target=n.route[n.routeIndex%n.route.length],dx=target.x-n.group.position.x,dz=target.z-n.group.position.z,dist=Math.hypot(dx,dz);
+   if(dist<.48){
+     n.routeIndex=(n.routeIndex+1)%n.route.length;
+     target=n.route[n.routeIndex];dx=target.x-n.group.position.x;dz=target.z-n.group.position.z;dist=Math.hypot(dx,dz)
+   }
+   if(dist>.001){
+     const sx=dx/dist*n.speed*dt,sz=dz/dist*n.speed*dt;
+     if(moveEntity(n,sx,sz,.3))setHeading(n,sx,sz)
+   }
+   return
+ }
  const current=n.axis==='x'?n.group.position.x:n.group.position.z;
  if(n.pathMin!=null&&n.pathMax!=null){
-   if(current<n.pathMin+.35){
-     if(!reroutePedestrian(n))n.dir=1
-   }
-   if(current>n.pathMax-.35){
-     if(!reroutePedestrian(n))n.dir=-1
-   }
- }else{
-   const off=n.axis==='x'?n.group.position.x-n.home.x:n.group.position.z-n.home.z;if(Math.abs(off)>19)n.dir*=-1
+   if(current<n.pathMin+.35)n.dir=1;
+   if(current>n.pathMax-.35)n.dir=-1
  }
  const dx=n.axis==='x'?n.dir*n.speed*dt:0,dz=n.axis==='z'?n.dir*n.speed*dt:0;
  if(moveEntity(n,dx,dz,.3))setHeading(n,dx,dz)
-}
-
-function reroutePedestrian(n){
- const cx=Math.floor(n.group.position.x/CHUNK),cz=Math.floor(n.group.position.z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
- if(n.axis==='z'){
-   const west=n.group.position.x<x0+CHUNK/2,south=n.group.position.z<z0+CHUNK/2;
-   if(Math.random()<.62){
-     n.axis='x';n.pathMin=x0+17;n.pathMax=x0+CHUNK-5;
-     n.group.position.z=south?z0+12.5:z0+CHUNK-1.5;
-     n.group.position.x=west?x0+17:x0+CHUNK-5;
-     n.dir=west?1:-1;
-     return true
-   }
- }else{
-   const west=n.group.position.x<x0+CHUNK/2,south=n.group.position.z<z0+CHUNK/2;
-   if(Math.random()<.62){
-     n.axis='z';n.pathMin=z0+17;n.pathMax=z0+CHUNK-5;
-     n.group.position.x=west?x0+12.5:x0+CHUNK-1.5;
-     n.group.position.z=south?z0+17:z0+CHUNK-5;
-     n.dir=south?1:-1;
-     return true
-   }
- }
- return false
 }
 function updateAngryCivilian(n,dt,t){
  const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);
@@ -616,13 +685,13 @@ function policeCatch(){
 }function animatePickups(dt,t){for(const p of pickups){if(!p.parent)continue;p.rotation.y+=dt;p.position.y=(p.userData.type==='artifact'?.72:.43)+Math.sin(t/450+p.position.x)*.07}}
 function animate(){
  if(!renderer)return;requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta()),t=performance.now();
- const keyForward=(keys['ArrowUp']||keys['KeyW']?1:0)-(keys['ArrowDown']||keys['KeyS']?1:0);
- const keyStrafe=(keys['ArrowRight']||keys['KeyD']?1:0)-(keys['ArrowLeft']||keys['KeyA']?1:0);
+ const keyForward=(keys['ArrowUp']?1:0)-(keys['ArrowDown']?1:0);
+ const keyStrafe=(keys['ArrowRight']?1:0)-(keys['ArrowLeft']?1:0);
  const forward=clamp(-moveStick.y+keyForward,-1,1),strafe=clamp(moveStick.x+keyStrafe,-1,1);
  const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);
  movePlayer((fx*forward+rx*strafe)*4.8*dt,(fz*forward+rz*strafe)*4.8*dt);
  state.yaw+=lookStick.x*1.8*dt;
- if(!desktopPointer){state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)}
+ state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)
  updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();renderer.render(scene,camera)
 }
 
@@ -965,28 +1034,18 @@ function setupMapUI(){
  $('#mapExpandBtn').onclick=open;$('#minimap').onclick=open;$('#closeMapOverlay').onclick=close;$('#mapOverlay').onclick=e=>e.target===$('#mapOverlay')&&close()
 }
 function setupDesktopControls(){
- const isDesktop=matchMedia('(pointer:fine)').matches;
- const canvas=renderer.domElement;
  document.addEventListener('keydown',e=>{
-   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)||/^Key[WASDMIEQ]$/.test(e.code))e.preventDefault();
+   if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();
    keys[e.code]=true;
    if(e.code==='KeyE'&&currentInteractFn)currentInteractFn();
    if(e.code==='KeyM'){const overlay=$('#mapOverlay');overlay.classList.toggle('hidden');if(!overlay.classList.contains('hidden'))drawMap()}
-   if(e.code==='KeyI')openSheet('bag');
-   if(e.code==='Escape'&&document.pointerLockElement===canvas)document.exitPointerLock?.();
+   if(e.code==='KeyI')openSheet('bag')
  });
  document.addEventListener('keyup',e=>{keys[e.code]=false});
- if(isDesktop){
-   canvas.addEventListener('click',()=>{canvas.requestPointerLock?.()});
-   document.addEventListener('pointerlockchange',()=>{desktopPointer=document.pointerLockElement===canvas});
-   document.addEventListener('mousemove',e=>{
-     if(!desktopPointer)return;
-     state.yaw -= e.movementX*.0026;
-     state.pitch = clamp(state.pitch-e.movementY*.0021,-.85,.65)
-   });
- }
+ // Important V9 PC behavior:
+ // arrows = movement; camera = right joystick dragged with the mouse.
+ // No pointer-lock and no free mouse-look.
 }
-
 function makeJoy(baseSel,knobSel,target){
  const b=$(baseSel),k=$(knobSel);let pid=null;
  const mv=e=>{const r=b.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2),max=30,len=Math.hypot(dx,dy)||1,nx=clamp(dx/Math.max(len,max),-1,1)*(Math.min(len,max)/max),ny=clamp(dy/Math.max(len,max),-1,1)*(Math.min(len,max)/max);target.x=Math.abs(nx)<.05?0:nx;target.y=Math.abs(ny)<.05?0:ny;k.style.transform=`translate(${target.x*30}px,${target.y*30}px)`};
@@ -1025,7 +1084,9 @@ function bagHTML(){
 }
 function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
 function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. Ta base te permet de sécuriser tes gains pendant l’aventure.</p></div>`}
-function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div><div class="card"><h3>Commandes PC</h3><p class="sub">Flèches directionnelles ou ZQSD/WASD pour bouger. Clique dans le jeu pour activer la souris et orienter la caméra. E = interagir, M = grande carte, I = sac, Échap = libérer la souris.</p><span class="armHint">V8 ajoute aussi des bras aux PNJ, une grande mini-carte, des voitures qui tournent et des victimes qui peuvent se défendre.</span></div><div class="warning">V8 améliore encore le trafic, les feux, la discrétion, la vente d’artefacts et la jouabilité PC/mobile.</div>`}
+function settingsHTML(){return `<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>
+<div class="card"><h3>Commandes PC V9</h3><p class="sub">⬆️⬇️⬅️➡️ = déplacement. Pour regarder autour de toi, clique et déplace le <b>joystick REGARDER</b> avec la souris, comme sur téléphone. E = interagir, M = grande carte, I = sac.</p></div>
+<div class="warning">V9 : 4 feux par intersection, ville plus dense, maisons et ruelles, PNJ avec bras couleur peau, visages stabilisés et déplacements avec vrais virages.</div>`}
 function bindSheet(panel){
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
  if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed)}
@@ -1040,7 +1101,7 @@ function bindSheet(panel){
    $$('.depositMed').forEach(b=>b.onclick=depositMedkit);$$('.withdrawMed').forEach(b=>b.onclick=withdrawMedkit)
  }
  if(panel==='districts'){const x=$('#secureDistrict'); if(x)x.onclick=secureDistrict}
- if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v8');location.reload()}};
+ if(panel==='settings')$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v9');location.reload()}};
  if(panel==='physicalShop')bindShop()
 }
 function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}

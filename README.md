@@ -191,3 +191,47 @@ Le jeu marche mieux si tu l’ouvres depuis l’écran d’accueil en mode PWA. 
 - grande mini-carte ouvrable
 - support PC : flèches / WASD + souris
 - les artefacts ramassés se vendent 500 crédits pièce en boutique
+
+
+# V9 — Dense City
+
+## Feux
+- 4 feux par intersection.
+- Un feu sur chaque coin.
+- Deux pour l’axe vertical et deux pour l’axe horizontal.
+- Positionnement hors du passage piéton.
+
+## PNJ
+- bras exposés de la même couleur que la peau du visage
+- petites manches assorties au vêtement
+- visage rendu sur un seul plan texturé pour supprimer le z-fighting / scintillement
+- frustum culling désactivé sur les PNJ pour éviter les disparitions visuelles brutales
+- trajets à waypoints : les PNJ tournent réellement aux coins
+- certains utilisent aussi les ruelles
+
+## Ville
+- beaucoup plus de bâtiments par chunk
+- mélange d’immeubles et de maisons
+- maisons avec toits
+- ruelles en croix au milieu des pâtés de maisons
+- petites branches de service
+- objets et artefacts peuvent apparaître dans les ruelles
+
+## Voitures
+- voies séparées selon le sens de circulation
+- virages aux intersections
+- respect des feux
+- correction du choc voiture après passage au système mode v/h
+- les voitures changent de parent de chunk lorsqu’elles traversent la ville
+
+## PC
+- flèches directionnelles uniquement pour se déplacer
+- aucun pointer-lock
+- la vue reste contrôlée par le joystick REGARDER avec la souris
+- E interagir, M grande carte, I inventaire
+
+## Cache
+streetquest3d-v9
+
+## Sauvegarde
+sq3d-v9

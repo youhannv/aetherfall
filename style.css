@@ -54,3 +54,10 @@ button,.joystick,.knob,.actionCircle,.nav{touch-action:none!important}
 .mapOverlayBox{width:min(92vw,700px);background:#07111dcc;border:1px solid #2b5269;border-radius:24px;padding:16px;backdrop-filter:blur(10px)}
 #bigMinimap{width:100%;height:auto;aspect-ratio:1/1;border-radius:18px;border:2px solid #6fcfff;background:#08121b}
 .armHint{display:inline-block;padding:5px 8px;border-radius:999px;background:#122435;border:1px solid #355670;color:#b7ecff;font-size:10px}
+
+.alleyTag{font-size:9px;color:#c8e7f7}
+@media (pointer:fine){
+  #threeHost canvas{cursor:default!important}
+  #lookJoy{cursor:grab}
+  #lookJoy:active{cursor:grabbing}
+}
