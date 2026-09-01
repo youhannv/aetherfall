@@ -1,49 +1,40 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-  <meta name="theme-color" content="#08111f">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Myeloma Lab">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icon-192.png">
-  <link rel="stylesheet" href="style.css">
-  <title>Myeloma Lab — Patient Simulator</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#081019">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+<title>StreetQuest 3D</title>
 </head>
 <body>
-  <div id="app">
-    <header class="topbar">
-      <div class="brand">
-        <div class="logo">ML</div>
-        <div>
-          <h1>MYELOMA LAB</h1>
-          <p>Virtual Patient Simulator</p>
-        </div>
-      </div>
-      <button id="helpBtn" class="icon-btn" aria-label="Informations">?</button>
-    </header>
-
-    <main id="main"></main>
-
-    <nav class="bottom-nav" aria-label="Navigation">
-      <button data-tab="patient" class="nav-btn active"><span>👤</span><small>Patient</small></button>
-      <button data-tab="labs" class="nav-btn"><span>🧪</span><small>Biologie</small></button>
-      <button data-tab="imaging" class="nav-btn"><span>🩻</span><small>Imagerie</small></button>
-      <button data-tab="treatment" class="nav-btn"><span>💊</span><small>Traitement</small></button>
-      <button data-tab="history" class="nav-btn"><span>📋</span><small>Historique</small></button>
-    </nav>
-
-    <div id="modal" class="modal hidden" role="dialog" aria-modal="true"></div>
-    <div id="toast" class="toast hidden" aria-live="polite"></div>
-  </div>
-
-  <script src="game.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(()=>{}));
-    }
-  </script>
-</body>
-</html>
+<div id="app">
+<div id="gameViewport">
+<div id="threeHost"></div><div id="streetHost" class="hidden"></div>
+<header class="hudTop"><div class="brand"><b>STREETQUEST 3D</b><small id="modeLabel">MODE 3D</small></div><button id="menuBtn" class="roundBtn">☰</button></header>
+<div class="statusRow">
+<div class="stat">❤️ <b id="hpText">100</b></div><div class="stat">🛡️ <b id="armorText">0</b></div><div class="stat">🪙 <b id="coinsText">0</b></div><div class="stat">🎒 <b id="bagText">0/20</b></div>
+</div>
+<div id="questCard" class="questCard"><small>MISSION</small><b id="questTitle">Chargement…</b><span id="questProgress"></span></div>
+<div id="enemyPanel" class="enemyPanel hidden">
+<div class="enemyHead"><b id="enemyName">Créature</b><span id="enemyLevel"></span></div><div class="bar"><i id="enemyHpBar"></i></div>
+<div class="enemyActions"><button id="attackBtn" class="actionBtn danger">⚔️ ATTAQUER</button><button id="fleeBtn" class="actionBtn">🏃 FUIR</button></div>
+</div>
+<div id="lootPrompt" class="lootPrompt hidden"><div><b id="lootName"></b><small id="lootDesc"></small></div><button id="lootBtn" class="actionBtn gold">RAMASSER</button></div>
+<div class="controls3d" id="controls3d"><div class="joystick" id="joystick"><div class="joyKnob" id="joyKnob"></div></div><div class="rightControls"><button id="interactBtn" class="bigCircle">✋</button><button id="scanBtn" class="smallCircle">📡</button></div></div>
+<div class="streetControls hidden" id="streetControls"><button id="streetLeft" class="streetMove">↶</button><button id="streetForward" class="streetMove main">↑</button><button id="streetRight" class="streetMove">↷</button><button id="streetScan" class="streetMove">📡</button></div>
+<div id="toast" class="toast hidden"></div>
+</div>
+<div id="sheet" class="sheet hidden"><div class="sheetBox"><div class="sheetHandle"></div><div class="sheetHeader"><h2 id="sheetTitle">Menu</h2><button id="closeSheet" class="roundBtn">✕</button></div><div id="sheetBody"></div></div></div>
+<nav class="bottomNav">
+<button class="nav active" data-panel="world">🌍<small>Monde</small></button><button class="nav" data-panel="inventory">🎒<small>Sac</small></button><button class="nav" data-panel="shop">🛒<small>Boutique</small></button><button class="nav" data-panel="quests">📜<small>Quêtes</small></button><button class="nav" data-panel="settings">⚙️<small>Réglages</small></button>
+</nav>
+</div>
+<script type="module" src="game.js"></script>
+<script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}</script>
+</body></html>

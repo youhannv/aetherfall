@@ -1,51 +1,29 @@
-# Myeloma Lab — Virtual Patient Simulator
+# StreetQuest 3D
 
-PWA de simulation médicale éducative en HTML/CSS/JavaScript, pensée pour iPhone.
+Jeu PWA portrait pour iPhone avec :
+- monde 3D procédural
+- Google Street View optionnel
+- Paris, Rome, New York, Tokyo et Londres
+- voyage rapide
+- artefacts à retrouver
+- scanner de proximité
+- combats contre créatures fictives
+- armes, inventaire, crédits, XP et niveaux
+- boutique, kits de soin, armure et extensions de sac
+- sauvegarde locale
 
-## Contenu
-- cohorte de jusqu'à 6 patients virtuels avec changement de dossier
-- profils aléatoires, risque standard, haut risque, atteinte rénale
-- biologie : NFS, créatinine/DFG, calcium, albumine, β2M, LDH, pic monoclonal, FLC, CRP
-- myélogramme et plasmocytose
-- MRD NGS simulée 10^-5 et 10^-6
-- imagerie corps entier schématique avec lésions osseuses
-- cytogénétique de risque
-- induction Isa-KRd inspirée de MIDAS
-- mobilisation / recueil de cellules souches
-- branches de consolidation A/B/C/D inspirées de MIDAS
-- ASCT et tandem ASCT
-- maintenance lénalidomide ou isatuximab + iberdomide
-- toxicités et événements indésirables simulés
-- soins de support
-- progression, rémission profonde durable, complications
-- score
-- mode recherche / bac à sable pour tester des décisions hors séquence sur le patient virtuel
-- historique clinique
-- sauvegarde locale automatique
-- fonctionnement hors ligne après premier chargement
+## Street View
+Le jeu ne met aucune clé Google Maps dans GitHub.
+Dans le jeu : Réglages > Clé Google Maps.
 
-## Important
-Ce projet est un jeu / simulateur pédagogique. Les probabilités et mécanismes sont volontairement simplifiés.
-Il ne doit jamais être utilisé comme protocole, dispositif médical ou aide à la décision pour un vrai patient.
+Créer une clé Google Maps Platform et activer Maps JavaScript API.
+Restreindre la clé :
+1. Application restriction : Websites.
+2. Autoriser l'adresse HTTPS de votre GitHub Pages.
+3. API restriction : Maps JavaScript API.
 
-## Remplacer le projet GitHub Pages existant
-Remplace les anciens fichiers par :
-- index.html
-- game.js
-- style.css
-- manifest.json
-- sw.js
-- icon-192.png
-- icon-512.png
+Street View nécessite une connexion Internet. Les objets, ennemis et boutiques du jeu sont purement fictifs et superposés à l'expérience d'exploration.
 
-`index.html` doit rester à la racine du dépôt.
-
-## Inspiration scientifique publique
-- MIDAS / IFM 2020-02 — NCT04934475
-- stratégie MRD-adaptée après 6 cycles d'Isa-KRd
-- MRD post-induction à 10^-5
-- consolidation adaptée avec Isa-KRd / ASCT / tandem ASCT
-- MRD pré-maintenance à 10^-6
-- maintenance selon la branche
-
-Le moteur du jeu ne reproduit pas les données individuelles de MIDAS et ne cherche pas à prédire le résultat d'un vrai patient.
+## GitHub Pages
+Mettre à la racine du dépôt :
+index.html, game.js, style.css, manifest.json, sw.js, icon-192.png, icon-512.png, README.md.
