@@ -75,3 +75,7 @@ button,.joystick,.knob,.actionCircle,.nav{touch-action:none!important}
 .housingStep{display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px solid #1e3244}.housingStep:last-child{border-bottom:0}.housingStep.done{opacity:.72}.housingNum{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#163047;border:1px solid #3d6b88;font-size:11px;font-weight:900}
 .facadeLabel{pointer-events:none}
 @media(max-width:380px){.need{width:62px}.needsHud{gap:3px}}
+
+/* V11.1 social/pathing fixes */
+
+.emergencyExit{position:absolute;z-index:31;right:10px;top:calc(205px + var(--safe-top));border:1px solid #75cfff;background:#0d2638e8;color:#d9f4ff;border-radius:999px;padding:7px 11px;font-size:9px;font-weight:900}

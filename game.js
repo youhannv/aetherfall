@@ -26,11 +26,11 @@ const WEAPONS={
 
 
 const CONSUMABLES={
- water:{id:'water',name:"Bouteille d’eau",icon:'💧',price:10,thirst:38,hunger:0,hygiene:0,desc:'+38 soif'},
- sandwich:{id:'sandwich',name:'Sandwich',icon:'🥪',price:18,thirst:0,hunger:32,hygiene:0,desc:'+32 faim'},
- meal:{id:'meal',name:'Repas complet',icon:'🍲',price:34,thirst:6,hunger:58,hygiene:0,desc:'+58 faim'},
- soda:{id:'soda',name:'Soda',icon:'🥤',price:14,thirst:25,hunger:5,hygiene:0,desc:'+25 soif'},
- hygieneKit:{id:'hygieneKit',name:"Kit d’hygiène",icon:'🧼',price:24,thirst:0,hunger:0,hygiene:35,desc:'+35 propreté'}
+ water:{id:'water',name:"Bouteille d’eau",icon:'💧',price:3,thirst:42,hunger:0,hygiene:0,desc:'+42 soif'},
+ sandwich:{id:'sandwich',name:'Sandwich',icon:'🥪',price:6,thirst:0,hunger:34,hygiene:0,desc:'+34 faim'},
+ meal:{id:'meal',name:'Repas complet',icon:'🍲',price:11,thirst:8,hunger:62,hygiene:0,desc:'+62 faim'},
+ soda:{id:'soda',name:'Soda',icon:'🥤',price:4,thirst:28,hunger:5,hygiene:0,desc:'+28 soif'},
+ hygieneKit:{id:'hygieneKit',name:"Kit d’hygiène",icon:'🧼',price:8,thirst:0,hunger:0,hygiene:40,desc:'+40 propreté'}
 };
 
 const STREET_ITEMS={
@@ -48,12 +48,12 @@ function itemInfo(id){return id==='medkit'?{id:'medkit',name:'Kit de soin',icon:
 
 const SHOPS={
  corner:{name:'Épicerie Nova',icon:'🛒',stock:[
-  {id:'water',name:"Bouteille d’eau",icon:'💧',price:10,desc:'+38 soif'},
-  {id:'sandwich',name:'Sandwich',icon:'🥪',price:18,desc:'+32 faim'},
-  {id:'meal',name:'Repas complet',icon:'🍲',price:34,desc:'+58 faim'},
-  {id:'soda',name:'Soda',icon:'🥤',price:14,desc:'+25 soif'},
-  {id:'hygieneKit',name:"Kit d’hygiène",icon:'🧼',price:24,desc:'+35 propreté'},
-  {id:'medkit',name:'Kit de soin',icon:'🩹',price:55,desc:'+40 PV'}
+  {id:'water',name:"Bouteille d’eau",icon:'💧',price:3,desc:'+42 soif'},
+  {id:'sandwich',name:'Sandwich',icon:'🥪',price:6,desc:'+34 faim'},
+  {id:'meal',name:'Repas complet',icon:'🍲',price:11,desc:'+62 faim'},
+  {id:'soda',name:'Soda',icon:'🥤',price:4,desc:'+28 soif'},
+  {id:'hygieneKit',name:"Kit d’hygiène",icon:'🧼',price:8,desc:'+40 propreté'},
+  {id:'medkit',name:'Kit de soin',icon:'🩹',price:28,desc:'+40 PV'}
  ]},
  gear:{name:'Atelier Horizon',icon:'🧰',stock:[
   {id:'armor',name:'Plaque d’armure',icon:'🛡️',price:85,desc:'+30 armure'},
@@ -119,8 +119,41 @@ const base={
  landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60
 };
 let state=loadState();
-function loadState(){try{const raw=JSON.parse(localStorage.getItem('sq3d-v11')||'{}');return {...structuredClone(base),...raw,pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[]}}catch{return structuredClone(base)}}
-function save(){localStorage.setItem('sq3d-v11',JSON.stringify(state))}
+function loadState(){
+ try{
+   const raw=JSON.parse(localStorage.getItem('sq3d-v11')||'{}');
+   const loaded={
+     ...structuredClone(base),...raw,
+     pos:{...base.pos,...(raw.pos||{})},
+     homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},
+     homeStock:raw.homeStock||[],
+     homePlaced:raw.homePlaced||[],
+     artifactBag:raw.artifactBag||[],
+     discoveredShops:raw.discoveredShops||[]
+   };
+   // V11/V11.1 recovery: an interior scene cannot survive a page reload.
+   // Resume outside at the exact position from which the player entered.
+   if(loaded.interior){
+     loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)
+       ? {x:raw.returnPos.x,z:raw.returnPos.z}
+       : {...base.pos};
+     loaded.interior=null;
+     loaded.returnPos=null
+   }
+   return loaded
+ }catch{return structuredClone(base)}
+}
+function save(){
+ // Never persist an interior as the reload position. If Safari refreshes/kills the tab,
+ // resume outside rather than loading a state with no reconstructed interiorGroup.
+ const snapshot={...state};
+ if(state.interior){
+   snapshot.pos=state.returnPos?{...state.returnPos}:{...base.pos};
+   snapshot.interior=null;
+   snapshot.returnPos=null
+ }
+ localStorage.setItem('sq3d-v11',JSON.stringify(snapshot))
+}
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
 function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
@@ -142,10 +175,15 @@ function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.i
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
 let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],clouds=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0;
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[];
 
 async function init(){
  try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
+ // Extra recovery guard for older saves or interrupted updates.
+ if(state.interior){
+   state.pos=state.returnPos&&Number.isFinite(state.returnPos.x)&&Number.isFinite(state.returnPos.z)?{...state.returnPos}:{...base.pos};
+   state.interior=null;state.returnPos=null;save()
+ }
  const host=$('#threeHost');scene=new THREE.Scene();scene.background=new THREE.Color(0x8facbd);scene.fog=new THREE.Fog(0x8facbd,70,220);
  camera=new THREE.PerspectiveCamera(72,host.clientWidth/host.clientHeight,.06,260);
  renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -334,8 +372,8 @@ function randomPedestrianPath(x0,z0,r){
  }
  const route=[
    {x:x0+43,z:z0+17},{x:x0+43,z:z0+43},{x:x0+66,z:z0+43},
-   {x:x0+66,z:z0+66},{x:x0+43,z:z0+66},{x:x0+43,z:z0+43},
-   {x:x0+20,z:z0+43},{x:x0+20,z:z0+20},{x:x0+43,z:z0+20}
+   {x:x0+43,z:z0+43},{x:x0+43,z:z0+66},{x:x0+43,z:z0+43},
+   {x:x0+20,z:z0+43},{x:x0+43,z:z0+43},{x:x0+43,z:z0+20}
  ];
  const idx=Math.floor(r()*route.length),p=route[idx];
  return{x:p.x,z:p.z,route,routeIndex:(idx+1)%route.length}
@@ -519,8 +557,9 @@ function createPerson(role,key,x,z,r,path=null){
 
  const hasCash=r()<.50;
  const pocketItems=[];
- if(r()<.46)pocketItems.push(choice(STREET_ITEM_IDS));
- if(r()<.12)pocketItems.push(choice(STREET_ITEM_IDS));
+ if(r()<.70)pocketItems.push(choice(STREET_ITEM_IDS));
+ if(r()<.27)pocketItems.push(choice(STREET_ITEM_IDS));
+ if(r()<.08)pocketItems.push(choice(STREET_ITEM_IDS));
  const n={
    key,group,role,hostile,isPolice,
    axis:path?.axis||(r()<.5?'x':'z'),pathMin:path?.min??null,pathMax:path?.max??null,
@@ -585,12 +624,28 @@ function blockedByPerson(x,z){
 function entityBlocked(x,z,pad=.3){return colliders.some(c=>x+pad>c.minX&&x-pad<c.maxX&&z+pad>c.minZ&&z-pad<c.maxZ)}
 function movePlayer(dx,dz){const nx=state.pos.x+dx,nz=state.pos.z+dz;if(!collides(nx,state.pos.z)&&!blockedByPerson(nx,state.pos.z))state.pos.x=nx;if(!collides(state.pos.x,nz)&&!blockedByPerson(state.pos.x,nz))state.pos.z=nz}
 function moveEntity(n,dx,dz,pad=.28){
- let moved=false,x=n.group.position.x,z=n.group.position.z;
- if(!entityBlocked(x+dx,z,pad)){n.group.position.x=x+dx;moved=true}
- x=n.group.position.x;z=n.group.position.z;
- if(!entityBlocked(x,z+dz,pad)){n.group.position.z=z+dz;moved=true}
- if(!moved)n.dir*=-1;
- return moved
+ const step=Math.hypot(dx,dz);if(step<.00001)return true;
+ const tries=[
+   [dx,dz],
+   [dx*.70-dz*.72,dz*.70+dx*.72],
+   [dx*.70+dz*.72,dz*.70-dx*.72],
+   [-dz,dz?dx:step],
+   [dz,dz?-dx:-step]
+ ];
+ for(const [tx,tz] of tries){
+   let moved=false,x=n.group.position.x,z=n.group.position.z;
+   if(!entityBlocked(x+tx,z,pad)){n.group.position.x=x+tx;moved=true}
+   x=n.group.position.x;z=n.group.position.z;
+   if(!entityBlocked(x,z+tz,pad)){n.group.position.z=z+tz;moved=true}
+   if(moved){n.stuckFrames=0;return true}
+ }
+ n.stuckFrames=(n.stuckFrames||0)+1;
+ // A waypoint can occasionally sit just behind street furniture.
+ // Skip it after repeated failed steering instead of freezing forever.
+ if(n.stuckFrames>24&&n.route?.length){
+   n.routeIndex=(n.routeIndex+1)%n.route.length;n.stuckFrames=0
+ }
+ return false
 }
 function updateCamera(t=0){const bob=(Math.abs(moveStick.x)+Math.abs(moveStick.y)>.15)?Math.sin(t*.012)*.022:0;camera.position.set(state.pos.x,1.72+bob,state.pos.z);const cp=Math.cos(state.pitch),sp=Math.sin(state.pitch),sy=Math.sin(state.yaw),cy=Math.cos(state.yaw);camera.lookAt(state.pos.x+sy*cp,1.72+sp+bob,state.pos.z-cy*cp)}
 function updateWorldLight(dt){
@@ -704,11 +759,31 @@ function patrolPerson(n,dt){
  const dx=n.axis==='x'?n.dir*n.speed*dt:0,dz=n.axis==='z'?n.dir*n.speed*dt:0;
  if(moveEntity(n,dx,dz,.3))setHeading(n,dx,dz)
 }
+function updatePlayerTrail(){
+ if(state.interior)return;
+ const last=playerTrail[playerTrail.length-1];
+ if(!last||Math.hypot(state.pos.x-last.x,state.pos.z-last.z)>.72){
+   playerTrail.push({x:state.pos.x,z:state.pos.z});
+   if(playerTrail.length>90)playerTrail.shift()
+ }
+}
+function followerTrailTarget(n){
+ if(playerTrail.length<2)return state.pos;
+ let best=0,bd=Infinity;
+ for(let i=0;i<playerTrail.length;i++){
+   const p=playerTrail[i],d=Math.hypot(n.group.position.x-p.x,n.group.position.z-p.z);
+   if(d<bd){bd=d;best=i}
+ }
+ return playerTrail[Math.min(playerTrail.length-1,best+3)]||state.pos
+}
+
 function updateFollower(n,dt){
- const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);
- if(dist>13){n.following=false;toast(`${n.name} a arrêté de te suivre.`);return}
- if(dist>1.55){
-   const sx=dx/(dist||1)*n.speed*1.18*dt,sz=dz/(dist||1)*n.speed*1.18*dt;
+ const pd=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
+ if(pd>18){n.following=false;removeFollowMarker(n);toast(`${n.name} t’a perdu.`);return}
+ if(pd<1.35)return;
+ const target=followerTrailTarget(n),dx=target.x-n.group.position.x,dz=target.z-n.group.position.z,dist=Math.hypot(dx,dz);
+ if(dist>.1){
+   const sx=dx/dist*n.speed*1.28*dt,sz=dz/dist*n.speed*1.28*dt;
    if(moveEntity(n,sx,sz,.3))setHeading(n,sx,sz)
  }
 }
@@ -718,14 +793,20 @@ function isInAlley(x,z){
    return (dx<2.8&&dz<28)||(dz<2.8&&dx<28)
  })
 }
+function addFollowMarker(n){
+ removeFollowMarker(n);
+ const m=makeSign('🚶 TE SUIT','#9effc7');m.scale.set(2.5,.62,1);m.position.set(0,2.72,0);n.group.add(m);n.followMarker=m
+}
+function removeFollowMarker(n){if(n?.followMarker?.parent)n.followMarker.parent.remove(n.followMarker);if(n)n.followMarker=null}
+
 function askFollow(n){
  if(n.following)return toast(`${n.name} te suit déjà.`);
  const doubt=clamp(n.followDoubt+state.wanted*.12-(state.reputation||0)*.015,0,.95);
  const hygieneBonus=(state.hygiene-50)/180;const chance=clamp(n.trust-doubt+.28+hygieneBonus,.05,.92);
  closeSheet();
  if(Math.random()<chance){
-   n.following=true;n.route=null;n.caught=false;
-   toast(`${n.name} accepte de te suivre.`)
+   n.following=true;n.route=null;n.caught=false;playerTrail=[];updatePlayerTrail();addFollowMarker(n);
+   closeSheet();toast(`${n.name} te suit maintenant. Emmène-le/la où tu veux.`)
  }else{
    n.trust=Math.max(0,n.trust-.1);
    toast(`${n.name} refuse : il/elle se méfie.`)
@@ -740,9 +821,9 @@ function transferPocketLoot(n,all=false){
 }
 function robFollower(n){
  if(!n.following)return;
- if(!isInAlley(state.pos.x,state.pos.z))return toast('Va dans une ruelle plus isolée.');
+ if(!(isInAlley(state.pos.x,state.pos.z)||isInAlley(n.group.position.x,n.group.position.z)))return toast('Emmène la personne dans une ruelle.');
  const compliance=clamp(.58+(weapon().damage>10?.12:0)-n.courage*.38+(state.reputation||0)*.005,.12,.88);
- n.following=false;n.pickpocketed=true;n.caught=true;
+ n.following=false;removeFollowMarker(n);n.pickpocketed=true;n.caught=true;
  if(Math.random()<compliance){
    const loot=transferPocketLoot(n,true);
    const names=loot.items.map(id=>itemInfo(id).name);
@@ -857,13 +938,22 @@ function useConsumable(id){
  toast(`${c.icon} ${c.name} utilisé`);save();openSheet('bag')
 }
 
+function ensureInteriorConsistency(){
+ if(state.interior&&!interiorGroup){
+   const p=state.returnPos&&Number.isFinite(state.returnPos.x)&&Number.isFinite(state.returnPos.z)?state.returnPos:base.pos;
+   state.pos={x:p.x,z:p.z};state.interior=null;state.returnPos=null;
+   for(const[,g]of chunks)g.visible=true;
+   save();toast('Intérieur restauré après une erreur de chargement.')
+ }
+}
+
 function animate(){
- if(!renderer)return;requestAnimationFrame(animate);const dt=Math.min(.033,clock.getDelta()),t=performance.now();
+ if(!renderer)return;requestAnimationFrame(animate);ensureInteriorConsistency();const dt=Math.min(.033,clock.getDelta()),t=performance.now();
  const keyForward=(keys['ArrowUp']?1:0)-(keys['ArrowDown']?1:0);
  const keyStrafe=(keys['ArrowRight']?1:0)-(keys['ArrowLeft']?1:0);
  const forward=clamp(-moveStick.y+keyForward,-1,1),strafe=clamp(moveStick.x+keyStrafe,-1,1);
  const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);
- const moveSpeed=4.8*needsSpeedMultiplier();movePlayer((fx*forward+rx*strafe)*moveSpeed*dt,(fz*forward+rz*strafe)*moveSpeed*dt);
+ const moveSpeed=4.8*needsSpeedMultiplier();movePlayer((fx*forward+rx*strafe)*moveSpeed*dt,(fz*forward+rz*strafe)*moveSpeed*dt);updatePlayerTrail();
  state.yaw+=lookStick.x*1.8*dt;
  state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)
  updateNeeds(dt);updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();renderer.render(scene,camera)
@@ -904,8 +994,9 @@ function checkInteraction(){
  }
  if(tailTheft?.active)return hidePrompt();
 
- const follower=nearest(npcs.filter(n=>n.following),1.85);
- if(follower&&isInAlley(state.pos.x,state.pos.z))return setPrompt(follower.name,'La ruelle est isolée.','BRAQUER',()=>robFollower(follower));
+ const follower=nearest(npcs.filter(n=>n.following),2.5);
+ if(follower&&(isInAlley(state.pos.x,state.pos.z)||isInAlley(follower.group.position.x,follower.group.position.z)))
+   return setPrompt(follower.name,'Vous êtes à l’écart.','BRAQUER',()=>robFollower(follower));
 
  if(selectedNPC&&selectedNPC.group.parent){
    const d=Math.hypot(state.pos.x-selectedNPC.group.position.x,state.pos.z-selectedNPC.group.position.z);
@@ -972,7 +1063,7 @@ function showNpcChoices(n){
  openSheet('npc');$('#sheetTitle').textContent=n.name;
  $('#sheetBody').innerHTML=`<div class="card"><div class="grid2">
  <button class="menuBtn primary" id="talkAgain">💬 Discuter</button>
- <button class="menuBtn" id="askFollow" ${n.caught?'disabled':''}>🚶 Suis-moi<small>${n.following?'Te suit déjà':'L’emmener avec toi'}</small></button>
+ <button class="menuBtn primary" id="askFollow" ${n.caught||n.following?'disabled':''}>🚶 SUIS-MOI<small>${n.following?'Cette personne te suit':'Lui demander de venir avec toi'}</small></button>
  <button class="menuBtn" id="askMission">📋 Petit boulot<small>${n.missionGiven?'Déjà proposé':'Demander une mission'}</small></button>
  <button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Cibler<small>${n.pickpocketed?'Déjà fouillé':'Le/la suivre discrètement'}</small></button>
  </div></div>`;
@@ -1008,7 +1099,7 @@ function startTailTheft(n){
  if(!n||n.pickpocketed)return;
  const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);if(d>2.1)return;
  if(!isBehindTarget(n))return;
- tailTheft={npc:n,suspicion:0,validStealTime:0,lostTime:0,nextCoin:.65+Math.random()*.55,emptyTimer:0,policeObserved:false,stolen:0,items:[]};
+ tailTheft={npc:n,suspicion:0,validStealTime:0,lostTime:0,nextCoin:.55+Math.random()*.35,emptyTimer:0,policeObserved:false,stolen:0,items:[],firstLoot:true};
  document.body.classList.add('crime-active');$('#targetInfo').textContent='Fouille en cours.'
 }
 function updateTailTheft(dt,t){
@@ -1029,15 +1120,15 @@ function updateTailTheft(dt,t){
      tailTheft.emptyTimer+=dt;
      if(tailTheft.emptyTimer>1.0){n.pickpocketed=true;return stopTailTheft((tailTheft.stolen||tailTheft.items.length)?'Poches vidées.':'Poches vides.')}
    }else if(tailTheft.nextCoin<=0){
-     const stealItem=hasItems&&(!hasMoney||Math.random()<.28);
+     const stealItem=hasItems&&(tailTheft.firstLoot||!hasMoney||Math.random()<.55);
      if(stealItem){
        if(invCount()>=state.bagMax)return stopTailTheft('Sac plein.');
-       const id=n.pocketItems.shift();addInv(id);tailTheft.items.push(id);
+       const id=n.pocketItems.shift();addInv(id);tailTheft.items.push(id);tailTheft.firstLoot=false;
        $('#targetLoot').textContent=`🪙 ${tailTheft.stolen} • 🎒 ${tailTheft.items.length}`;
-       toast(`${itemInfo(id).icon} ${itemInfo(id).name} récupéré`)
+       toast(`${itemInfo(id).icon} Volé : ${itemInfo(id).name}`)
      }else if(hasMoney){
        const take=Math.min(n.money,1+Math.floor(Math.random()*(3+Math.min(2,state.stealth))));
-       n.money-=take;state.coins+=take;state.coinsEarned+=take;state.stolenCoins+=take;tailTheft.stolen+=take;
+       n.money-=take;state.coins+=take;state.coinsEarned+=take;state.stolenCoins+=take;tailTheft.stolen+=take;tailTheft.firstLoot=false;
        $('#targetLoot').textContent=`🪙 ${tailTheft.stolen} • 🎒 ${tailTheft.items.length}`
      }
      tailTheft.nextCoin=.72+Math.random()*.72;checkQuests();maybeCompleteNpcMission()
@@ -1087,7 +1178,12 @@ function setupWorldTap(){
    if(moved>12||elapsed>350||state.interior)return;
    const r=canvas.getBoundingClientRect(),pt=new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
    raycaster.setFromCamera(pt,camera);const hits=raycaster.intersectObjects(npcs.map(n=>n.group),true);
-   const n=hits.map(h=>h.object.userData.person).find(Boolean);if(n){selectTarget(n);toast('Cible choisie : suis-la et place-toi derrière elle.')}
+   const n=hits.map(h=>h.object.userData.person).find(Boolean);
+   if(n){
+     const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
+     if(d>4.2)return toast('Approche-toi pour lui parler.');
+     showNpcChoices(n)
+   }
  })
 }
 
@@ -1295,6 +1391,10 @@ function renderMapTo(canvas,zoom=2.0){
  q.rotate(state.yaw);q.fillStyle='#fff';q.beginPath();q.moveTo(0,-8*(zoom/2));q.lineTo(5*(zoom/2),6*(zoom/2));q.lineTo(0,3*(zoom/2));q.lineTo(-5*(zoom/2),6*(zoom/2));q.closePath();q.fill();q.restore()
 }
 function drawMap(){renderMapTo($('#minimap'),1.15);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),.62)}
+function emergencyExit(){
+ if(!state.interior)return;
+ leaveInterior();toast('Retour dans la rue.')
+}
 function updateHUD(){
  const {cx,cz}=currentChunk(),d=districtFor(cx,cz),aq=activeQuest(),prog=Math.min(aq.target,progress(aq.goal));$('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;$('#level').textContent=state.level;$('#wanted').textContent=state.wanted;
  $('#hungerVal').textContent=Math.round(state.hunger);$('#thirstVal').textContent=Math.round(state.thirst);$('#hygieneVal').textContent=Math.round(state.hygiene);
@@ -1364,7 +1464,7 @@ function bagHTML(){
 }
 function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
 function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. Ta base te permet de sécuriser tes gains pendant l’aventure.</p></div>`}
-function settingsHTML(){return `<div class="card"><h3>StreetQuest V11</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>
+function settingsHTML(){return `<div class="card"><h3>StreetQuest V11.1</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>
 <div class="card"><h3>Survie</h3><p class="sub">🍗 faim • 💧 soif • 🧼 propreté. Quand faim ou soif tombent à zéro, tes PV commencent à diminuer.</p></div>
 <div class="card"><h3>Progression logement</h3><p class="sub">Sans logement → studio loué → appartement acheté → terrain + maison.</p></div>
 <div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
@@ -1399,7 +1499,7 @@ let toastTimer;function toast(m){
 
 
 
-$('#updateBtn').onclick=()=>window.streetQuestUpdate?.();$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
+$('#updateBtn').onclick=()=>window.streetQuestUpdate?.();$('#emergencyExitBtn').onclick=emergencyExit;$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
 init();

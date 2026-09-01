@@ -329,3 +329,37 @@ La partie démarre avec 0 crédit et aucun logement.
 ## PNJ
 - l’option « Suis-moi » est maintenant toujours visible dans le menu de dialogue
 - les missions sont un choix séparé
+
+
+# V11.1 — Social / Pickpocket / Pathing Fix
+
+- prix survie réduits :
+  - eau 3
+  - soda 4
+  - sandwich 6
+  - kit hygiène 8
+  - repas 11
+  - medkit 28
+- ~70 % des passants peuvent transporter au moins un objet, certains 2 ou 3
+- si un passant possède un objet, le premier butin du pickpocket le privilégie
+- objets toujours finis : une fois volés, ils disparaissent réellement des poches
+- déplacement PNJ avec plusieurs directions d’évitement autour des obstacles
+- waypoint bloqué ignoré automatiquement après plusieurs tentatives
+- trajets de ruelle déplacés vers les corridors réellement ouverts
+- un PNJ qui te suit suit maintenant la trace réelle de ton trajet : beaucoup moins de blocage derrière les immeubles
+- toucher directement un PNJ ouvre désormais son menu d’actions
+- option SUIS-MOI mise en évidence
+- marqueur « TE SUIT » au-dessus du PNJ
+- nom du suiveur affiché dans le HUD
+- dans une ruelle, action BRAQUER disponible quand le suiveur est proche
+- braquage peut donner son argent fini et jusqu’à deux objets
+
+
+# V11.2 — Interior Recovery
+- correction du bug écran gris / INTÉRIEUR après recharge Safari
+- les sauvegardes V11/V11.1 bloquées en intérieur sont réparées automatiquement
+- la position extérieure (`returnPos`) est utilisée pour reprendre la partie
+- un intérieur n'est plus jamais persisté comme état de redémarrage
+- watchdog de cohérence : si `state.interior` existe sans `interiorGroup`, retour automatique dans la rue
+- bouton de secours `SORTIR` visible pendant les intérieurs
+- sauvegarde `sq3d-v11` conservée : aucune progression V11/V11.1 perdue
