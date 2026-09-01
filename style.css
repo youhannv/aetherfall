@@ -13,3 +13,20 @@
 .sheet{position:fixed;z-index:200;inset:0;background:#0009;display:flex;align-items:flex-end;padding-bottom:calc(72px + var(--safe-bottom))}.sheetBox{width:100%;max-height:76dvh;overflow:auto;background:#0a1622;border:1px solid #2d4357;border-radius:24px 24px 0 0;padding:8px 14px 24px}.sheetHandle{width:42px;height:5px;background:#40566a;border-radius:99px;margin:1px auto 10px}.sheetHeader{display:flex;justify-content:space-between;align-items:center;position:sticky;top:-8px;background:#0a1622f5;padding:6px 0 8px}.sheetHeader h2{margin:0;font-size:21px}
 .card{background:#0f1f2e;border:1px solid #263c50;border-radius:16px;padding:13px;margin-bottom:10px}.card h3{margin:0 0 6px;font-size:15px}.sub{font-size:12px;color:var(--muted);line-height:1.4}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.menuBtn{min-height:48px;border-radius:13px;border:1px solid #344c61;background:#112333;padding:10px;text-align:left;font-weight:750}.menuBtn small{display:block;font-weight:500;color:var(--muted);margin-top:3px}.menuBtn.primary{background:#155a7e}.menuBtn.green{background:#14402f}.menuBtn.red{background:#3b1821}.menuBtn:disabled{opacity:.42}.item{display:flex;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid #1e3041}.item:last-child{border-bottom:0}.itemIcon{width:43px;height:43px;border-radius:12px;background:#172b3c;display:grid;place-items:center;font-size:22px}.itemMain{flex:1}.itemMain b,.itemMain small{display:block}.itemMain small{color:var(--muted);font-size:11px}.tag{display:inline-block;padding:4px 7px;border-radius:999px;border:1px solid #36546c;background:#102536;font-size:10px}.mapList .city{width:100%;min-height:58px;margin-bottom:8px;border-radius:14px;border:1px solid #324b60;background:#0e2030;text-align:left;padding:10px}.city.active{border-color:#65cfff;background:#12314a}.city b,.city small{display:block}.city small{color:var(--muted)}.codeInput{width:100%;min-height:48px;border:1px solid #365067;background:#08141f;color:#fff;border-radius:13px;padding:0 11px;font-size:16px}.warning{background:#32280e;border:1px solid #6a5720;color:#ffe6a4;border-radius:14px;padding:10px;font-size:11px;line-height:1.45}
 @media(min-width:700px){#app{max-width:520px;margin:0 auto;border-left:1px solid #223549;border-right:1px solid #223549}.sheet{left:50%;transform:translateX(-50%);max-width:520px}}
+
+html,body,#app,#gameViewport,#threeHost,#streetHost{
+  touch-action:none;
+  overscroll-behavior:none;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+}
+button,.joystick,.joyKnob,.rightControls,.streetControls,.bottomNav{
+  touch-action:manipulation;
+}
+#threeHost{cursor:crosshair}
+.lookHint{
+  position:absolute;left:50%;bottom:140px;transform:translateX(-50%);
+  z-index:17;background:#07121dbd;border:1px solid #2a4258;border-radius:999px;
+  padding:7px 10px;color:#cde9fb;font-size:10px;pointer-events:none
+}

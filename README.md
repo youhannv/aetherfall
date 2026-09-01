@@ -27,3 +27,11 @@ Street View nécessite une connexion Internet. Les objets, ennemis et boutiques 
 ## GitHub Pages
 Mettre à la racine du dépôt :
 index.html, game.js, style.css, manifest.json, sw.js, icon-192.png, icon-512.png, README.md.
+
+## Version 2
+- collisions avec les bâtiments
+- caméra FPS à hauteur des yeux
+- glisser sur l'écran pour regarder autour de soi
+- déplacement relatif à la direction du regard
+- glissement le long des murs
+- blocage du pinch/double-tap zoom iOS
