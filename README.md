@@ -485,3 +485,25 @@ Les quartiers pauvres ont :
 V12 utilise `sq3d-v12`.
 Au premier lancement, une sauvegarde V11 existante est importée.
 Les anciens achats logement sont transformés en avoir immobilier afin de ne pas perdre la valeur déjà dépensée.
+
+
+# V13 — Neo City / Refonte visuelle
+
+## Refonte graphique
+- ambiance plus moderne et futuriste
+- interface glassmorphism plus sombre et plus lisible
+- mini-carte et grande carte retouchées
+- bâtiments avec davantage de variété visuelle
+- façades plus technologiques (verre, panneaux, accents lumineux)
+- commerces retravaillés dans un style néon / urbain moderne
+
+## Correctifs visuels demandés
+- feux tricolores replacés pour éviter les chevauchements incohérents
+- panneaux immobiliers réduits et mieux positionnés
+- suppression de la surcharge de texte sur la grande carte
+- carte recentrée sur les informations utiles : quartiers, boutiques, police, biens, résidence
+
+## Carte
+- zoom par boutons + / - toujours disponible
+- plus de noms de magasins et de biens partout
+- lecture plus propre sur mobile
