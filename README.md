@@ -507,3 +507,20 @@ Les anciens achats logement sont transformés en avoir immobilier afin de ne pas
 - zoom par boutons + / - toujours disponible
 - plus de noms de magasins et de biens partout
 - lecture plus propre sur mobile
+
+
+# V14 — Neo City Deluxe
+
+## Nouveautés visuelles
+- refonte plus moderne et futuriste de l'ambiance globale
+- voitures retravaillées avec éclairages avant / arrière et détails plus premium
+- PNJ plus détaillés (visages mieux visibles, bras plus complets, épaules, chaussures, accessoires)
+- intérieurs de logements enrichis
+- atmosphère améliorée : étoiles, lueurs urbaines, ciel plus vivant
+
+## Monde
+- davantage de bâtiments par chunk
+- quartiers plus contrastés économiquement et visuellement
+- plus de circulation et plus de passants
+- davantage de commerces répartis en ville
+- grandes cartes plus lisibles et moins chargées
