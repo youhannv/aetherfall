@@ -444,6 +444,7 @@ function createChunk(cx,cz){
  const key=ck(cx,cz);if(chunks.has(key))return;
  const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
  const x0=cx*CHUNK,z0=cz*CHUNK,d=districtFor(cx,cz);
+ try{
  const grass=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));
  grass.rotation.x=-Math.PI/2;grass.position.set(x0+CHUNK/2,-.04,z0+CHUNK/2);g.add(grass);
  makeRoad(g,x0,z0);addAlleyNetwork(g,key,x0,z0,d,r);
@@ -486,6 +487,7 @@ function createChunk(cx,cz){
  const trafficBase=d.style==='central'?6:d.tier==='luxury'?4:d.tier==='poor'?5:d.style==='green'?4:5;
  const carN=trafficBase+Math.floor(r()*3);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
  if(r()<.72)addParkedCar(g,key,x0,z0,r)
+ }catch(err){console.error('Chunk creation error',key,err);toast("⚠️ Erreur de chargement d’un quartier")}
 }
 function randomSidewalk(x0,z0,r){
  const side=Math.floor(r()*4);
@@ -629,6 +631,50 @@ function addBuildingDetails(g,x,z,w,d,h,r,dist,isHouse=false,styleRoll=0){
 function addPocketGarden(g,key,x,z,r){
  const p=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));p.rotation.x=-Math.PI/2;p.position.set(x,.06,z);g.add(p);
  addTree(g,x-1.7,z-1.6,r);addBush(g,key,x+1.4,z+1.3,r);addBench(g,x-1.3,z+1.8)
+}
+
+
+function addLamp(g,x,z){
+ const post=new THREE.Group();
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.08,.10,3.5,10),new THREE.MeshStandardMaterial({color:0x1d232b,roughness:.92}));
+ pole.position.y=1.75;post.add(pole);
+ const arm=new THREE.Mesh(new THREE.BoxGeometry(.18,.12,.75),new THREE.MeshStandardMaterial({color:0x222a33,roughness:.88}));
+ arm.position.set(0,3.25,.34);post.add(arm);
+ const head=new THREE.Mesh(new THREE.BoxGeometry(.34,.18,.42),new THREE.MeshStandardMaterial({color:0x2b3640,metalness:.18,roughness:.42}));
+ head.position.set(0,3.20,.62);post.add(head);
+ const bulb=new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),new THREE.MeshBasicMaterial({color:0xfff1c4}));
+ bulb.position.set(0,3.14,.64);post.add(bulb);
+ post.position.set(x,0,z);g.add(post);
+ colliders.push({key:g.userData?.key||'',minX:x-.18,maxX:x+.18,minZ:z-.18,maxZ:z+.18,type:'lamp'})
+}
+function addBench(g,x,z){
+ const bench=new THREE.Group();
+ const wood=new THREE.MeshStandardMaterial({color:0x7b5b3e,roughness:.95});
+ const metal=new THREE.MeshStandardMaterial({color:0x2c333b,roughness:.75,metalness:.25});
+ for(const yy of [.52,.78]){const slat=new THREE.Mesh(new THREE.BoxGeometry(1.2,.08,.22),wood);slat.position.set(0,yy,0);bench.add(slat)}
+ const seat=new THREE.Mesh(new THREE.BoxGeometry(1.24,.08,.42),wood);seat.position.set(0,.44,0);bench.add(seat);
+ for(const sx of [-.45,.45]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.10,.44,.10),metal);leg.position.set(sx,.22,0);bench.add(leg)}
+ bench.position.set(x,0,z);g.add(bench);
+ colliders.push({key:g.userData?.key||'',minX:x-.68,maxX:x+.68,minZ:z-.28,maxZ:z+.28,type:'bench'})
+}
+function addTree(g,x,z,r){
+ const tree=new THREE.Group();
+ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.26,1.8,10),new THREE.MeshStandardMaterial({color:0x64482e,roughness:1}));
+ trunk.position.y=.9;tree.add(trunk);
+ const leafMat=new THREE.MeshStandardMaterial({color:choice([0x427a46,0x4f8a55,0x356b40]),roughness:.95});
+ for(const p of [[0,2.05,0,.95],[.34,1.92,.18,.68],[-.32,1.84,-.16,.62],[.05,2.34,-.06,.54]]){const leaf=new THREE.Mesh(new THREE.SphereGeometry(p[3],10,8),leafMat);leaf.position.set(p[0],p[1],p[2]);tree.add(leaf)}
+ tree.position.set(x,0,z);g.add(tree);
+ const key=g.userData?.key||'';
+ colliders.push({key,minX:x-.55,maxX:x+.55,minZ:z-.55,maxZ:z+.55,type:'tree'});
+ hidingZones.push({key,x,z,radius:1.35})
+}
+function addBush(g,key,x,z,r){
+ const bush=new THREE.Group();
+ const mat=new THREE.MeshStandardMaterial({color:choice([0x457d4d,0x4f8a55,0x568f5c]),roughness:.98});
+ for(const p of [[0,.36,0,.48],[.28,.30,.10,.34],[-.22,.28,-.15,.30],[.10,.26,-.24,.27]]){const m=new THREE.Mesh(new THREE.SphereGeometry(p[3],10,8),mat);m.position.set(p[0],p[1],p[2]);bush.add(m)}
+ bush.position.set(x,0,z);g.add(bush);
+ colliders.push({key,minX:x-.45,maxX:x+.45,minZ:z-.45,maxZ:z+.45,type:'bush'});
+ hidingZones.push({key,x,z,radius:1.05})
 }
 
 function addParkedCar(g,key,x0,z0,r){
@@ -1923,7 +1969,7 @@ function districtHTML(){
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
 function settingsHTML(){
- return `<div class="card"><h3>StreetQuest V14</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>
+ return `<div class="card"><h3>StreetQuest V14.1</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>
  <div class="card"><h3>Immobilier</h3><p class="sub">Les loyers sont débités chaque mois. Un bien acheté est payé une seule fois puis peut devenir ta résidence ou être loué à un PNJ.</p></div>
  <div class="card"><h3>Carte</h3><p class="sub">Grande carte : +/−, molette sur PC ou pincement à deux doigts.</p></div>
  <div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`

@@ -524,3 +524,9 @@ Les anciens achats logement sont transformés en avoir immobilier afin de ne pas
 - plus de circulation et plus de passants
 - davantage de commerces répartis en ville
 - grandes cartes plus lisibles et moins chargées
+
+
+## V14.1 correctif
+- correction du bug principal qui empêchait l'affichage du monde à partir des versions 13/14
+- restauration des helpers de décor (lampadaires, arbres, buissons, bancs) utilisés pendant la génération des chunks
+- ajout d'un garde-fou pour éviter qu'une erreur de génération vide tout le monde
