@@ -4,11 +4,23 @@ const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelecto
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),choice=a=>a[Math.floor(Math.random()*a.length)];
 const CHUNK=72,LOAD=1,UNLOAD=2,RADIUS=.34;
 const DISTRICTS=[
- {id:'central',name:'Centre',style:'urban',bonus:'Commerces fréquents'},
- {id:'garden',name:'Quartier des Jardins',style:'green',bonus:'Plus de caches et de PNJ amicaux'},
- {id:'harbor',name:'Canal',style:'industrial',bonus:'Butin rare et adversaires légèrement plus présents'},
- {id:'old',name:'Vieille Ville',style:'old',bonus:'Quêtes et appartements'}
+ {id:'docks',name:'Les Docks',tier:'poor',style:'poor',bonus:'Loyers bas • délinquance élevée',wealth:.48,rentMult:.58,buyMult:.56,policeRate:.045,crimeRate:.18,density:1.42,cashMult:.62,itemMult:.72,propertyDemand:.72},
+ {id:'popular',name:'Quartier Populaire',tier:'working',style:'old',bonus:'Immobilier accessible • vie de quartier',wealth:.72,rentMult:.78,buyMult:.76,policeRate:.075,crimeRate:.12,density:1.30,cashMult:.82,itemMult:.88,propertyDemand:.86},
+ {id:'central',name:'Centre',tier:'mid',style:'central',bonus:'Commerces • prix soutenus',wealth:1.0,rentMult:1.05,buyMult:1.10,policeRate:.11,crimeRate:.075,density:1.18,cashMult:1.0,itemMult:1.0,propertyDemand:1.0},
+ {id:'garden',name:'Quartier des Jardins',tier:'rich',style:'green',bonus:'Calme • maisons • police présente',wealth:1.35,rentMult:1.38,buyMult:1.48,policeRate:.16,crimeRate:.038,density:.88,cashMult:1.42,itemMult:1.22,propertyDemand:1.15},
+ {id:'heights',name:'Les Hauteurs',tier:'luxury',style:'luxury',bonus:'Très riche • villas • très surveillé',wealth:1.78,rentMult:1.88,buyMult:2.05,policeRate:.22,crimeRate:.018,density:.70,cashMult:1.90,itemMult:1.42,propertyDemand:1.28},
+ {id:'workshops',name:'Faubourg des Ateliers',tier:'working',style:'industrial',bonus:'Entrepôts • maisons modestes',wealth:.68,rentMult:.72,buyMult:.70,policeRate:.07,crimeRate:.13,density:1.34,cashMult:.78,itemMult:.90,propertyDemand:.82}
 ];
+const PROPERTY_TYPES={
+ studio:{name:'Studio',icon:'🚪',baseArea:24,areaVar:10,rooms:1,baseRent:42,baseBuy:620},
+ flat2:{name:'Appartement T2',icon:'🏢',baseArea:43,areaVar:14,rooms:2,baseRent:68,baseBuy:1080},
+ flat3:{name:'Appartement T3',icon:'🏢',baseArea:67,areaVar:20,rooms:3,baseRent:102,baseBuy:1780},
+ house:{name:'Maison',icon:'🏠',baseArea:88,areaVar:34,rooms:4,baseRent:145,baseBuy:2850},
+ villa:{name:'Villa',icon:'🏡',baseArea:150,areaVar:70,rooms:6,baseRent:285,baseBuy:6100}
+};
+function districtTierLabel(d){return d.tier==='poor'?'POPULAIRE / PAUVRE':d.tier==='working'?'MODESTE':d.tier==='rich'?'AISÉ':d.tier==='luxury'?'TRÈS RICHE':'CENTRAL'}
+function districtTierClass(d){return d.tier==='poor'?'districtPoor':d.tier==='working'||d.tier==='mid'?'districtMid':d.tier==='rich'?'districtRich':'districtLuxury'}
+
 const CITIES=[
  {id:'paris',name:'Paris',artifact:'Fragment d’Azur'},
  {id:'rome',name:'Rome',artifact:'Sceau solaire'},
@@ -98,8 +110,6 @@ const HOME_SLOTS=[
  {x:-5.0,z:2.8},{x:-1.6,z:2.7},{x:1.8,z:2.8},{x:5.1,z:2.7},
  {x:-5.2,z:5.4},{x:-1.6,z:5.4},{x:1.8,z:5.4},{x:5.2,z:5.4}
 ];
-const RENT_STUDIO_PRICE=180;
-const BUY_APARTMENT_PRICE=850;
 const HOME_PLOT_PRICE=1800;
 const HOME_UPGRADE_COST={2:650,3:1450};
 const QUESTS=[
@@ -116,47 +126,50 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:113
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:120,
+ gameDay:1,gameMonth:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0
 };
 let state=loadState();
 function loadState(){
  try{
-   const raw=JSON.parse(localStorage.getItem('sq3d-v11')||'{}');
+   let raw=JSON.parse(localStorage.getItem('sq3d-v12')||'null');
+   let migrated=false;
+   if(!raw){
+     raw=JSON.parse(localStorage.getItem('sq3d-v11')||'{}');
+     migrated=!!Object.keys(raw).length
+   }
    const loaded={
      ...structuredClone(base),...raw,
      pos:{...base.pos,...(raw.pos||{})},
      homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},
-     homeStock:raw.homeStock||[],
-     homePlaced:raw.homePlaced||[],
-     artifactBag:raw.artifactBag||[],
-     discoveredShops:raw.discoveredShops||[]
+     homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[],
+     artifactBag:raw.artifactBag||[],discoveredShops:raw.discoveredShops||[],
+     propertyCatalog:raw.propertyCatalog||[],propertyPortfolio:raw.propertyPortfolio||[]
    };
-   // V11/V11.1 recovery: an interior scene cannot survive a page reload.
-   // Resume outside at the exact position from which the player entered.
    if(loaded.interior){
-     loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)
-       ? {x:raw.returnPos.x,z:raw.returnPos.z}
-       : {...base.pos};
-     loaded.interior=null;
-     loaded.returnPos=null
+     loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)?{x:raw.returnPos.x,z:raw.returnPos.z}:{...base.pos};
+     loaded.interior=null;loaded.returnPos=null
    }
-   if(raw.worldLayoutVersion!==113){
-     loaded.discoveredShops=[];
-     loaded.worldLayoutVersion=113
+   if(migrated){
+     const oldStage=raw.housingStage||0;
+     loaded.propertyCredit=(raw.propertyCredit||0)+(oldStage===1?180:oldStage===2?1030:oldStage>=3?2830:0);
+     loaded.housingStage=0;loaded.landOwned=false;
+     loaded.propertyPortfolio=[];loaded.propertyCatalog=[];loaded.residenceId=null;
+     loaded.worldLayoutVersion=120
+   }
+   if(raw.worldLayoutVersion!==120){
+     loaded.discoveredShops=[];loaded.propertyCatalog=[];loaded.worldLayoutVersion=120
    }
    return loaded
  }catch{return structuredClone(base)}
 }
 function save(){
- // Never persist an interior as the reload position. If Safari refreshes/kills the tab,
- // resume outside rather than loading a state with no reconstructed interiorGroup.
  const snapshot={...state};
  if(state.interior){
    snapshot.pos=state.returnPos?{...state.returnPos}:{...base.pos};
-   snapshot.interior=null;
-   snapshot.returnPos=null
+   snapshot.interior=null;snapshot.returnPos=null
  }
- localStorage.setItem('sq3d-v11',JSON.stringify(snapshot))
+ localStorage.setItem('sq3d-v12',JSON.stringify(snapshot))
 }
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
@@ -172,14 +185,22 @@ function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt
 function rngFor(s){let a=hashStr(s);return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
 function ck(cx,cz){return `${state.cityId}:${cx}:${cz}`}
 function currentChunk(){return{cx:Math.floor(state.pos.x/CHUNK),cz:Math.floor(state.pos.z/CHUNK)}}
-function districtFor(cx,cz){const idx=Math.abs((cx*7+cz*11)%DISTRICTS.length);return DISTRICTS[idx]}
+function districtFor(cx,cz){
+ if(cx===0&&cz===0)return DISTRICTS.find(d=>d.id==='central');
+ if(cx>=1&&cx<=2&&cz>=-1&&cz<=1)return DISTRICTS.find(d=>d.id==='garden');
+ if(cx<=-1&&cx>=-2&&cz>=-1&&cz<=1)return DISTRICTS.find(d=>d.id==='docks');
+ if(cz<=-1&&cz>=-2&&Math.abs(cx)<=1)return DISTRICTS.find(d=>d.id==='popular');
+ if(cz>=1&&cz<=2&&Math.abs(cx)<=1)return DISTRICTS.find(d=>d.id==='heights');
+ const rx=Math.floor(cx/2),rz=Math.floor(cz/2),idx=hashStr(`${state.cityId}:district:${rx}:${rz}`)%DISTRICTS.length;
+ return DISTRICTS[idx]
+}
 function districtId(cx,cz){return `${state.cityId}:${cx}:${cz}`}
 function progress(goal){if(goal==='stolenCoins')return state.stolenCoins;if(goal==='coinsEarned')return state.coinsEarned;if(goal==='npcMissions')return state.npcMissions;if(goal==='districtsSeen')return state.seenDistricts.length;if(goal==='containersOpened')return state.containersOpened;if(goal==='districtsOwned')return state.ownedDistricts.length;if(goal==='housingStage')return state.housingStage||0;return 0}
 function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.id))||{id:'free',title:'Légende urbaine',text:'Explore librement, collectionne les artefacts et sécurise les quartiers.',goal:'districtsOwned',target:999}}
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
-let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],clouds=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[];
+let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],properties=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],clouds=[];
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.55,interiorBounds={x:8.5,z:8.5};
 
 async function init(){
  try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
@@ -325,23 +346,19 @@ function plannedShopType(cx,cz){
  const pool=['corner','corner','gear','pawn','home','rare'];
  return pool[(h>>>8)%pool.length]
 }
-function generateIrregularLots(x0,z0,r,startChunk){
- const zones=[
-  [18,39,18,39],[47,68,18,39],
-  [18,39,47,68],[47,68,47,68]
- ];
- const out=[];
+function generateIrregularLots(x0,z0,r,startChunk,d){
+ const zones=[[17,40,17,40],[46,69,17,40],[17,40,46,69],[46,69,46,69]],out=[];
  for(let qi=0;qi<zones.length;qi++){
-   if(startChunk&&qi===3)continue; // south-east is reserved for the future home plot.
+   if(startChunk&&qi===3)continue;
    const [xmin,xmax,zmin,zmax]=zones[qi];
-   const wanted=1+Math.floor(r()*3);
+   const baseCount=d.tier==='luxury'?1:d.tier==='rich'?1+(r()<.45?1:0):d.tier==='poor'?3+Math.floor(r()*2):2+Math.floor(r()*2);
+   const wanted=Math.max(1,Math.round(baseCount*d.density));
    let made=0,tries=0;
-   while(made<wanted&&tries++<35){
-     const x=x0+xmin+2.5+r()*(xmax-xmin-5);
-     const z=z0+zmin+2.5+r()*(zmax-zmin-5);
-     if(out.some(p=>Math.hypot(p.x-x,p.z-z)<9.4))continue;
-     out.push({x,z,qi,variant:Math.floor(r()*4)});
-     made++
+   const minDist=d.tier==='luxury'?12.5:d.tier==='rich'?11.2:d.tier==='poor'?7.3:8.4;
+   while(made<wanted&&tries++<55){
+     const x=x0+xmin+2.2+r()*(xmax-xmin-4.4),z=z0+zmin+2.2+r()*(zmax-zmin-4.4);
+     if(out.some(p=>Math.hypot(p.x-x,p.z-z)<minDist))continue;
+     out.push({x,z,qi,variant:Math.floor(r()*5)});made++
    }
  }
  return out
@@ -358,7 +375,7 @@ function createChunk(cx,cz){
 
  const startChunk=cx===0&&cz===0;
  const plannedShop=plannedShopType(cx,cz);
- const lots=generateIrregularLots(x0,z0,r,startChunk);
+ const lots=generateIrregularLots(x0,z0,r,startChunk,d);
  let shopIndex=plannedShop?Math.floor(r()*Math.max(1,lots.length)):-1;
 
  // Start block keeps the grocery away from the player's house plot.
@@ -384,12 +401,13 @@ function createChunk(cx,cz){
    const p=randomAlleyPoint(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')
  }
 
- const npcN=4+Math.floor(r()*4);
- for(let i=0;i<npcN;i++){const p=randomPedestrianPath(x0,z0,r);addNPC(g,key,p.x,p.z,r,p)}
- if(r()<.045){const p=randomPedestrianPath(x0,z0,r);addEnemy(g,key,p.x,p.z,r,p)}
- if(r()<.11){const p=randomPedestrianPath(x0,z0,r);addPolice(g,key,p.x,p.z,r,p)}
+ const npcN=4+Math.floor(r()*4)+(d.tier==='luxury'?2:0);
+ for(let i=0;i<npcN;i++){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addNPC(g,key,p.x,p.z,r,p)}
+ if(r()<d.crimeRate){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addEnemy(g,key,p.x,p.z,r,p)}
+ const policeN=d.policeRate>.18?2:(r()<d.policeRate*5?1:0);
+ for(let i=0;i<policeN;i++){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addPolice(g,key,p.x,p.z,r,p)}
 
- const trafficBase=d.style==='central'?4:d.style==='green'?2:3;
+ const trafficBase=d.style==='central'?5:d.tier==='luxury'?3:d.tier==='poor'?4:d.style==='green'?3:4;
  const carN=trafficBase+Math.floor(r()*3);for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
  if(r()<.48)addParkedCar(g,key,x0,z0,r)
 }
@@ -436,27 +454,66 @@ function addAlleyNetwork(g,key,x0,z0,d,r){
    alleys.push({key,axis:'x',z:z0+32,min:x0+43,max:x0+61,width:2.4})
  }
 }
+
+function makePropertyListing(key,x,z,isHouse,d,r,serial=0){
+ const id=`${key}:property:${serial}:${Math.round(x)}:${Math.round(z)}`;
+ const pr=rngFor(id);
+ let type;
+ if(isHouse){
+   if(d.tier==='luxury')type=pr()<.62?'villa':'house';
+   else type=pr()<.86?'house':'flat3'
+ }else{
+   const roll=pr();
+   if(d.tier==='poor')type=roll<.52?'studio':roll<.88?'flat2':'flat3';
+   else if(d.tier==='luxury')type=roll<.18?'flat2':roll<.68?'flat3':'villa';
+   else type=roll<.34?'studio':roll<.76?'flat2':'flat3'
+ }
+ const t=PROPERTY_TYPES[type],area=Math.round(t.baseArea+pr()*t.areaVar);
+ const quality=.82+pr()*.36+(d.wealth-1)*.12;
+ const rent=Math.max(12,Math.round(t.baseRent*d.rentMult*(area/t.baseArea)*quality));
+ const buyPrice=Math.max(220,Math.round(t.baseBuy*d.buyMult*(area/t.baseArea)*quality/10)*10);
+ const rooms=type==='studio'?1:type==='flat2'?2:type==='flat3'?3:type==='house'?4+Math.floor(pr()*2):6+Math.floor(pr()*3);
+ return{id,cityId:state.cityId,key,cx:Math.floor(x/CHUNK),cz:Math.floor(z/CHUNK),x,z,type,area,rooms,rent,buyPrice,districtId:d.id,districtName:d.name,tier:d.tier,demand:d.propertyDemand}
+}
+function rememberProperty(p){
+ const i=state.propertyCatalog.findIndex(x=>x.id===p.id);
+ if(i<0)state.propertyCatalog.push({...p});else state.propertyCatalog[i]={...state.propertyCatalog[i],...p}
+}
+function addPropertyEntrance(g,key,x,z,dep,isHouse,d,r,serial){
+ const p=makePropertyListing(key,x,z-dep/2-.82,isHouse,d,r,serial);
+ const door=new THREE.Mesh(new THREE.PlaneGeometry(isHouse?1.05:1.45,isHouse?2.15:2.45),new THREE.MeshStandardMaterial({color:isHouse?0x553b2d:0x42362f,roughness:.82}));
+ door.position.set(x,1.15,z-dep/2-.014);door.rotation.y=Math.PI;g.add(door);
+ const plaque=makeFacadeSign(`${PROPERTY_TYPES[p.type].icon} ${p.area}m²`,'#d8f1ff');plaque.scale.set(.42,.42,.42);plaque.position.set(x+1.35,2.45,z-dep/2-.03);g.add(plaque);
+ properties.push({...p,key,doorX:x,doorZ:p.z});rememberProperty(p)
+}
+function portfolioRecord(id){return state.propertyPortfolio.find(p=>p.id===id)||null}
+function propertyFromCatalog(id){return state.propertyCatalog.find(p=>p.id===id)||properties.find(p=>p.id===id)||null}
+function propertyAcquired(p){return !!portfolioRecord(p.id)}
+
 function addDenseBuilding(g,key,x,z,d,r,i,variant=0){
- const central=d.style==='central',green=d.style==='green',old=d.style==='old';
- const isHouse=(green||old)?r()<.62:r()<.20;
- const scale=[.82,1,1.08,.92][variant]||1;
- const w=(isHouse?6.2+r()*2.0:6.8+r()*2.2)*scale;
- const dep=(isHouse?6.1+r()*2.1:6.8+r()*2.2)*(variant===2?.82:1);
- const h=isHouse?(4.0+r()*3.2):(central?11+r()*27:8+r()*16);
- // More irregular setback inside each parcel.
- x+=(r()-.5)*2.0;z+=(r()-.5)*2.0;
- const texChoice=old?textures.brick:(d.style==='harbor'?textures.stone:(r()<.58?textures.modern:textures.brick));
- const mat=new THREE.MeshStandardMaterial({map:texChoice,roughness:.87,metalness:d.style==='harbor'?.04:0});
+ const central=d.style==='central',green=d.style==='green',poor=d.style==='poor',lux=d.style==='luxury';
+ const houseChance=lux?.82:green?.70:poor?.18:d.style==='old'?.42:.24;
+ const isHouse=r()<houseChance;
+ const scale=[.78,.92,1.05,.86,1.16][variant]||1;
+ const w=(isHouse?(lux?8.5:6.2)+r()*(lux?4.5:2.4):(poor?5.5:6.8)+r()*(poor?2.2:3.0))*scale;
+ const dep=(isHouse?(lux?8.2:6.0)+r()*(lux?4.5:2.6):(poor?5.8:6.8)+r()*2.8)*(variant===2?.84:1);
+ const h=isHouse?(lux?5.2+r()*4.0:4+r()*3):(central?12+r()*30:poor?8+r()*12:8+r()*18);
+ x+=(r()-.5)*(lux?3.8:2.2);z+=(r()-.5)*(lux?3.8:2.2);
+ const texChoice=poor?textures.brick:lux?(r()<.5?textures.stone:textures.modern):d.style==='old'?textures.brick:(d.style==='industrial'?textures.stone:(r()<.58?textures.modern:textures.brick));
+ const mat=new THREE.MeshStandardMaterial({map:texChoice,roughness:lux?.72:.88,metalness:lux?.08:0});
  const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),mat);b.position.set(x,h/2,z);g.add(b);
  addBuildingDetails(g,x,z,w,dep,h,r,d);
  if(isHouse){
-   const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,dep)*.68,1.35+r()*.4,4),new THREE.MeshStandardMaterial({color:choice([0x58483f,0x4a5056,0x6a493c]),roughness:.96}));
-   roof.rotation.y=Math.PI/4;roof.position.set(x,h+.7,z);g.add(roof);
-   const door=new THREE.Mesh(new THREE.PlaneGeometry(.9,1.8),new THREE.MeshStandardMaterial({color:0x4b3427,roughness:.85}));
-   door.position.set(x+(r()-.5)*1.6,1.0,z-dep/2-.014);door.rotation.y=Math.PI;g.add(door)
+   const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,dep)*.69,1.35+r()*(lux?1.0:.45),4),new THREE.MeshStandardMaterial({color:lux?choice([0x454d57,0x5a5149,0x3f4b43]):choice([0x58483f,0x4a5056,0x6a493c]),roughness:.92}));
+   roof.rotation.y=Math.PI/4;roof.position.set(x,h+.72,z);g.add(roof);
+   if(lux){
+     const lawn=new THREE.Mesh(new THREE.PlaneGeometry(w+4,dep+4),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));lawn.rotation.x=-Math.PI/2;lawn.position.set(x,.018,z);g.add(lawn);
+     if(r()<.6)addTree(g,x+w/2+1.2,z,r)
+   }
  }
  colliders.push({key,minX:x-w/2-.30,maxX:x+w/2+.30,minZ:z-dep/2-.30,maxZ:z+dep/2+.30,type:isHouse?'house':'building'});
- if(!isHouse&&i%4===0&&r()<.34)addApartmentDoor(g,key,x,z,dep)
+ const propChance=isHouse?.92:(poor?.48:lux?.72:.58);
+ if(r()<propChance)addPropertyEntrance(g,key,x,z,dep,isHouse,d,r,i)
 }
 function addPocketGarden(g,key,x,z,r){
  const p=new THREE.Mesh(new THREE.PlaneGeometry(8,8),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));p.rotation.x=-Math.PI/2;p.position.set(x,.06,z);g.add(p);
@@ -559,11 +616,7 @@ function addShop(g,key,x,z,r,forcedType=null){
  const sid=`${state.cityId}:${Math.round(x)}:${Math.round(z)}:${type}`;
  if(!state.discoveredShops.some(s=>s.id===sid))state.discoveredShops.push({id:sid,cityId:state.cityId,x,z,type})
 }
-function addApartmentDoor(g,key,x,z,dep){
- const door=new THREE.Mesh(new THREE.PlaneGeometry(1.6,2.6),new THREE.MeshStandardMaterial({color:0x49362b,roughness:.75}));door.position.set(x,1.4,z-dep/2-.012);door.rotation.y=Math.PI;g.add(door);
- const light=new THREE.Mesh(new THREE.SphereGeometry(.09,7,6),new THREE.MeshBasicMaterial({color:0xffe4a6}));light.position.set(x+1.1,2.35,z-dep/2-.08);g.add(light);
- apartments.push({key,x,z:z-dep/2-.85,id:`${key}:apt`})
-}
+function addApartmentDoor(g,key,x,z,dep){/* V12: replaced by physical property entrances */}
 function addContainer(g,key,id,x,z,type){const mesh=new THREE.Mesh(type==='bin'?new THREE.CylinderGeometry(.42,.48,.9,10):new THREE.BoxGeometry(.9,.55,.65),new THREE.MeshStandardMaterial({color:type==='bin'?0x335d45:0x74572e}));mesh.position.set(x,type==='bin'?.45:.28,z);mesh.userData={key,id,type};g.add(mesh);containers.push(mesh)}
 function addPickup(g,key,id,x,z,type){const color={coins:0xffd15b,medkit:0x62e3a4,rare:0xa68cff,artifact:0x60d8ff}[type],geo=type==='artifact'?new THREE.OctahedronGeometry(.65):type==='coins'?new THREE.CylinderGeometry(.34,.34,.12,16):new THREE.BoxGeometry(.6,.6,.6),m=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color,emissive:type==='artifact'?0x15536a:0x000000,emissiveIntensity:1}));m.position.set(x,type==='artifact'?.72:.43,z);m.userData={key,id,type};g.add(m);pickups.push(m)}
 function addNPC(g,key,x,z,r,path){const n=createPerson('civilian',key,x,z,r,path);g.add(n.group);npcs.push(n)}
@@ -604,17 +657,18 @@ function createPerson(role,key,x,z,r,path=null){
  const lm=new THREE.MeshStandardMaterial({color:0x222b34}),l1=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),lm),l2=l1.clone();
  l1.position.set(-.13,.38,0);l2.position.set(.13,.38,0);group.add(l1,l2);group.position.set(x,0,z);
 
- const hasCash=r()<.50;
+ const socio=districtFor(Math.floor(x/CHUNK),Math.floor(z/CHUNK));
+ const hasCash=r()<clamp(.34+socio.wealth*.20,.32,.82);
  const pocketItems=[];
- if(r()<.70)pocketItems.push(choice(STREET_ITEM_IDS));
- if(r()<.27)pocketItems.push(choice(STREET_ITEM_IDS));
- if(r()<.08)pocketItems.push(choice(STREET_ITEM_IDS));
+ if(r()<clamp(.48*socio.itemMult,.30,.88))pocketItems.push(choice(STREET_ITEM_IDS));
+ if(r()<clamp(.16*socio.itemMult,.07,.42))pocketItems.push(choice(STREET_ITEM_IDS));
+ if(r()<clamp(.045*socio.itemMult,.02,.17))pocketItems.push(choice(STREET_ITEM_IDS));
  const n={
    key,group,role,hostile,isPolice,
    axis:path?.axis||(r()<.5?'x':'z'),pathMin:path?.min??null,pathMax:path?.max??null,
    route:path?.route||null,routeIndex:path?.routeIndex||0,
    speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},
-   money:hasCash?(2+Math.floor(r()*34)):0,pocketItems,
+   money:hasCash?Math.max(1,Math.round((2+r()*38)*socio.cashMult)):0,pocketItems,
    legs:[l1,l2],arms:[a1,a2],phase:r()*6.2,
    name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),
    missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false,following:false,trust:.25+r()*.7,courage:.2+r()*.75,followDoubt:r()*.55,routeStuck:0,followStuck:0,lastSafe:{x,z}
@@ -656,11 +710,11 @@ function unload(key){
  const g=chunks.get(key);if(!g)return;
  if(selectedNPC?.key===key)clearTarget();
  scene.remove(g);chunks.delete(key);
- colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key);homePlots=homePlots.filter(x=>x.key!==key);trafficLights=trafficLights.filter(x=>x.group.parent!==g);alleys=alleys.filter(x=>x.key!==key)
+ colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);properties=properties.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key);homePlots=homePlots.filter(x=>x.key!==key);trafficLights=trafficLights.filter(x=>x.group.parent!==g);alleys=alleys.filter(x=>x.key!==key)
 }
 function ensureChunks(force=false){if(state.interior)return;const {cx,cz}=currentChunk();for(let x=cx-LOAD;x<=cx+LOAD;x++)for(let z=cz-LOAD;z<=cz+LOAD;z++)createChunk(x,z);for(const[k,g]of chunks){if(Math.abs(g.userData.cx-cx)>UNLOAD||Math.abs(g.userData.cz-cz)>UNLOAD)unload(k)}if(force)drawMap()}
 function collides(x,z){
- if(state.interior)return Math.abs(x)>8.5||z<-8.5||z>8.5||interiorColliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ);
+ if(state.interior)return Math.abs(x)>interiorBounds.x||Math.abs(z)>interiorBounds.z||interiorColliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ);
  return colliders.some(c=>x+RADIUS>c.minX&&x-RADIUS<c.maxX&&z+RADIUS>c.minZ&&z-RADIUS<c.maxZ)
 }
 function blockedByPerson(x,z){
@@ -697,8 +751,49 @@ function moveEntity(n,dx,dz,pad=.28){
  return false
 }
 function updateCamera(t=0){const bob=(Math.abs(moveStick.x)+Math.abs(moveStick.y)>.15)?Math.sin(t*.012)*.022:0;camera.position.set(state.pos.x,1.72+bob,state.pos.z);const cp=Math.cos(state.pitch),sp=Math.sin(state.pitch),sy=Math.sin(state.yaw),cy=Math.cos(state.yaw);camera.lookAt(state.pos.x+sy*cp,1.72+sp+bob,state.pos.z-cy*cp)}
+
+function spendFromFunds(amount){
+ let left=amount;
+ const fromBank=Math.min(state.homeBank,left);state.homeBank-=fromBank;left-=fromBank;
+ const fromCoins=Math.min(state.coins,left);state.coins-=fromCoins;left-=fromCoins;
+ return left<=0
+}
+function processMonthlyFinances(){
+ let income=0,expense=0,events=[];
+ const rentRec=state.propertyPortfolio.find(p=>p.id===state.residenceId&&p.tenure==='rent');
+ if(rentRec){
+   if(spendFromFunds(rentRec.rent)){expense+=rentRec.rent;state.missedRent=0;events.push(`loyer -${rentRec.rent}`)}
+   else{
+     state.missedRent=(state.missedRent||0)+1;events.push('loyer IMPAYÉ');
+     if(state.missedRent>=2){
+       state.propertyPortfolio=state.propertyPortfolio.filter(p=>p.id!==rentRec.id);state.residenceId=null;state.missedRent=0;events.push('expulsion')
+     }
+   }
+ }
+ for(const rec of state.propertyPortfolio.filter(p=>p.tenure==='owned'&&p.listed)){
+   const market=rec.marketRent||rec.rent||40,ratio=(rec.askingRent||market)/market;
+   if(!rec.tenant){
+     const chance=clamp((rec.demand||1)*(1.28-ratio)*.78,.08,.90);
+     if(Math.random()<chance){rec.tenant=true;events.push(`locataire trouvé : ${rec.label||'bien'}`)}
+   }
+   if(rec.tenant){
+     if(ratio>1.42&&Math.random()<.30){rec.tenant=false;events.push(`locataire parti : ${rec.label||'bien'}`)}
+     else{const got=rec.askingRent||market;state.homeBank+=got;income+=got}
+   }
+ }
+ state.monthlyLedger=`Mois ${state.gameMonth} : +${income} / -${expense}${events.length?' • '+events.join(' • '):''}`;
+ if(income||expense||events.length)toast(`📅 ${state.monthlyLedger}`);
+ save()
+}
+function advanceDay(days=1){
+ for(let i=0;i<days;i++){
+   state.gameDay=(state.gameDay||1)+1;
+   if(state.gameDay>30){state.gameDay=1;state.gameMonth=(state.gameMonth||1)+1;processMonthlyFinances()}
+ }
+}
+
 function updateWorldLight(dt){
- state.timeOfDay=(state.timeOfDay+dt*.025)%24;
+ const prevTime=state.timeOfDay;state.timeOfDay=(state.timeOfDay+dt*.025)%24;if(state.timeOfDay<prevTime)advanceDay(1);
  const sun=scene.getObjectByName('sun'),hemi=scene.children.find(x=>x.isHemisphereLight),day=Math.max(.06,Math.sin((state.timeOfDay-6)/24*Math.PI*2)*.5+.5);
  sun.intensity=.12+day*1.95;hemi.intensity=.28+day*1.9;
  const cloudDim=state.weather==='cloudy'?.78:state.weather==='rain'?.58:1;
@@ -1112,7 +1207,12 @@ function checkInteraction(){
  const p=nearest(pickups.filter(x=>x.parent),1.6);if(p)return setPrompt(pickupName(p.userData.type),'Objet trouvé dans la rue.','RAMASSER',()=>collectPickup(p));
  const c=nearest(containers.filter(x=>x.parent),1.7);if(c)return setPrompt(c.userData.type==='bin'?'Poubelle':'Coffre',c.userData.type==='bin'?'Fouiller du matériel.':'Ouvrir le coffre.','FOUILLER',()=>openContainer(c));
  const s=shops.reduce((b,x)=>{const d=Math.hypot(state.pos.x-x.door.x,state.pos.z-x.door.z);return !b||d<b.d?{x,d}:b},null);if(s&&s.d<1.8)return setPrompt(SHOPS[s.x.type].name,'Entrer dans la boutique.','ENTRER',()=>enterInterior('shop',s.x));
- const a=nearest(apartments,1.6);if(a)return setPrompt('Immeuble résidentiel','Entrer dans le hall.','ENTRER',()=>enterInterior('apartment',a));
+ const pr=nearest(properties,1.75);
+ if(pr){
+   const rec=portfolioRecord(pr.id);
+   if(rec)return setPrompt(propertyLabel(pr),rec.tenure==='rent'?`${rec.rent} crédits/mois`:'Bien dont tu es propriétaire.','ENTRER',()=>enterInterior('property',pr));
+   return setPrompt(propertyLabel(pr),`${pr.districtName} • ${pr.rent}/mois ou ${pr.buyPrice} à l’achat.`,'VOIR',()=>{selectedProperty=pr;openSheet('property')})
+ }
  const n=nearest(npcs,1.5);if(n)return setPrompt(n.name,'Touche le passant pour le choisir comme cible, ou ouvre le dialogue.','PARLER',()=>talkNPC(n));
  hidePrompt()
 }
@@ -1293,12 +1393,55 @@ function showDialogue(name,text,next){$('#dialogueName').textContent=name;$('#di
 function hideDialogue(){$('#dialogue').classList.add('hidden')}
 
 function enterInterior(type,obj){
- state.returnPos={...state.pos};state.interior={type,shopType:obj?.type||null};interiorColliders=[];for(const[,g]of chunks)g.visible=false;
+ state.returnPos={...state.pos};
+ state.interior={type,shopType:obj?.type||null,propertyId:type==='property'?obj?.id:null};
+ interiorColliders=[];for(const[,g]of chunks)g.visible=false;
  if(interiorGroup)scene.remove(interiorGroup);interiorGroup=new THREE.Group();scene.add(interiorGroup);
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(18,18),new THREE.MeshStandardMaterial({color:type==='shop'?0x786f60:type==='home'?0x7b6c5d:0x6b665f,roughness:1}));floor.rotation.x=-Math.PI/2;interiorGroup.add(floor);
- const wallM=new THREE.MeshStandardMaterial({color:type==='shop'?0xc8c0aa:type==='home'?0xd7cfbf:0xd2cbc1});[[0,2.5,-9,18,.25],[0,2.5,9,18,.25],[-9,2.5,0,.25,18],[9,2.5,0,.25,18]].forEach(w=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],5,w[4]),wallM);m.position.set(w[0],w[1],w[2]);interiorGroup.add(m)});
- if(type==='shop')buildShopInterior(obj.type);else if(type==='home')buildHomeInterior();else buildApartmentInterior();
- state.pos={x:0,z:6.5};state.yaw=0;state.pitch=0;hidePrompt();save()
+
+ let width=18,depth=18;
+ if(type==='property'){
+   const p=propertyFromCatalog(obj.id)||obj;
+   const dims=propertyInteriorDims(p);width=dims.width;depth=dims.depth
+ }
+ interiorBounds={x:width/2-.5,z:depth/2-.5};
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(width,depth),new THREE.MeshStandardMaterial({color:type==='shop'?0x786f60:type==='property'?0x8d8172:0x7b6c5d,roughness:1}));floor.rotation.x=-Math.PI/2;interiorGroup.add(floor);
+ const wallM=new THREE.MeshStandardMaterial({color:type==='shop'?0xc8c0aa:type==='property'?0xd8d1c7:0xd7cfbf});
+ [[0,2.5,-depth/2,width,.25],[0,2.5,depth/2,width,.25],[-width/2,2.5,0,.25,depth],[width/2,2.5,0,.25,depth]].forEach(w=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],5,w[4]),wallM);m.position.set(w[0],w[1],w[2]);interiorGroup.add(m)});
+
+ if(type==='shop')buildShopInterior(obj.type);
+ else if(type==='property')buildPropertyInterior(propertyFromCatalog(obj.id)||obj);
+ else if(type==='home')buildHomeInterior();
+ else buildApartmentInterior();
+ state.pos={x:0,z:depth/2-2.1};state.yaw=0;state.pitch=0;hidePrompt();save()
+}
+function propertyInteriorDims(p){
+ if(p.type==='studio')return{width:9,depth:8};
+ if(p.type==='flat2')return{width:12,depth:10};
+ if(p.type==='flat3')return{width:15,depth:12};
+ if(p.type==='house')return{width:18,depth:15};
+ return{width:22,depth:18}
+}
+function addInteriorBox(x,y,z,w,h,d,color=0x765438){
+ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.9}));m.position.set(x,y,z);interiorGroup.add(m);interiorColliders.push({minX:x-w/2-.08,maxX:x+w/2+.08,minZ:z-d/2-.08,maxZ:z+d/2+.08});return m
+}
+function buildPropertyInterior(p){
+ const dims=propertyInteriorDims(p),t=PROPERTY_TYPES[p.type],rich=p.tier==='rich'||p.tier==='luxury';
+ const sign=makeSign(`${t.icon} ${p.area} m²`,'#d8f4ff');sign.position.set(0,3,-dims.depth/2+.2);interiorGroup.add(sign);
+ if(p.type==='studio'){
+   addInteriorBox(-2.3,.3,-1.5,2.2,.55,1.25,0x5b6f80);addInteriorBox(2,.4,-1.4,1.35,.75,.9,0x704e34)
+ }else{
+   // room partitions scale with property size
+   const part=new THREE.Mesh(new THREE.BoxGeometry(.16,2.6,dims.depth*.46),new THREE.MeshStandardMaterial({color:0xc7c0b5}));part.position.set(0,1.3,-1);interiorGroup.add(part);interiorColliders.push({minX:-.13,maxX:.13,minZ:-dims.depth*.23-1,maxZ:dims.depth*.23-1});
+   addInteriorBox(-dims.width*.25,.32,-dims.depth*.18,p.type==='villa'?3.6:2.8,.58,1.3,rich?0x587184:0x566876);
+   addInteriorBox(dims.width*.24,.4,-dims.depth*.18,1.6,.75,1.0,rich?0x86654a:0x715137);
+   if(p.type==='house'||p.type==='villa'){
+     addInteriorBox(-dims.width*.27,.38,dims.depth*.20,2.6,.72,1.0,rich?0x6b5b83:0x53687a);
+     const plant=new THREE.Mesh(new THREE.SphereGeometry(.6,9,7),new THREE.MeshStandardMaterial({color:0x43815a}));plant.position.set(dims.width*.28,1,dims.depth*.22);interiorGroup.add(plant)
+   }
+ }
+ if(rich){
+   const rug=new THREE.Mesh(new THREE.PlaneGeometry(Math.min(6,dims.width*.42),Math.min(4,dims.depth*.34)),new THREE.MeshStandardMaterial({color:0x765d7d,roughness:1}));rug.rotation.x=-Math.PI/2;rug.position.set(0,.02,1);interiorGroup.add(rug)
+ }
 }
 function buildShopInterior(type){
  const shelfM=new THREE.MeshStandardMaterial({color:0x4c3c2d});for(let i=-1;i<=1;i++){const s=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.8,5),shelfM);s.position.set(i*4,1,0);interiorGroup.add(s);interiorColliders.push({minX:i*4-.95,maxX:i*4+.95,minZ:-2.55,maxZ:2.55})}
@@ -1346,10 +1489,10 @@ function buildHomeInterior(){
  }
 }
 function exitInterior(){leaveInterior()}
-function leaveInterior(){if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}interiorColliders=[];for(const[,g]of chunks)g.visible=true;state.interior=null;state.pos=state.returnPos||{x:2,z:8};state.returnPos=null;save();hidePrompt()}
+function leaveInterior(){if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}interiorColliders=[];interiorBounds={x:8.5,z:8.5};for(const[,g]of chunks)g.visible=true;state.interior=null;state.pos=state.returnPos||{x:2,z:8};state.returnPos=null;save();hidePrompt()}
 function physicalShopHTML(){
  const s=SHOPS[state.interior.shopType],arts=[...new Set(state.artifactBag)];
- if(state.interior.shopType==='housing')return `<div class="card"><h3>🔑 Agence Habitat</h3><p class="sub">Commence petit, puis deviens propriétaire.</p></div>${housingPanelHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ if(state.interior.shopType==='housing')return `${housingAgencyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
  const valuables=state.inventory.filter(i=>STREET_ITEMS[i.id]&&i.qty>0);
  const resale=state.interior.shopType==='pawn'
    ?`<div class="card"><h3>📦 Revente d’objets</h3>${valuables.length?valuables.map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty} • ${info.value} crédits pièce</small></div><button class="menuBtn sellLoot" data-id="${i.id}">Vendre</button></div>`}).join(''):'<p class="sub">Aucun objet revendable.</p>'}</div>`
@@ -1367,13 +1510,77 @@ function sellLoot(id){
  $('#sheetBody').innerHTML=physicalShopHTML();bindShop()
 }
 function bindShop(){
- bindHousingButtons();
+ $$('.inspectProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){selectedProperty=p;openSheet('property')}});
  $$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));
  $$('.sellLoot').forEach(b=>b.onclick=()=>sellLoot(b.dataset.id));
  $$('.sellArtifact').forEach(b=>b.onclick=()=>sellArtifact(b.dataset.id));
  $('#leaveShop').onclick=()=>{closeSheet();leaveInterior()}
 }
 
+
+
+function propertyLabel(p){return `${PROPERTY_TYPES[p.type]?.name||'Logement'} ${p.area} m²`}
+function propertyCreditUse(amount){
+ const used=Math.min(state.propertyCredit||0,amount);state.propertyCredit=(state.propertyCredit||0)-used;return amount-used
+}
+function rentProperty(p){
+ if(portfolioRecord(p.id))return toast('Ce bien est déjà dans ton portefeuille.');
+ const cost=propertyCreditUse(p.rent);
+ if(state.coins<cost){state.propertyCredit=(state.propertyCredit||0)+(p.rent-cost);return toast(`Il te manque ${cost-state.coins} crédits.`)}
+ const oldRent=state.propertyPortfolio.find(x=>x.id===state.residenceId&&x.tenure==='rent');
+ if(oldRent)state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==oldRent.id);
+ state.coins-=cost;
+ state.propertyPortfolio.push({...p,label:propertyLabel(p),tenure:'rent',marketRent:p.rent,listed:false,tenant:false,askingRent:p.rent});
+ state.residenceId=p.id;state.missedRent=0;save();toast(`🔑 ${propertyLabel(p)} loué • ${p.rent}/mois`);openSheet('home')
+}
+function buyProperty(p){
+ if(portfolioRecord(p.id))return toast('Bien déjà acquis.');
+ const cost=propertyCreditUse(p.buyPrice);
+ if(state.coins<cost){state.propertyCredit=(state.propertyCredit||0)+(p.buyPrice-cost);return toast(`Il te manque ${cost-state.coins} crédits.`)}
+ state.coins-=cost;
+ const rec={...p,label:propertyLabel(p),tenure:'owned',marketRent:p.rent,listed:false,tenant:false,askingRent:p.rent};
+ state.propertyPortfolio.push(rec);
+ if(!state.residenceId)state.residenceId=p.id;
+ save();toast(`🏠 ${propertyLabel(p)} acheté`);openSheet('home')
+}
+function setResidence(id){
+ const rec=portfolioRecord(id);if(!rec)return;
+ if(rec.tenure==='owned'&&rec.listed){rec.listed=false;rec.tenant=false}
+ const old=state.propertyPortfolio.find(x=>x.id===state.residenceId&&x.tenure==='rent'&&x.id!==id);
+ if(old)state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==old.id);
+ state.residenceId=id;state.missedRent=0;save();toast(`${rec.label} devient ta résidence.`);openSheet('home')
+}
+function endRental(id){
+ const rec=portfolioRecord(id);if(!rec||rec.tenure!=='rent')return;
+ state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==id);
+ if(state.residenceId===id)state.residenceId=null;save();toast('Bail résilié.');openSheet('home')
+}
+function adjustAskingRent(id,delta){
+ const rec=portfolioRecord(id);if(!rec||rec.tenure!=='owned')return;
+ rec.askingRent=Math.max(5,Math.round((rec.askingRent||rec.marketRent)+delta));rec.tenant=false;save();openSheet('home')
+}
+function togglePropertyListing(id){
+ const rec=portfolioRecord(id);if(!rec||rec.tenure!=='owned')return;
+ if(state.residenceId===id)return toast('Choisis d’abord une autre résidence.');
+ rec.listed=!rec.listed;if(rec.listed){rec.askingRent=rec.askingRent||rec.marketRent;rec.tenant=false}
+ else rec.tenant=false;
+ save();toast(rec.listed?'Bien proposé à la location.':'Annonce retirée.');openSheet('home')
+}
+function propertySheetHTML(p){
+ const d=DISTRICTS.find(x=>x.id===p.districtId)||districtFor(p.cx,p.cz),rec=portfolioRecord(p.id),t=PROPERTY_TYPES[p.type];
+ if(rec)return `<div class="card"><h3>${t.icon} ${propertyLabel(p)}</h3><p class="sub">${d.name} • ${districtTierLabel(d)} • ${p.rooms} pièce(s)</p><p class="sub">Valeur d’achat ${p.buyPrice} • loyer marché ${p.rent}/mois</p></div>
+ <div class="card"><button class="menuBtn green enterProperty" data-id="${p.id}" style="width:100%">🚪 Entrer dans le logement</button></div>`;
+ return `<div class="card"><h3>${t.icon} ${propertyLabel(p)}</h3><p class="sub">${d.name} • <span class="${districtTierClass(d)}">${districtTierLabel(d)}</span></p><p class="sub">${p.rooms} pièce(s) • ${p.area} m²</p></div>
+ <div class="card"><div class="marketRow"><div><b>Louer</b><small>${p.rent} crédits chaque mois</small></div><button class="menuBtn rentProperty" data-id="${p.id}">Louer</button></div>
+ <div class="marketRow"><div><b>Acheter</b><small>Paiement unique</small></div><button class="menuBtn buyProperty" data-id="${p.id}">${p.buyPrice}</button></div>
+ ${state.propertyCredit?`<p class="sub">Avoir logement disponible : ${state.propertyCredit} crédits.</p>`:''}</div>`
+}
+function housingAgencyHTML(){
+ const {cx,cz}=currentChunk(),curD=districtFor(cx,cz);
+ const list=state.propertyCatalog.filter(p=>p.cityId===state.cityId).sort((a,b)=>Math.hypot(a.cx-cx,a.cz-cz)-Math.hypot(b.cx-cx,b.cz-cz)).slice(0,12);
+ return `<div class="card"><h3>🔑 Marché immobilier</h3><p class="sub">${curD.name} • ${districtTierLabel(curD)}. Les prix changent réellement selon le quartier et la taille.</p></div>
+ ${list.length?list.map(p=>{const d=DISTRICTS.find(x=>x.id===p.districtId)||districtFor(p.cx,p.cz);return `<div class="card"><div class="marketRow"><div><b>${PROPERTY_TYPES[p.type].icon} ${propertyLabel(p)}</b><small>${d.name} • ${p.rent}/mois • achat ${p.buyPrice}</small></div><button class="menuBtn inspectProperty" data-id="${p.id}">Voir</button></div></div>`}).join(''):'<div class="card"><p class="sub">Explore les quartiers : les logements découverts apparaîtront ici.</p></div>'}`
+}
 
 function housingName(){
  return ['Sans logement','Studio loué','Appartement propriétaire','Maison sur terrain'][state.housingStage||0]
@@ -1398,10 +1605,10 @@ function buyLandProgression(){
 }
 function sleepRough(){
  if((state.housingStage||0)>0)return;
- state.hp=clamp(state.hp+22,0,state.maxHp);state.hygiene=clamp(state.hygiene-12,0,100);state.hunger=clamp(state.hunger-7,0,100);state.thirst=clamp(state.thirst-10,0,100);state.timeOfDay=7.2;save();toast('Tu as dormi dehors.');openSheet('home')
+ state.hp=clamp(state.hp+22,0,state.maxHp);state.hygiene=clamp(state.hygiene-12,0,100);state.hunger=clamp(state.hunger-7,0,100);state.thirst=clamp(state.thirst-10,0,100);advanceDay(1);state.timeOfDay=7.2;save();toast('Tu as dormi dehors.');openSheet('home')
 }
 function showerAtHome(){
- if((state.housingStage||0)<1)return toast('Tu n’as pas de douche.');
+ if(!state.residenceId)return toast('Tu n’as pas de douche.');
  state.hygiene=100;save();toast('🚿 Propreté restaurée.');openSheet('home')
 }
 function housingPanelHTML(){
@@ -1431,11 +1638,11 @@ function upgradeHome(){
  state.coins-=cost;state.homeLevel=next;save();toast(`Maison améliorée au niveau ${next}`);for(const[k]of[...chunks])unload(k);ensureChunks(true);openSheet('home')
 }
 function restAtHome(){
- if((state.housingStage||0)<1)return toast('Tu n’as pas de logement.');
+ if(!state.residenceId)return toast('Tu n’as pas de logement.');
  state.hp=state.maxHp;state.wanted=Math.max(0,state.wanted-2);state.timeOfDay=7.5;
- state.hunger=clamp(state.hunger-8,0,100);state.thirst=clamp(state.thirst-10,0,100);state.restCount=(state.restCount||0)+1;save();toast('Tu as dormi.');openSheet('home')
+ state.hunger=clamp(state.hunger-8,0,100);state.thirst=clamp(state.thirst-10,0,100);state.restCount=(state.restCount||0)+1;advanceDay(1);save();toast('Tu as dormi.');openSheet('home')
 }
-function depositCoins(amount=50){if((state.housingStage||0)<1)return toast('Aucun endroit sûr.');if(state.coins<amount)return toast('Pas assez de crédits sur toi');state.coins-=amount;state.homeBank+=amount;save();openSheet('home')}
+function depositCoins(amount=50){if(!state.residenceId)return toast('Aucun endroit sûr.');if(state.coins<amount)return toast('Pas assez de crédits sur toi');state.coins-=amount;state.homeBank+=amount;save();openSheet('home')}
 function withdrawCoins(amount=50){if(state.homeBank<amount)return toast('Pas assez dans le coffre');state.homeBank-=amount;state.coins+=amount;save();openSheet('home')}
 function depositValuable(id){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(!removeStack(state.inventory,id,1))return;state.homeStorage[id]=(state.homeStorage[id]||0)+1;save();openSheet('home')}
 function withdrawValuable(id){if((state.homeStorage[id]||0)<=0)return;if(invCount()>=state.bagMax)return toast('Sac plein');state.homeStorage[id]--;addInv(id);save();openSheet('home')}
@@ -1460,12 +1667,23 @@ function scan(){
  const max=state.scanner?140:70;if(art&&bd<max)toast(`Artefact ${bd<10?'TRÈS PROCHE':bd<30?'PROCHE':'DANS LE SECTEUR'} • ${Math.round(bd)} m`);else toast(`Scanner : ${state.scanner?'longue':'courte'} portée — aucun artefact détecté ici`)
 }
 
+
+function districtMapColor(d){
+ return d.tier==='poor'?'rgba(124,74,62,.16)':d.tier==='working'?'rgba(113,103,82,.13)':d.tier==='rich'?'rgba(67,122,82,.15)':d.tier==='luxury'?'rgba(126,111,64,.18)':'rgba(72,92,118,.12)'
+}
+
 function renderMapTo(canvas,zoom=2.0){
  if(!canvas)return;
  const q=canvas.getContext('2d'),W=canvas.width,H=canvas.height,S=zoom,R=W/(zoom*2.2);
  q.clearRect(0,0,W,H);q.fillStyle='#07111d';q.fillRect(0,0,W,H);q.save();q.translate(W/2,H/2);
  if(state.interior){q.fillStyle='#8594a0';q.fillRect(-W*.18,-H*.18,W*.36,H*.36);q.fillStyle='#fff';q.beginPath();q.arc(0,0,6,0,Math.PI*2);q.fill();q.restore();return}
- q.strokeStyle='#47555e';q.lineWidth=11*(zoom/2);const minCx=Math.floor((state.pos.x-R)/CHUNK)-1,maxCx=Math.floor((state.pos.x+R)/CHUNK)+1,minCz=Math.floor((state.pos.z-R)/CHUNK)-1,maxCz=Math.floor((state.pos.z+R)/CHUNK)+1;
+ const minCx0=Math.floor((state.pos.x-R)/CHUNK)-1,maxCx0=Math.floor((state.pos.x+R)/CHUNK)+1,minCz0=Math.floor((state.pos.z-R)/CHUNK)-1,maxCz0=Math.floor((state.pos.z+R)/CHUNK)+1;
+ for(let cx=minCx0;cx<=maxCx0;cx++)for(let cz=minCz0;cz<=maxCz0;cz++){
+   const d=districtFor(cx,cz),x=(cx*CHUNK-state.pos.x)*S,y=(cz*CHUNK-state.pos.z)*S;
+   q.fillStyle=districtMapColor(d);q.fillRect(x,y,CHUNK*S,CHUNK*S);
+   if(W>300&&zoom>.30){q.fillStyle='#a9becd';q.font='11px system-ui';q.fillText(d.name,x+5,y+15)}
+ }
+ q.strokeStyle='#47555e';q.lineWidth=Math.max(2,11*(zoom/2));const minCx=Math.floor((state.pos.x-R)/CHUNK)-1,maxCx=Math.floor((state.pos.x+R)/CHUNK)+1,minCz=Math.floor((state.pos.z-R)/CHUNK)-1,maxCz=Math.floor((state.pos.z+R)/CHUNK)+1;
  for(let cx=minCx;cx<=maxCx;cx++){const x=(cx*CHUNK-state.pos.x)*S;q.beginPath();q.moveTo(x,-H);q.lineTo(x,H);q.stroke()}for(let cz=minCz;cz<=maxCz;cz++){const y=(cz*CHUNK-state.pos.z)*S;q.beginPath();q.moveTo(-W,y);q.lineTo(W,y);q.stroke()}
  q.fillStyle='#6a7680';for(const b of colliders){const x=(b.minX-state.pos.x)*S,y=(b.minZ-state.pos.z)*S,w=(b.maxX-b.minX)*S,h=(b.maxZ-b.minZ)*S;if(Math.abs(x)>W||Math.abs(y)>H)continue;q.fillRect(x,y,w,h)}
  q.fillStyle='#63e2b0';
@@ -1477,7 +1695,16 @@ function renderMapTo(canvas,zoom=2.0){
      if(W>300){q.fillStyle='#bdf5dc';q.font='13px system-ui';q.fillText(SHOPS[s.type]?.name||'Boutique',dx+7,dz-5);q.fillStyle='#63e2b0'}
    }
  }
+ q.fillStyle='#d6a7ff';
+ for(const p of state.propertyCatalog.filter(p=>p.cityId===state.cityId)){
+   const dx=(p.x-state.pos.x)*S,dz=(p.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){
+     q.fillRect(dx-3,dz-3,6,6);
+     if(W>300&&zoom>.38){q.fillStyle='#ead8ff';q.font='10px system-ui';q.fillText(`${PROPERTY_TYPES[p.type]?.name||'Bien'} ${p.rent}/m`,dx+6,dz+10);q.fillStyle='#d6a7ff'}
+   }
+ }
  q.fillStyle='#f0cf63';for(const h of homePlots){const hx=h.centerX??h.x,hz=h.centerZ??h.z,dx=(hx-state.pos.x)*S,dz=(hz-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.fillRect(dx-4*(zoom/2),dz-4*(zoom/2),8*(zoom/2),8*(zoom/2))}}
+ const res=state.residenceId?propertyFromCatalog(state.residenceId):null;
+ if(res){const dx=(res.x-state.pos.x)*S,dz=(res.z-state.pos.z)*S;q.strokeStyle='#ffd45c';q.lineWidth=3;q.beginPath();q.arc(dx,dz,8,0,Math.PI*2);q.stroke()}
  q.fillStyle='#ff6c7e';for(const e of enemies){const dx=(e.group.position.x-state.pos.x)*S,dz=(e.group.position.z-state.pos.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){q.beginPath();q.arc(dx,dz,3*(zoom/2),0,Math.PI*2);q.fill()}}
  q.fillStyle='#4ea8ff';for(const p of police){
    const dx=(p.group.position.x-state.pos.x)*S,dz=(p.group.position.z-state.pos.z)*S;
@@ -1492,7 +1719,7 @@ function renderMapTo(canvas,zoom=2.0){
  if(selectedNPC?.group?.parent){const dx=(selectedNPC.group.position.x-state.pos.x)*S,dz=(selectedNPC.group.position.z-state.pos.z)*S;q.strokeStyle='#8ee8ff';q.lineWidth=2*(zoom/2);q.beginPath();q.arc(dx,dz,6*(zoom/2),0,Math.PI*2);q.stroke()}
  q.rotate(state.yaw);q.fillStyle='#fff';q.beginPath();q.moveTo(0,-8*(zoom/2));q.lineTo(5*(zoom/2),6*(zoom/2));q.lineTo(0,3*(zoom/2));q.lineTo(-5*(zoom/2),6*(zoom/2));q.closePath();q.fill();q.restore()
 }
-function drawMap(){renderMapTo($('#minimap'),1.15);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),.62)}
+function drawMap(){renderMapTo($('#minimap'),1.08);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),bigMapZoom);const z=$('#mapZoomLabel');if(z)z.textContent=`${Math.round(bigMapZoom/.55*100)}%`}
 function emergencyExit(){
  if(!state.interior)return;
  leaveInterior();toast('Retour dans la rue.')
@@ -1501,16 +1728,21 @@ function updateHUD(){
  const {cx,cz}=currentChunk(),d=districtFor(cx,cz),aq=activeQuest(),prog=Math.min(aq.target,progress(aq.goal));$('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;$('#level').textContent=state.level;$('#wanted').textContent=state.wanted;
  $('#hungerVal').textContent=Math.round(state.hunger);$('#thirstVal').textContent=Math.round(state.thirst);$('#hygieneVal').textContent=Math.round(state.hygiene);
  $('#hungerBar').style.width=`${state.hunger}%`;$('#thirstBar').style.width=`${state.thirst}%`;$('#hygieneBar').style.width=`${state.hygiene}%`;
- $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
+ $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()} • M${state.gameMonth} J${state.gameDay}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
  const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️',period=state.timeOfDay<6||state.timeOfDay>20?'NUIT':state.timeOfDay<9?'MATIN':state.timeOfDay>17?'SOIR':'JOUR';$('#weatherChip').textContent=`${icon} ${period}`;
  maybeCompleteNpcMission();updateTargetHUD();updateFollowerCard()
 }
 
 
 function setupMapUI(){
- const open=()=>{$('#mapOverlay').classList.remove('hidden');drawMap()};
- const close=()=>$('#mapOverlay').classList.add('hidden');
- $('#mapExpandBtn').onclick=open;$('#minimap').onclick=open;$('#closeMapOverlay').onclick=close;$('#mapOverlay').onclick=e=>e.target===$('#mapOverlay')&&close()
+ const open=()=>{$('#mapOverlay').classList.remove('hidden');drawMap()},close=()=>$('#mapOverlay').classList.add('hidden');
+ $('#mapExpandBtn').onclick=open;$('#minimap').onclick=open;$('#closeMapOverlay').onclick=close;$('#mapOverlay').onclick=e=>e.target===$('#mapOverlay')&&close();
+ const change=f=>{bigMapZoom=clamp(bigMapZoom*f,.18,2.2);drawMap()};
+ $('#mapZoomIn').onclick=()=>change(1.25);$('#mapZoomOut').onclick=()=>change(.8);
+ const map=$('#bigMinimap');map.addEventListener('wheel',e=>{e.preventDefault();change(e.deltaY<0?1.12:.89)},{passive:false});
+ let pinchDist=0;
+ map.addEventListener('touchstart',e=>{if(e.touches.length===2)pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)},{passive:true});
+ map.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(pinchDist){change(d/pinchDist);pinchDist=d}}},{passive:false})
 }
 function setupDesktopControls(){
  document.addEventListener('keydown',e=>{
@@ -1541,21 +1773,28 @@ function makeJoy(baseSel,knobSel,target){
 makeJoy('#moveJoy','#moveKnob',moveStick);makeJoy('#lookJoy','#lookKnob',lookStick);
 
 function openSheet(panel){
- $('#sheet').classList.remove('hidden');$$('.nav').forEach(n=>n.classList.toggle('active',n.dataset.panel===panel));const t=$('#sheetTitle'),b=$('#sheetBody');
+ $('#sheet').classList.remove('hidden');
+ $$('.nav').forEach(n=>n.classList.toggle('active',n.dataset.panel===panel));
+ const t=$('#sheetTitle'),b=$('#sheetBody');
  if(panel==='world'){t.textContent='Monde';b.innerHTML=worldHTML()}
  if(panel==='bag'){t.textContent='Inventaire';b.innerHTML=bagHTML()}
- if(panel==='home'){t.textContent='Base';b.innerHTML=homeHTML()}
+ if(panel==='home'){t.textContent='Immobilier';b.innerHTML=homeHTML()}
  if(panel==='quests'){t.textContent='Quêtes';b.innerHTML=questsHTML()}
  if(panel==='districts'){t.textContent='Quartiers';b.innerHTML=districtHTML()}
  if(panel==='settings'){t.textContent='Réglages';b.innerHTML=settingsHTML()}
  if(panel==='physicalShop'){t.textContent=SHOPS[state.interior.shopType].name;b.innerHTML=physicalShopHTML()}
+ if(panel==='property'&&selectedProperty){t.textContent='Immobilier';b.innerHTML=propertySheetHTML(selectedProperty)}
  bindSheet(panel)
 }
-function worldHTML(){return `<div class="card"><h3>Exploration chill</h3><p class="sub">Explore sans chronomètre. Les quartiers se chargent au fur et à mesure, avec voitures, habitants, boutiques, appartements, parcs, terrain personnel et secrets.</p></div><div class="card"><h3>Voyager</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div>`}
+function worldHTML(){
+ return `<div class="card"><h3>Vie urbaine</h3><p class="sub">Explore des quartiers pauvres, populaires, centraux, aisés et très riches. Les prix, la sécurité, les logements et le niveau de vie changent réellement.</p></div>
+ <div class="card"><h3>Voyager</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div>`
+}
 function bagHTML(){
  const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join('');
  const inv=state.inventory.length?state.inventory.map(i=>{
-   const info=itemInfo(i.id),use=CONSUMABLES[i.id]?`<button class="menuBtn useConsumable" data-id="${i.id}">Utiliser</button>`:i.id==='medkit'?'<button class="menuBtn useMed">Utiliser</button>':'';
+   const info=itemInfo(i.id);
+   const use=CONSUMABLES[i.id]?`<button class="menuBtn useConsumable" data-id="${i.id}">Utiliser</button>`:i.id==='medkit'?'<button class="menuBtn useMed">Utiliser</button>':'';
    return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty}${info.value?` • revente ${info.value}`:''}</small></div>${use}</div>`
  }).join(''):'<p class="sub">Sac vide.</p>';
  const arts=[...new Set(state.artifactBag)];
@@ -1564,31 +1803,51 @@ function bagHTML(){
  <div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${inv}</div>
  <div class="card"><h3>Artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • 500 crédits</small></div></div>`).join(''):'<p class="sub">Aucun artefact.</p>'}</div>`
 }
-function questsHTML(){return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`}
-function districtHTML(){const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);return `<div class="card"><h3>${d.name}</h3><p class="sub">${d.bonus}</p><p class="sub">${state.ownedDistricts.includes(id)?'✅ Quartier sécurisé':'Explore une cache puis sécurise le quartier.'}</p><button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ Sécuriser ce quartier</button></div><div class="card"><h3>Conquête</h3><p class="sub">${state.ownedDistricts.length} quartiers sécurisés au total. Ta base te permet de sécuriser tes gains pendant l’aventure.</p></div>`}
-function settingsHTML(){return `<div class="card"><h3>StreetQuest V11.3</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>
-<div class="card"><h3>Survie</h3><p class="sub">🍗 faim • 💧 soif • 🧼 propreté. Quand faim ou soif tombent à zéro, tes PV commencent à diminuer.</p></div>
-<div class="card"><h3>Progression logement</h3><p class="sub">Sans logement → studio loué → appartement acheté → terrain + maison.</p></div>
-<div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
+function questsHTML(){
+ return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>
+ ${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}
+ ${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`
+}
+function districtHTML(){
+ const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);
+ return `<div class="card"><h3>${d.name}</h3><p class="sub"><span class="${districtTierClass(d)}">${districtTierLabel(d)}</span> • richesse ${Math.round(d.wealth*100)}%</p>
+ <p class="sub">${d.bonus}</p>
+ <p class="sub">Immobilier : loyers ×${d.rentMult.toFixed(2)} • achat ×${d.buyMult.toFixed(2)}</p>
+ <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
+ <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
+}
+function settingsHTML(){
+ return `<div class="card"><h3>StreetQuest V12</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>
+ <div class="card"><h3>Immobilier</h3><p class="sub">Les loyers sont débités chaque mois. Un bien acheté est payé une seule fois puis peut devenir ta résidence ou être loué à un PNJ.</p></div>
+ <div class="card"><h3>Carte</h3><p class="sub">Grande carte : +/−, molette sur PC ou pincement à deux doigts.</p></div>
+ <div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`
+}
 function bindSheet(panel){
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
- if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed);$$('.useConsumable').forEach(b=>b.onclick=()=>useConsumable(b.dataset.id))}
- if(panel==='home'){
-   bindHousingButtons();
-   const rough=$('#sleepRough');if(rough)rough.onclick=sleepRough;
-   const shower=$('#showerHome');if(shower)shower.onclick=showerAtHome;
-   const buyBtn=$('#buyLandBtn'); if(buyBtn)buyBtn.onclick=buyLand;
-   const enterBtn=$('#enterHomeBtn'); if(enterBtn)enterBtn.onclick=()=>{closeSheet();enterInterior('home',{})};
-   const up=$('#upgradeHome'); if(up)up.onclick=upgradeHome;
-   const rest=$('#restHome'); if(rest)rest.onclick=restAtHome;
-   $$('.placeHome').forEach(b=>b.onclick=()=>placeHomeItem(b.dataset.id));
-   const storeBtn=$('#storeAllHome'); if(storeBtn)storeBtn.onclick=storeAllHome;
-   $$('.deposit50').forEach(b=>b.onclick=()=>depositCoins(50));$$('.withdraw50').forEach(b=>b.onclick=()=>withdrawCoins(50));
-   $$('.depositMed').forEach(b=>b.onclick=depositMedkit);$$('.withdrawMed').forEach(b=>b.onclick=withdrawMedkit);$$('.depositLoot').forEach(b=>b.onclick=()=>depositValuable(b.dataset.id));$$('.withdrawLoot').forEach(b=>b.onclick=()=>withdrawValuable(b.dataset.id))
+ if(panel==='bag'){
+   $$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});
+   $$('.useMed').forEach(b=>b.onclick=useMed);
+   $$('.useConsumable').forEach(b=>b.onclick=()=>useConsumable(b.dataset.id))
  }
- if(panel==='districts'){const x=$('#secureDistrict'); if(x)x.onclick=secureDistrict}
- if(panel==='settings'){const u=$('#forceUpdate');if(u)u.onclick=()=>window.streetQuestUpdate?.();$('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v11');location.reload()}}};
- if(panel==='physicalShop')bindShop()
+ if(panel==='home'){
+   const rough=$('#sleepRough');if(rough)rough.onclick=sleepRough;
+   $$('.setResidence').forEach(b=>b.onclick=()=>setResidence(b.dataset.id));
+   $$('.endRental').forEach(b=>b.onclick=()=>endRental(b.dataset.id));
+   $$('.toggleListing').forEach(b=>b.onclick=()=>togglePropertyListing(b.dataset.id));
+   $$('.adjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta)))
+ }
+ if(panel==='districts'){const x=$('#secureDistrict');if(x)x.onclick=secureDistrict}
+ if(panel==='settings'){
+   const u=$('#forceUpdate');if(u)u.onclick=()=>window.streetQuestUpdate?.();
+   $('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v12');location.reload()}}
+ }
+ if(panel==='physicalShop')bindShop();
+ if(panel==='property'){
+   $$('.rentProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)rentProperty(p)});
+   $$('.buyProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)buyProperty(p)});
+   $$('.enterProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){closeSheet();enterInterior('property',p)}})
+ }
+ $$('.inspectProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){selectedProperty=p;openSheet('property')}})
 }
 function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();toast(`Bienvenue à ${city().name}`)}
 function useMed(){const x=state.inventory.find(i=>i.id==='medkit');if(!x)return toast('Aucun kit');if(state.hp>=state.maxHp)return toast('PV déjà au maximum');x.qty--;state.hp=clamp(state.hp+40,0,state.maxHp);if(x.qty<=0)state.inventory=state.inventory.filter(i=>i!==x);save();openSheet('bag')}

@@ -85,3 +85,11 @@ button,.joystick,.knob,.actionCircle,.nav{touch-action:none!important}
 .robFollowerBtn{width:100%;min-height:36px;border-radius:10px;border:1px solid #4b6375;background:#162b39;color:#b8c8d4;font-size:9px;font-weight:900}
 .robFollowerBtn.ready{background:#6d2532;border-color:#d1586d;color:#fff}
 @media(max-width:380px){.followerCard{width:158px;top:calc(198px + var(--safe-top))}}
+
+.mapZoomBar{display:flex;align-items:center;justify-content:center;gap:12px;margin:4px 0 10px}
+.mapZoomBar .roundBtn{width:38px;height:38px}.mapZoomBar span{min-width:62px;text-align:center;font-size:11px;font-weight:900;color:#d9f1ff}
+.propertyTag{font-size:9px;padding:3px 6px;border-radius:999px;border:1px solid #35556c;background:#10202d;color:#cce4f3}
+.propertyPrice{font-size:12px;font-weight:900;color:#9fe9c6}
+.marketRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid #203444}
+.marketRow:last-child{border-bottom:0}
+.districtPoor{color:#ffb7a6}.districtMid{color:#d9e1e8}.districtRich{color:#a8e8c5}.districtLuxury{color:#ffe7a2}

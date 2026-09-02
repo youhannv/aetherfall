@@ -404,3 +404,84 @@ La partie démarre avec 0 crédit et aucun logement.
 ## Sauvegarde
 La sauvegarde reste `sq3d-v11`.
 Seul le plan de boutiques est migré ; argent, logement, inventaire et progression sont conservés.
+
+
+# V12 — City Life / Immobilier
+
+## Quartiers socio-économiques
+- Les Docks : pauvre, très dense, immobilier bon marché, plus de délinquance, peu de police.
+- Quartier Populaire : modeste, loyers accessibles, beaucoup de petits immeubles/maisons.
+- Centre : prix moyens/élevés, commerces et densité.
+- Quartier des Jardins : aisé, plus de maisons, moins de délinquance, davantage de police.
+- Les Hauteurs : très riche, villas, habitants avec plus d’argent/objets, forte présence policière.
+- Faubourg des Ateliers : modeste/industriel.
+
+Les quartiers sont générés par zones de plusieurs chunks pour éviter l’effet damier.
+
+## Immobilier
+Chaque porte immobilière correspond à un vrai bien physique déterministe :
+- studio
+- T2
+- T3
+- maison
+- villa
+
+Les surfaces, le nombre de pièces, les loyers et prix d’achat varient selon :
+- le type de bien
+- sa surface
+- son quartier
+- le niveau de richesse du secteur
+
+## Location
+- premier loyer payé à l’entrée
+- ensuite loyer prélevé chaque mois
+- priorité à l’épargne du logement, puis aux crédits portés
+- deux loyers impayés entraînent une expulsion
+
+## Achat
+- paiement unique
+- le bien reste dans le patrimoine
+- possibilité d’y vivre
+- possibilité de le mettre en location
+- loyer demandé ajustable par pas de 10 crédits
+- un prix trop élevé réduit la probabilité de trouver/garder un locataire
+- loyers encaissés chaque mois dans l’épargne
+
+## Temps
+- calendrier 30 jours par mois
+- dormir fait avancer d’un jour
+- passage naturel de minuit fait aussi avancer le calendrier
+- bilan mensuel affiché dans Base
+
+## Intérieurs physiques
+La taille 3D dépend réellement du logement :
+- studio petit
+- T2 moyen
+- T3 plus grand
+- maison
+- grande villa
+
+## Carte
+- boutons + / -
+- zoom à la molette sur PC
+- pincement sur mobile
+- couleurs de quartier
+- logements découverts
+- loyers visibles sur la grande carte
+- résidence actuelle entourée en jaune
+
+## Population / sécurité
+Les habitants des quartiers riches ont statistiquement :
+- plus d’argent
+- davantage d’objets
+- plus de police autour d’eux
+
+Les quartiers pauvres ont :
+- moins d’argent moyen
+- davantage de délinquance
+- moins de policiers
+
+## Migration
+V12 utilise `sq3d-v12`.
+Au premier lancement, une sauvegarde V11 existante est importée.
+Les anciens achats logement sont transformés en avoir immobilier afin de ne pas perdre la valeur déjà dépensée.
