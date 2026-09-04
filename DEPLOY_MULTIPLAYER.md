@@ -27,3 +27,6 @@ L’URL est mémorisée sur l’appareil.
 
 ## Important
 Cette V15 synchronise la présence, les positions, le chat et les émotes. La progression économique reste encore enregistrée localement sur chaque appareil. Pour une vraie économie multijoueur inviolable et persistante, la prochaine étape est une base serveur (PostgreSQL/Supabase) avec argent, propriétés, inventaires et PNJ validés côté serveur.
+
+
+V18: remplacer aussi `server/server.js` et `server/package.json`, puis laisser Render redéployer. Le serveur V18 transporte désormais `interior` et la synchronisation renforcée des skins.

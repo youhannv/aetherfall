@@ -191,3 +191,14 @@ body{background:radial-gradient(circle at top,#10263c 0%,#07111a 45%,#040910 100
 .targetCard,.followerCard{top:calc(185px + var(--safe-top))!important;background:#0a1117ec!important;border-color:rgba(255,255,255,.12)!important;box-shadow:0 12px 32px #0007!important}
 @media(max-width:380px){.v17MapWrap{width:98px}.v17MapWrap #minimap{width:96px;height:96px}.v17MapWrap .gpsChip{max-width:96px;font-size:7px}.v17Prompt{width:calc(100% - 112px)}.v17Controls .joystick{width:84px;height:84px}.v17Controls .knob{left:23px;top:23px;width:36px;height:36px}.agendaRow{grid-template-columns:72px 1fr auto}.timeCluster{padding:4px 7px}.v17Top .roundBtn{width:34px;height:34px}.v17Top .brand small{max-width:27vw}}
 @media(min-width:700px){#app{max-width:none!important;margin:0!important;border:0!important}.sheet{left:50%!important;transform:translateX(-50%)!important;max-width:620px!important}.v17Controls{padding:0 22%}.v17Prompt{width:390px}}
+
+/* V18 City & Physics */
+.mapLegendV18{display:flex;flex-wrap:wrap;gap:7px 12px;justify-content:center}
+.mapLegendV18 span{font-size:10px;color:#b9cad7;display:inline-flex;align-items:center;gap:4px}
+.mapLegendV18 b{font-size:12px}
+.propertyNav{display:flex;flex-direction:column;gap:10px}
+.propertyNav>div:first-child{display:flex;flex-direction:column;gap:2px}
+.policeChip{min-width:0!important;padding-left:10px!important;padding-right:10px!important}
+
+/* V18.1 — Urban block polish */
+.mapLegendV18 span:last-child{opacity:.72}
