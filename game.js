@@ -96,6 +96,39 @@ SHOPS.home={name:'Maison & Co',icon:'🪑',stock:[
   {id:'wardrobe',name:'Armoire',icon:'🧰',price:175,desc:'Grand rangement'}
 ]};
 
+
+const AVATAR_DEFAULT={
+ skin:'#c89570',hair:'#2b211b',hairStyle:'short',
+ top:'#355f8a',pants:'#202a34',shoes:'#11151a',
+ accessory:'none',build:'standard'
+};
+const COSMETIC_ITEMS={
+ cap_black:{id:'cap_black',name:'Casquette noire',icon:'🧢',price:55,kind:'accessory',value:'cap'},
+ glasses_black:{id:'glasses_black',name:'Lunettes urbaines',icon:'🕶️',price:70,kind:'accessory',value:'glasses'},
+ backpack_city:{id:'backpack_city',name:'Sac NeoCity',icon:'🎒',price:90,kind:'accessory',value:'backpack'},
+ top_red:{id:'top_red',name:'Veste rouge',icon:'🧥',price:85,kind:'top',value:'#9b3d4a'},
+ top_purple:{id:'top_purple',name:'Veste violette',icon:'🧥',price:110,kind:'top',value:'#6553a8'},
+ top_black:{id:'top_black',name:'Veste noire',icon:'🧥',price:125,kind:'top',value:'#202733'},
+ shoes_white:{id:'shoes_white',name:'Sneakers blanches',icon:'👟',price:80,kind:'shoes',value:'#e7edf1'}
+};
+function normalizedAvatar(a={}){
+ const okHex=v=>/^#[0-9a-fA-F]{6}$/.test(v||'');
+ const hairStyles=['short','buzz','long','curly'],accessories=['none','cap','glasses','backpack'],builds=['slim','standard','strong'];
+ return{
+  skin:okHex(a.skin)?a.skin:AVATAR_DEFAULT.skin,
+  hair:okHex(a.hair)?a.hair:AVATAR_DEFAULT.hair,
+  hairStyle:hairStyles.includes(a.hairStyle)?a.hairStyle:'short',
+  top:okHex(a.top)?a.top:AVATAR_DEFAULT.top,
+  pants:okHex(a.pants)?a.pants:AVATAR_DEFAULT.pants,
+  shoes:okHex(a.shoes)?a.shoes:AVATAR_DEFAULT.shoes,
+  accessory:accessories.includes(a.accessory)?a.accessory:'none',
+  build:builds.includes(a.build)?a.build:'standard'
+ }
+}
+function avatarPayload(){return normalizedAvatar(state.avatar)}
+
+SHOPS.clothes={name:'NeoStyle',icon:'👕',stock:Object.values(COSMETIC_ITEMS).map(x=>({id:x.id,name:x.name,icon:x.icon,price:x.price,desc:'Apparence multijoueur'}))};
+
 const EDUCATION_PROGRAMS={
  vocational:{id:'vocational',name:'Certificat technique',icon:'🔧',cost:90,days:8,desc:'Nécessaire pour devenir mécanicien.'},
  police:{id:'police',name:'Académie de police',icon:'👮',cost:150,days:12,desc:'Formation pour intégrer la police.'},
@@ -170,12 +203,12 @@ const base={
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
  landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:120,
- gameDay:1,gameMonth:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0
+ gameDay:1,gameMonth:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
 function loadState(){
  try{
-   let raw=JSON.parse(localStorage.getItem('sq3d-v15')||'null');
+   let raw=JSON.parse(localStorage.getItem('sq3d-v16')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v15')||'null');
    let migrated=false;
    if(!raw){raw=JSON.parse(localStorage.getItem('sq3d-v12')||'null');migrated=!!raw}
    if(!raw){raw=JSON.parse(localStorage.getItem('sq3d-v11')||'{}');migrated=!!Object.keys(raw).length}
@@ -184,7 +217,7 @@ function loadState(){
      pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},
      homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[],artifactBag:raw.artifactBag||[],discoveredShops:raw.discoveredShops||[],
      propertyCatalog:raw.propertyCatalog||[],propertyPortfolio:raw.propertyPortfolio||[],
-     education:{current:null,completed:[],...(raw.education||{})},companies:{...freshCompanies(),...(raw.companies||{})},salaryHistory:raw.salaryHistory||[]
+     education:{current:null,completed:[],...(raw.education||{})},companies:{...freshCompanies(),...(raw.companies||{})},salaryHistory:raw.salaryHistory||[],avatar:normalizedAvatar(raw.avatar||AVATAR_DEFAULT),avatarCreated:!!raw.avatarCreated,cosmeticsUnlocked:raw.cosmeticsUnlocked||[]
    };
    if(loaded.interior){loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)?{x:raw.returnPos.x,z:raw.returnPos.z}:{...base.pos};loaded.interior=null;loaded.returnPos=null}
    if(migrated&&raw.housingStage){loaded.propertyCredit=(loaded.propertyCredit||0)+(raw.housingStage===1?180:raw.housingStage===2?1030:raw.housingStage>=3?2830:0);loaded.housingStage=0;loaded.landOwned=false}
@@ -194,7 +227,7 @@ function loadState(){
 function save(){
  const snapshot={...state};
  if(state.interior){snapshot.pos=state.returnPos?{...state.returnPos}:{...base.pos};snapshot.interior=null;snapshot.returnPos=null}
- localStorage.setItem('sq3d-v15',JSON.stringify(snapshot))
+ localStorage.setItem('sq3d-v16',JSON.stringify(snapshot))
 }
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
@@ -225,56 +258,146 @@ function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.i
 function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
 
 let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],properties=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],clouds=[],starSystem=null,ambientGlowSystem=null;
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0;
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpStatusMessage='Hors ligne',mpRoomCount=0;
 
 
-function mpServerUrl(){return (localStorage.getItem('sq-mp-url')||window.STREETQUEST_DEFAULT_SERVER||'https://streetquest-multiplayer.onrender.com').trim().replace(/\/$/,'')}
+function mpServerUrl(){return 'https://streetquest-multiplayer.onrender.com'}
 function mpNickname(){return (localStorage.getItem('sq-mp-name')||'Joueur'+Math.floor(100+Math.random()*900)).slice(0,18)}
 function makeRemoteName(text){const c=document.createElement('canvas');c.width=256;c.height=64;const q=c.getContext('2d');q.fillStyle='rgba(5,16,25,.8)';q.fillRect(8,8,240,48);q.fillStyle='#dff7ff';q.font='700 24px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(text,128,32);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));s.scale.set(2.8,.7,1);s.position.y=2.45;return s}
-function createRemoteAvatar(p){if(!scene||remotePlayers.has(p.id))return;const g=new THREE.Group();const mat=new THREE.MeshStandardMaterial({color:p.color||0x5fa7d8,roughness:.78});const skin=new THREE.MeshStandardMaterial({color:0xc89570,roughness:.9});const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28,.75,5,8),mat);body.position.y=1.04;g.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.25,12,10),skin);head.position.y=1.76;g.add(head);for(const sx of [-.34,.34]){const a=new THREE.Mesh(new THREE.BoxGeometry(.13,.58,.13),skin);a.position.set(sx,1.02,0);g.add(a)}for(const sx of [-.13,.13]){const l=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),new THREE.MeshStandardMaterial({color:0x202a34}));l.position.set(sx,.38,0);g.add(l)}g.add(makeRemoteName(p.name||'Joueur'));g.position.set(p.x||0,0,p.z||0);scene.add(g);remotePlayers.set(p.id,{group:g,targetX:p.x||0,targetZ:p.z||0,targetYaw:p.yaw||0,name:p.name})}
-function removeRemoteAvatar(id){const r=remotePlayers.get(id);if(r?.group?.parent)scene.remove(r.group);remotePlayers.delete(id)}
-function updateRemotePlayers(dt){for(const r of remotePlayers.values()){r.group.position.x+=(r.targetX-r.group.position.x)*Math.min(1,dt*10);r.group.position.z+=(r.targetZ-r.group.position.z)*Math.min(1,dt*10);let dy=((r.targetYaw-r.group.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI;r.group.rotation.y+=dy*Math.min(1,dt*10);r.group.visible=!state.interior}}
-function addChatLine(name,msg,system=false){const box=$('#chatMessages');if(!box)return;const p=document.createElement('p');p.className=system?'system':'';p.innerHTML=system?msg:`<b>${String(name).replace(/[<>]/g,'')}</b> : ${String(msg).replace(/[<>]/g,'')}`;box.appendChild(p);while(box.children.length>30)box.removeChild(box.firstChild);box.scrollTop=box.scrollHeight}
-function setMpStatus(ok,count=0){const b=$('#onlineBtn');if(b)b.classList.toggle('connected',ok);const c=$('#onlineCount');if(c)c.textContent=ok?count:0}
+function buildRemoteAvatarMesh(p){
+ const a=normalizedAvatar(p.avatar||{}),g=new THREE.Group();
+ const skin=new THREE.MeshStandardMaterial({color:a.skin,roughness:.92});
+ const top=new THREE.MeshStandardMaterial({color:a.top,roughness:.78});
+ const pants=new THREE.MeshStandardMaterial({color:a.pants,roughness:.88});
+ const shoes=new THREE.MeshStandardMaterial({color:a.shoes,roughness:.94});
+ const hairM=new THREE.MeshStandardMaterial({color:a.hair,roughness:.95});
+ const scaleX=a.build==='strong'?1.13:a.build==='slim'?.90:1;
+
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28*scaleX,.75,5,8),top);body.position.y=1.04;g.add(body);
+ const shoulder=new THREE.Mesh(new THREE.BoxGeometry(.70*scaleX,.17,.28),top);shoulder.position.y=1.34;g.add(shoulder);
+ const neck=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.11,10),skin);neck.position.y=1.50;g.add(neck);
+ const head=new THREE.Mesh(new THREE.SphereGeometry(.25,16,14),skin);head.position.y=1.76;g.add(head);
+
+ if(a.hairStyle!=='buzz'){
+   const hair=new THREE.Mesh(new THREE.SphereGeometry(.258,14,11),hairM);
+   hair.scale.set(1,a.hairStyle==='long'?.82:a.hairStyle==='curly'?.70:.55,1);
+   hair.position.set(0,a.hairStyle==='long'?1.86:1.91,.015);g.add(hair)
+ }else{
+   const hair=new THREE.Mesh(new THREE.SphereGeometry(.255,14,11),hairM);hair.scale.y=.25;hair.position.set(0,1.94,.01);g.add(hair)
+ }
+
+ const fc=document.createElement('canvas');fc.width=96;fc.height=96;const f=fc.getContext('2d');
+ f.fillStyle='#14181c';f.beginPath();f.arc(31,39,5,0,Math.PI*2);f.arc(65,39,5,0,Math.PI*2);f.fill();
+ f.strokeStyle='#74404a';f.lineWidth=5;f.beginPath();f.moveTo(35,66);f.quadraticCurveTo(48,72,61,66);f.stroke();
+ const ft=new THREE.CanvasTexture(fc);ft.colorSpace=THREE.SRGBColorSpace;
+ const face=new THREE.Mesh(new THREE.PlaneGeometry(.235,.235),new THREE.MeshBasicMaterial({map:ft,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
+ face.position.set(0,1.75,-.252);face.rotation.y=Math.PI;g.add(face);
+
+ for(const sx of [-.35,.35]){
+   const arm=new THREE.Mesh(new THREE.BoxGeometry(.12,.56,.12),skin);arm.position.set(sx*scaleX,1.02,0);g.add(arm)
+ }
+ for(const sx of [-.13,.13]){
+   const leg=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),pants);leg.position.set(sx,.38,0);g.add(leg);
+   const shoe=new THREE.Mesh(new THREE.BoxGeometry(.17,.09,.27),shoes);shoe.position.set(sx,.04,-.03);g.add(shoe)
+ }
+
+ if(a.accessory==='cap'){
+   const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.10,12),new THREE.MeshStandardMaterial({color:0x20252b,roughness:.9}));cap.position.y=1.99;g.add(cap)
+ }else if(a.accessory==='glasses'){
+   const gl=new THREE.Mesh(new THREE.BoxGeometry(.40,.08,.04),new THREE.MeshStandardMaterial({color:0x15191e,metalness:.25}));gl.position.set(0,1.78,-.235);g.add(gl)
+ }else if(a.accessory==='backpack'){
+   const bp=new THREE.Mesh(new THREE.BoxGeometry(.42,.52,.18),new THREE.MeshStandardMaterial({color:0x303944,roughness:.9}));bp.position.set(0,1.02,.27);g.add(bp)
+ }
+ g.add(makeRemoteName(p.name||'Joueur'));
+ return g
+}
+function createRemoteAvatar(p){
+ if(!scene||remotePlayers.has(p.id))return;
+ const g=buildRemoteAvatarMesh(p);g.position.set(p.x||0,0,p.z||0);g.rotation.y=p.yaw||0;scene.add(g);
+ remotePlayers.set(p.id,{group:g,targetX:p.x||0,targetZ:p.z||0,targetYaw:p.yaw||0,name:p.name,avatar:normalizedAvatar(p.avatar||{})})
+}
+function refreshRemoteAvatar(p){
+ const old=remotePlayers.get(p.id);if(!old)return createRemoteAvatar(p);
+ const pos=old.group.position.clone(),rot=old.group.rotation.y;scene.remove(old.group);remotePlayers.delete(p.id);
+ createRemoteAvatar({...p,x:pos.x,z:pos.z,yaw:rot});
+}
 function disconnectMultiplayer(){if(mpSocket){mpSocket.disconnect();mpSocket=null}for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);setMpStatus(false,0);addChatLine('', 'Mode solo.',true)}
-function connectMultiplayer(url=mpServerUrl(),name=mpNickname()){
- if(!window.io)return toast('Client multijoueur indisponible.');if(!url)return toast('Renseigne l’URL du serveur dans Réglages.');disconnectMultiplayer();localStorage.setItem('sq-mp-url',url);localStorage.setItem('sq-mp-name',name);
- mpSocket=window.io(url,{transports:['websocket','polling'],timeout:8000});
- mpSocket.on('connect',()=>{mpSocket.emit('player:join',{name,city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,color:0x5fa7d8});addChatLine('',`Connecté comme ${name}.`,true)});
- mpSocket.on('world:players',list=>{for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);for(const p of list||[])if(p.id!==mpSocket.id)createRemoteAvatar(p);setMpStatus(true,(list||[]).length)});
- mpSocket.on('player:joined',p=>{if(p.id!==mpSocket.id)createRemoteAvatar(p);addChatLine('',`${p.name} arrive dans la ville.`,true)});
+function connectMultiplayer(_url=mpServerUrl(),name=mpNickname()){
+ const url='https://streetquest-multiplayer.onrender.com';
+ localStorage.setItem('sq-mp-url',url);
+ localStorage.setItem('sq-mp-name',(name||'Joueur').slice(0,18));
+ if(!window.io){
+   setMpStatus(false,0,'Client Socket.IO non chargé');
+   toast('Le module multijoueur ne s’est pas chargé. Recharge la page.');
+   return
+ }
+ if(mpSocket){try{mpSocket.removeAllListeners();mpSocket.disconnect()}catch{}mpSocket=null}
+ for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);
+ setMpStatus(false,0,'Connexion au serveur…');
+ mpSocket=window.io(url,{
+   path:'/socket.io',
+   transports:['polling','websocket'],
+   upgrade:true,
+   timeout:20000,
+   reconnection:true,
+   reconnectionAttempts:Infinity,
+   reconnectionDelay:1000,
+   reconnectionDelayMax:5000,
+   forceNew:true
+ });
+ mpSocket.on('connect',()=>{
+   setMpStatus(true,1,'Connecté — inscription dans '+state.cityId);
+   mpSocket.emit('player:join',{name:(name||mpNickname()).slice(0,18),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,color:0x5fa7d8,avatar:avatarPayload()});
+   addChatLine('',`Connecté au serveur comme ${name||mpNickname()}. Ville : ${state.cityId}.`,true)
+ });
+ mpSocket.on('world:players',list=>{
+   for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);
+   for(const p of list||[])if(p.id!==mpSocket.id)createRemoteAvatar(p);
+   setMpStatus(true,(list||[]).length,`Connecté • ${(list||[]).length} joueur(s) à ${state.cityId}`)
+ });
+ mpSocket.on('world:count',n=>setMpStatus(true,n,`Connecté • ${n} joueur(s) à ${state.cityId}`));
+ mpSocket.on('player:joined',p=>{
+   if(p.id!==mpSocket.id)createRemoteAvatar(p);
+   addChatLine('',`${p.name} arrive dans ${state.cityId}.`,true)
+ });
  mpSocket.on('player:left',p=>{removeRemoteAvatar(p.id);addChatLine('',`${p.name||'Un joueur'} est parti.`,true)});
- mpSocket.on('player:moved',p=>{let r=remotePlayers.get(p.id);if(!r){createRemoteAvatar(p);r=remotePlayers.get(p.id)}if(r){r.targetX=p.x;r.targetZ=p.z;r.targetYaw=p.yaw}});
+ mpSocket.on('player:appearance',p=>{if(p.id!==mpSocket.id)refreshRemoteAvatar(p)});
+ mpSocket.on('player:moved',p=>{
+   let r=remotePlayers.get(p.id);
+   if(!r){createRemoteAvatar(p);r=remotePlayers.get(p.id)}
+   if(r){r.targetX=p.x;r.targetZ=p.z;r.targetYaw=p.yaw}
+ });
  mpSocket.on('chat:message',m=>addChatLine(m.name,m.message));
- mpSocket.on('player:emote',m=>{const r=remotePlayers.get(m.id);if(r){toast(`${m.name} ${m.emote}`)}});
- mpSocket.on('world:count',n=>setMpStatus(true,n));
- mpSocket.on('disconnect',()=>setMpStatus(false,0));mpSocket.on('connect_error',err=>{setMpStatus(false,0);addChatLine('', 'Serveur en cours de réveil ou temporairement inaccessible. Réessaie dans quelques secondes.',true);console.warn('StreetQuest multiplayer',err?.message||err)})
+ mpSocket.on('player:emote',m=>{const r=remotePlayers.get(m.id);if(r)toast(`${m.name} ${m.emote}`)});
+ mpSocket.on('disconnect',reason=>setMpStatus(false,0,'Déconnecté : '+reason));
+ mpSocket.on('connect_error',err=>{
+   setMpStatus(false,0,'Connexion impossible : '+(err?.message||'erreur'));
+   console.warn('StreetQuest multiplayer',err?.message||err)
+ })
 }
 function multiplayerTick(t,dt){updateRemotePlayers(dt);if(!mpSocket?.connected||state.interior)return;if(t-mpLastSend<100)return;const moved=Math.hypot(state.pos.x-mpLastX,state.pos.z-mpLastZ)>.03||Math.abs(state.yaw-mpLastYaw)>.02;if(moved){mpLastSend=t;mpLastX=state.pos.x;mpLastZ=state.pos.z;mpLastYaw=state.yaw;mpSocket.emit('player:move',{city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw})}}
-
-function bindMpNamePersistence(){
- const i=$('#mpName');
- if(!i)return;
- i.addEventListener('input',()=>localStorage.setItem('sq-mp-name',(i.value.trim()||'Joueur').slice(0,18)));
-}
-
 function multiplayerSettingsHTML(){
  const connected=!!mpSocket?.connected;
  return `<div class="card">
-   <h3>🌐 Multijoueur Alpha</h3>
-   <p class="sub">Le serveur StreetQuest est déjà configuré. Sur iPhone, tu n’as plus besoin de saisir ni copier-coller l’adresse.</p>
+   <h3>🌐 Multijoueur StreetQuest</h3>
+   <p class="sub">Le serveur est configuré automatiquement. Aucun lien à saisir.</p>
    <div class="item">
      <div class="itemIcon">🛰️</div>
-     <div class="itemMain"><b>Serveur StreetQuest</b><small>streetquest-multiplayer.onrender.com</small></div>
-     <span class="propertyTag">${connected?'🟢 Connecté':'⚪ Hors ligne'}</span>
+     <div class="itemMain"><b id="mpLiveStatus">${mpStatusMessage}</b><small>Serveur officiel Render</small></div>
+     <span class="propertyTag">${connected?'🟢 En ligne':'⚪ Hors ligne'}</span>
+   </div>
+   <div class="item">
+     <div class="itemIcon">🌍</div>
+     <div class="itemMain"><b>Salle : ${state.cityId}</b><small>Pour vous voir, les joueurs doivent être dans la même ville.</small></div>
+     <span class="propertyTag"><span id="mpRoomCount">${mpRoomCount}</span> 👤</span>
    </div>
    <label class="sub" for="mpName">Ton pseudo</label>
    <input class="lifeInput mpNameInput" id="mpName" value="${mpNickname()}" maxlength="18" autocomplete="nickname" autocapitalize="words" spellcheck="false" placeholder="Ex : Youhann">
    <div class="grid2" style="margin-top:8px">
-     <button class="menuBtn primary" id="mpConnect">🌐 CONNECTER</button>
+     <button class="menuBtn primary" id="mpConnect">🌐 RECONNECTER</button>
      <button class="menuBtn red" id="mpDisconnect">Déconnecter</button>
    </div>
-   <p class="sub" style="margin-top:8px">La connexion est également tentée automatiquement au lancement du jeu.</p>
+   <p class="sub">Important : Paris et Rome sont deux salles différentes. Deux joueurs dans des villes différentes ne peuvent pas se voir.</p>
  </div>`
 }
 
@@ -296,7 +419,7 @@ async function init(){
  const fill=new THREE.DirectionalLight(0x8dc8ff,.32);fill.position.set(-35,30,-25);scene.add(fill);
  textures=createTextures();weaponRig=createWeaponRig();camera.add(weaponRig);scene.add(camera);
  createAtmosphere();setupWorldTap();setupDesktopControls();setupMapUI();
- ensureChunks(true);ensureOutdoorPositionClear();updateHUD();animate();setTimeout(()=>{if(mpServerUrl()){addChatLine('', 'Connexion au serveur StreetQuest…', true);connectMultiplayer(mpServerUrl(),mpNickname())}},900);
+ localStorage.setItem('sq-mp-url','https://streetquest-multiplayer.onrender.com');ensureChunks(true);ensureOutdoorPositionClear();updateHUD();animate();setTimeout(()=>connectMultiplayer(mpServerUrl(),mpNickname()),1600);setTimeout(()=>{if(!state.avatarCreated)openSheet('avatar')},2300);
  addEventListener('resize',()=>{camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight)});
  if(window.visualViewport){
    const syncViewport=()=>{const h=Math.round(window.visualViewport.height);if(Math.abs(h-lastViewportHeight)>12){lastViewportHeight=h;camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight);lookStick.x=0;lookStick.y=0}}
@@ -489,13 +612,14 @@ function plannedShopType(cx,cz){
   '1,1':'rare',
   '2,0':'school',
   '-2,0':'jobcenter',
-  '2,1':'clinic'
+  '2,1':'clinic',
+  '-1,1':'clothes'
  };
  const fk=`${cx},${cz}`;if(fixed[fk])return fixed[fk];
  // About one commercial block every 5 chunks, deterministic.
  const h=hashStr(`${state.cityId}:shop-plan:${cx}:${cz}`);
  if(h%100>=26)return null;
- const pool=['corner','corner','gear','pawn','home','rare'];
+ const pool=['corner','corner','gear','pawn','home','rare','clothes'];
  return pool[(h>>>8)%pool.length]
 }
 
@@ -536,9 +660,12 @@ function createChunk(cx,cz){
  // Start block keeps the grocery away from the player's house plot.
  if(startChunk&&plannedShop&&lots.length)shopIndex=Math.min(lots.length-1,0);
 
+ if(plannedShop&&lots.length){
+   const p=lots[shopIndex];addShop(g,key,p.x,p.z,r,plannedShop)
+ }
  lots.forEach((p,i)=>{
-   if(plannedShop&&i===shopIndex){addShop(g,key,p.x,p.z,r,plannedShop);return}
-   if(d.style==='green'&&r()<.13){addPocketGarden(g,key,p.x,p.z,r);return}
+   if(plannedShop&&i===shopIndex)return;
+   if(d.style==='green'&&r()<.13){if(!footprintHitsProtected(key,footprintRect(p.x,p.z,8,8)))addPocketGarden(g,key,p.x,p.z,r);return}
    addDenseBuilding(g,key,p.x,p.z,d,r,i,p.variant)
  });
 
@@ -618,6 +745,42 @@ function addAlleyNetwork(g,key,x0,z0,d,r){
  }
 }
 
+
+function rectOverlap(a,b,margin=0){
+ return a.maxX+margin>b.minX&&a.minX-margin<b.maxX&&a.maxZ+margin>b.minZ&&a.minZ-margin<b.maxZ
+}
+function footprintRect(x,z,w,d){return{minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2}}
+function footprintHitsProtected(key,rect){
+ const cx=Math.floor((rect.minX+rect.maxX)/2/CHUNK),cz=Math.floor((rect.minZ+rect.maxZ)/2/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
+ // Keep a hard construction setback from roads and outside chunk edges.
+ if(rect.minX<x0+15.4||rect.minZ<z0+15.4||rect.maxX>x0+CHUNK-5.0||rect.maxZ>z0+CHUNK-5.0)return true;
+ // Central alleys are reserved pedestrian corridors.
+ const alleyV={minX:x0+39.3,maxX:x0+46.7,minZ:z0+15.0,maxZ:z0+71.0};
+ const alleyH={minX:x0+15.0,maxX:x0+71.0,minZ:z0+39.3,maxZ:z0+46.7};
+ if(rectOverlap(rect,alleyV,.45)||rectOverlap(rect,alleyH,.45))return true;
+ // Never overlap another actual structure in the same chunk.
+ return colliders.some(c=>c.key===key&&['building','house','shop','playerHome','fence'].includes(c.type)&&rectOverlap(rect,c,.75))
+}
+function findSafeFootprint(key,x,z,w,d,r){
+ const cx=Math.floor(x/CHUNK),cz=Math.floor(z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
+ const left=x<x0+43,top=z<z0+43;
+ const qMinX=left?x0+16.2:x0+47.0,qMaxX=left?x0+38.7:x0+70.2;
+ const qMinZ=top?z0+16.2:z0+47.0,qMaxZ=top?z0+38.7:z0+70.2;
+ const minCX=qMinX+w/2,maxCX=qMaxX-w/2,minCZ=qMinZ+d/2,maxCZ=qMaxZ-d/2;
+ if(minCX>maxCX||minCZ>maxCZ)return null;
+ const candidates=[];
+ candidates.push([clamp(x,minCX,maxCX),clamp(z,minCZ,maxCZ)]);
+ for(let i=0;i<28;i++){
+   const t=i/27,angle=i*2.3999632297,rad=.5+7.5*t;
+   candidates.push([clamp(x+Math.cos(angle)*rad,minCX,maxCX),clamp(z+Math.sin(angle)*rad,minCZ,maxCZ)])
+ }
+ for(const [px,pz] of candidates){
+   const rect=footprintRect(px,pz,w,d);
+   if(!footprintHitsProtected(key,rect))return{x:px,z:pz,rect}
+ }
+ return null
+}
+
 function makePropertyListing(key,x,z,isHouse,d,r,serial=0){
  const id=`${key}:property:${serial}:${Math.round(x)}:${Math.round(z)}`,pr=rngFor(id);
  let type;if(isHouse){type=d.tier==='luxury'?(pr()<.62?'villa':'house'):(pr()<.86?'house':'flat3')}else{const roll=pr();if(d.tier==='poor')type=roll<.52?'studio':roll<.88?'flat2':'flat3';else if(d.tier==='luxury')type=roll<.18?'flat2':roll<.68?'flat3':'villa';else type=roll<.34?'studio':roll<.76?'flat2':'flat3'}
@@ -653,14 +816,9 @@ function addDenseBuilding(g,key,x,z,d,r,i,variant=0){
  const w=(isHouse?(lux?8.8:6.3)+r()*(lux?4.8:2.6):(poor?5.8:6.7)+r()*(poor?2.4:3.8))*scale;
  const dep=(isHouse?(lux?8.5:6.2)+r()*(lux?5.0:2.7):(poor?6.2:7.0)+r()*3.2)*(variant===2?.86:1);
  const h=isHouse?(lux?5.4+r()*4.6:4.0+r()*3.3):(central?14+r()*34:lux?16+r()*30:poor?8+r()*14:9+r()*20);
- x+=(r()-.5)*(lux?3.9:2.4);z+=(r()-.5)*(lux?3.9:2.4);
- const bx0=Math.floor(x/CHUNK)*CHUNK,bz0=Math.floor(z/CHUNK)*CHUNK;
- const minX=bx0+15.2+w/2,maxX=bx0+CHUNK-4.8-w/2,minZ=bz0+15.2+dep/2,maxZ=bz0+CHUNK-4.8-dep/2;
- x=clamp(x,minX,maxX);z=clamp(z,minZ,maxZ);
- const alleyX=bx0+43,alleyZ=bz0+43;
- if(Math.abs(x-alleyX)<w/2+3.1)x+=(x<alleyX?-1:1)*(w/2+3.4-Math.abs(x-alleyX));
- if(Math.abs(z-alleyZ)<dep/2+3.1)z+=(z<alleyZ?-1:1)*(dep/2+3.4-Math.abs(z-alleyZ));
- x=clamp(x,minX,maxX);z=clamp(z,minZ,maxZ);
+ x+=(r()-.5)*(lux?3.4:2.0);z+=(r()-.5)*(lux?3.4:2.0);
+ const safe=findSafeFootprint(key,x,z,w,dep,r);if(!safe)return;
+ x=safe.x;z=safe.z;
  const texChoice=poor?choice([textures.brick,textures.residential,textures.panel]):lux?choice([textures.neonGlass,textures.stone,textures.modern]):central?choice([textures.neonGlass,textures.modern,textures.panel]):d.style==='industrial'?choice([textures.panel,textures.stone,textures.modern]):choice([textures.residential,textures.brick,textures.modern]);
  const isGlass=texChoice===textures.neonGlass||texChoice===textures.modern;
  const bodyMat=new THREE.MeshStandardMaterial({map:texChoice,roughness:isGlass?.32:.82,metalness:isGlass?.22:.05,emissive:isGlass?0x0f2236:0x000000,emissiveIntensity:isGlass?.22:0});
@@ -809,6 +967,7 @@ function makeFacadeSign(text,color='#9fe9ff'){
 
 function addShop(g,key,x,z,r,forcedType=null){
  const pool=Object.keys(SHOPS),type=forcedType||choice(pool),shop=SHOPS[type],group=new THREE.Group();
+ const safe=findSafeFootprint(key,x,z,10.4,9.4,r);if(!safe){console.warn('No safe shop footprint',key,type);return false}x=safe.x;z=safe.z;
  const shopColor={corner:0x1e5f56,gear:0x46576d,rare:0x56408b,pawn:0x1d6072,home:0x5a4d76,housing:0x5b6947}[type]||0x3e5567;
  const body=new THREE.Mesh(new THREE.BoxGeometry(10,5.4,9),new THREE.MeshStandardMaterial({color:shopColor,roughness:.42,metalness:.18}));body.position.y=2.7;group.add(body);
  const trim=new THREE.Mesh(new THREE.BoxGeometry(10.25,.22,9.25),new THREE.MeshStandardMaterial({color:0x8fe4ff,emissive:0x23495f,emissiveIntensity:.45,roughness:.35}));trim.position.set(0,5.05,0);group.add(trim);
@@ -821,7 +980,7 @@ function addShop(g,key,x,z,r,forcedType=null){
  colliders.push({key,minX:x-5.2,maxX:x+5.2,minZ:z-4.7,maxZ:z+4.7,type:'shop'});
  shops.push({key,x,z,type,group,door:{x,z:z-5.05}});
  const sid=`${state.cityId}:${Math.round(x)}:${Math.round(z)}:${type}`;
- if(!state.discoveredShops.some(s=>s.id===sid))state.discoveredShops.push({id:sid,cityId:state.cityId,x,z,type})
+ if(!state.discoveredShops.some(s=>s.id===sid))state.discoveredShops.push({id:sid,cityId:state.cityId,x,z,type});return true
 }
 
 function addApartmentDoor(g,key,x,z,dep){/* V12: replaced by physical property entrances */}
@@ -1752,7 +1911,16 @@ function physicalShopHTML(){
  <div class="card"><h3>💎 Artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • 500 crédits</small></div><button class="menuBtn sellArtifact" data-id="${id}">Vendre</button></div>`).join(''):'<p class="sub">Aucun artefact.</p>'}</div>
  <button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`
 }
-function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),finalPrice=Math.max(1,Math.round(price*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(CONSUMABLES[id])addInv(id);if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;if(HOME_ITEMS[id])addHomeItem(id);save();updateHUD();toast('Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
+function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),finalPrice=Math.max(1,Math.round(price*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');if(COSMETIC_ITEMS[id]&&state.cosmeticsUnlocked.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(CONSUMABLES[id])addInv(id);if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;if(HOME_ITEMS[id])addHomeItem(id);
+ if(COSMETIC_ITEMS[id]){
+   state.cosmeticsUnlocked.push(id);
+   const c=COSMETIC_ITEMS[id];
+   if(c.kind==='accessory')state.avatar.accessory=c.value;
+   if(c.kind==='top')state.avatar.top=c.value;
+   if(c.kind==='shoes')state.avatar.shoes=c.value;
+   if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload()})
+ }
+ save();updateHUD();toast(COSMETIC_ITEMS[id]?'Style acheté et équipé':'Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
 function sellLoot(id){
  const info=STREET_ITEMS[id];if(!info||!removeStack(state.inventory,id,1))return;
  state.coins+=info.value;save();toast(`${info.name} vendu : +${info.value}`);
@@ -1986,6 +2154,13 @@ function renderMapTo(canvas,zoom=2.0){
 }
 
 function drawMap(){renderMapTo($('#minimap'),1.02);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),bigMapZoom);const z=$('#mapZoomLabel');if(z)z.textContent=`${Math.round(bigMapZoom/.42*100)}%`}
+
+function sqCoordValue(v){return String(Math.round(Math.abs(v))).padStart(4,'0')}
+function streetGPS(){
+ const ns=state.pos.z>=0?'N':'S',ew=state.pos.x>=0?'E':'W';
+ return `SQ ${ns}${sqCoordValue(state.pos.z)} ${ew}${sqCoordValue(state.pos.x)}`
+}
+
 function emergencyExit(){
  if(!state.interior)return;
  leaveInterior();toast('Retour dans la rue.')
@@ -1995,6 +2170,7 @@ function updateHUD(){
  $('#hungerVal').textContent=Math.round(state.hunger);$('#thirstVal').textContent=Math.round(state.thirst);$('#hygieneVal').textContent=Math.round(state.hygiene);
  $('#hungerBar').style.width=`${state.hunger}%`;$('#thirstBar').style.width=`${state.thirst}%`;$('#hygieneBar').style.width=`${state.hygiene}%`;
  $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()} • M${state.gameMonth} J${state.gameDay}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
+ $('#gpsChip').textContent=`📍 ${streetGPS()}`;const mg=$('#mapGpsReadout');if(mg)mg.textContent=`📍 ${streetGPS()} • ${d.name}`;
  const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️',period=state.timeOfDay<6||state.timeOfDay>20?'NUIT':state.timeOfDay<9?'MATIN':state.timeOfDay>17?'SOIR':'JOUR';$('#weatherChip').textContent=`${icon} ${period}`;
  maybeCompleteNpcMission();updateTargetHUD();updateFollowerCard()
 }
@@ -2038,6 +2214,72 @@ function makeJoy(baseSel,knobSel,target){
 }
 makeJoy('#moveJoy','#moveKnob',moveStick);makeJoy('#lookJoy','#lookKnob',lookStick);
 
+
+function avatarCreatorHTML(){
+ const a=avatarPayload(),unlocked=state.cosmeticsUnlocked||[];
+ const acc=[
+  ['none','Aucun',true],
+  ['cap','Casquette',unlocked.includes('cap_black')],
+  ['glasses','Lunettes',unlocked.includes('glasses_black')],
+  ['backpack','Sac à dos',unlocked.includes('backpack_city')]
+ ].filter(x=>x[2]);
+ const premiumTops=[
+  ['#9b3d4a','Rouge Neo',unlocked.includes('top_red')],
+  ['#6553a8','Violet Neo',unlocked.includes('top_purple')],
+  ['#202733','Noir premium',unlocked.includes('top_black')]
+ ].filter(x=>x[2]);
+ const topOptions=[['#355f8a','Bleu'],['#486d45','Vert'],['#785f42','Brun'],...premiumTops];
+ const shoeOptions=[['#11151a','Noir'],['#39424c','Gris'],...(unlocked.includes('shoes_white')?[['#e7edf1','Blanc premium']]:[])];
+ return `<div class="card">
+   <h3>🎨 Ton personnage</h3>
+   <p class="sub">Cette apparence est synchronisée : les autres joueurs voient exactement ton skin.</p>
+   <div class="avatarPreview" id="avatarPreview" style="--skin:${a.skin};--hair:${a.hair};--top:${a.top};--pants:${a.pants};--shoes:${a.shoes}">
+    <div class="av"><div class="backpack ${a.accessory==='backpack'?'':'hidden'}"></div><div class="body"></div><div class="arm l"></div><div class="arm r"></div><div class="leg l"></div><div class="leg r"></div><div class="shoe l"></div><div class="shoe r"></div><div class="head"></div><div class="hair"></div><div class="cap ${a.accessory==='cap'?'':'hidden'}"></div><div class="glasses ${a.accessory==='glasses'?'':'hidden'}"></div></div>
+   </div>
+   <div class="avatarGrid">
+    <label>Peau<select id="avSkin">${[['#f0c3a1','Claire'],['#d5a47c','Dorée'],['#c38e68','Mate'],['#9f684c','Brune'],['#714834','Foncée']].map(x=>`<option value="${x[0]}" ${a.skin===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+    <label>Coiffure<select id="avHairStyle">${[['short','Courte'],['buzz','Très courte'],['long','Longue'],['curly','Bouclée']].map(x=>`<option value="${x[0]}" ${a.hairStyle===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+    <label>Cheveux<input type="color" id="avHair" value="${a.hair}"></label>
+    <label>Corpulence<select id="avBuild">${[['slim','Fine'],['standard','Standard'],['strong','Forte']].map(x=>`<option value="${x[0]}" ${a.build===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+    <label>Haut<select id="avTop">${topOptions.map(x=>`<option value="${x[0]}" ${a.top===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+    <label>Pantalon<select id="avPants">${[['#202a34','Noir'],['#3a4655','Bleu nuit'],['#564a45','Brun']].map(x=>`<option value="${x[0]}" ${a.pants===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+    <label>Chaussures<select id="avShoes">${shoeOptions.map(x=>`<option value="${x[0]}" ${a.shoes===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+    <label>Accessoire<select id="avAccessory">${acc.map(x=>`<option value="${x[0]}" ${a.accessory===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+   </div>
+   <button class="menuBtn primary" id="saveAvatar" style="width:100%;margin-top:12px">✅ ENREGISTRER LE PERSONNAGE</button>
+   <p class="sub">D’autres vêtements et accessoires sont disponibles chez 👕 NeoStyle.</p>
+ </div>`
+}
+function readAvatarForm(){
+ return normalizedAvatar({
+  skin:$('#avSkin')?.value,hair:$('#avHair')?.value,hairStyle:$('#avHairStyle')?.value,
+  top:$('#avTop')?.value,pants:$('#avPants')?.value,shoes:$('#avShoes')?.value,
+  accessory:$('#avAccessory')?.value,build:$('#avBuild')?.value
+ })
+}
+function updateAvatarPreview(){
+ const p=$('#avatarPreview');if(!p)return;const a=readAvatarForm();
+ p.style.setProperty('--skin',a.skin);p.style.setProperty('--hair',a.hair);p.style.setProperty('--top',a.top);p.style.setProperty('--pants',a.pants);p.style.setProperty('--shoes',a.shoes);
+ p.querySelector('.cap')?.classList.toggle('hidden',a.accessory!=='cap');
+ p.querySelector('.glasses')?.classList.toggle('hidden',a.accessory!=='glasses');
+ p.querySelector('.backpack')?.classList.toggle('hidden',a.accessory!=='backpack')
+}
+function saveAvatar(){
+ state.avatar=readAvatarForm();state.avatarCreated=true;save();
+ if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload()});
+ toast('🎨 Apparence enregistrée et synchronisée.');openSheet('settings')
+}
+function bindAvatarCreator(){
+ ['#avSkin','#avHair','#avHairStyle','#avTop','#avPants','#avShoes','#avAccessory','#avBuild'].forEach(s=>$(s)?.addEventListener('input',updateAvatarPreview));
+ const b=$('#saveAvatar');if(b)b.onclick=saveAvatar
+}
+function applyCosmetic(id){
+ const c=COSMETIC_ITEMS[id];if(!c)return;
+ if(c.kind==='accessory')state.avatar.accessory=c.value;
+ if(c.kind==='top')state.avatar.top=c.value;
+ if(c.kind==='shoes')state.avatar.shoes=c.value
+}
+
 function openSheet(panel){
  $('#sheet').classList.remove('hidden');
  $$('.nav').forEach(n=>n.classList.toggle('active',n.dataset.panel===panel));
@@ -2048,6 +2290,7 @@ function openSheet(panel){
  if(panel==='quests'){t.textContent='Quêtes';b.innerHTML=questsHTML()}
  if(panel==='districts'){t.textContent='Quartiers';b.innerHTML=districtHTML()}
  if(panel==='settings'){t.textContent='Réglages';b.innerHTML=settingsHTML()}
+ if(panel==='avatar'){t.textContent='Personnage';b.innerHTML=avatarCreatorHTML()}
  if(panel==='work'){t.textContent='Travail';b.innerHTML=workHTML()}
  if(panel==='physicalShop'){t.textContent=SHOPS[state.interior.shopType].name;b.innerHTML=physicalShopHTML()}
  if(panel==='property'&&selectedProperty){t.textContent='Immobilier';b.innerHTML=propertySheetHTML(selectedProperty)}
@@ -2084,7 +2327,8 @@ function districtHTML(){
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
 function settingsHTML(){
- return `<div class="card"><h3>StreetQuest V15.2</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>${multiplayerSettingsHTML()}
+ return `<div class="card"><h3>StreetQuest V16</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>${multiplayerSettingsHTML()}
+ <div class="card"><h3>Identité</h3><p class="sub">Crée le skin visible par les autres joueurs.</p><button class="menuBtn primary" id="openAvatar" style="width:100%">🎨 Modifier mon personnage</button></div>
  <div class="card"><h3>Économie</h3><p class="sub">École → diplôme → emploi → missions → salaire → impôts → logement.</p><button class="menuBtn" id="openWork" style="width:100%">💼 Voir mon travail</button></div>
  <div class="card"><h3>Immobilier</h3><p class="sub">Pour louer : emploi obligatoire et salaire brut au moins égal à trois fois le loyer.</p></div>
  <div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`
@@ -2104,12 +2348,13 @@ function bindSheet(panel){
    $$('.adjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta)))
  }
  if(panel==='districts'){const x=$('#secureDistrict');if(x)x.onclick=secureDistrict}
+ if(panel==='avatar')bindAvatarCreator();
  if(panel==='settings'){
    const u=$('#forceUpdate');if(u)u.onclick=()=>window.streetQuestUpdate?.();
-   bindMpNamePersistence();const mc=$('#mpConnect');if(mc)mc.onclick=()=>connectMultiplayer(mpServerUrl(),$('#mpName').value.trim()||'Joueur');
+   const ni=$('#mpName');if(ni)ni.oninput=()=>localStorage.setItem('sq-mp-name',(ni.value.trim()||'Joueur').slice(0,18));const mc=$('#mpConnect');if(mc)mc.onclick=()=>connectMultiplayer(mpServerUrl(),($('#mpName')?.value||mpNickname()).trim()||'Joueur');
    const md=$('#mpDisconnect');if(md)md.onclick=disconnectMultiplayer;
-   const ow=$('#openWork');if(ow)ow.onclick=()=>openSheet('work');
-   $('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v15');location.reload()}}
+   const oa=$('#openAvatar');if(oa)oa.onclick=()=>openSheet('avatar');const ow=$('#openWork');if(ow)ow.onclick=()=>openSheet('work');
+   $('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v16');localStorage.removeItem('sq3d-v15');location.reload()}}
  }
  if(panel==='physicalShop')bindShop();
  if(panel==='work'){const sw=$('.startWork');if(sw)sw.onclick=startWorkMission}
@@ -2120,7 +2365,7 @@ function bindSheet(panel){
  }
  $$('.inspectProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){selectedProperty=p;openSheet('property')}})
 }
-function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();if(mpSocket?.connected)mpSocket.emit('player:join',{name:mpNickname(),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw});toast(`Bienvenue à ${city().name}`)}
+function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);if(mpSocket?.connected){setMpStatus(true,1,'Changement de ville…');mpSocket.emit('player:join',{name:mpNickname(),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,avatar:avatarPayload()})}toast(`Bienvenue à ${city().name}`)}
 function useMed(){const x=state.inventory.find(i=>i.id==='medkit');if(!x)return toast('Aucun kit');if(state.hp>=state.maxHp)return toast('PV déjà au maximum');x.qty--;state.hp=clamp(state.hp+40,0,state.maxHp);if(x.qty<=0)state.inventory=state.inventory.filter(i=>i!==x);save();openSheet('bag')}
 function closeSheet(){$('#sheet').classList.add('hidden')}
 let toastTimer;function toast(m){

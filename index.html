@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V15.2">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V16">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V15.2</title>
+<title>StreetQuest 3D V16</title>
 </head>
 <body>
 <div id="app">
@@ -77,7 +77,7 @@
    <span id="missionText"></span>
   </div>
 
-  <div id="weatherChip" class="weatherChip">☀️ JOUR</div><button id="emergencyExitBtn" class="emergencyExit hidden">↩ SORTIR</button>
+  <div id="weatherChip" class="weatherChip">☀️ JOUR</div><div id="gpsChip" class="gpsChip">📍 SQ N0000 E0000</div><button id="emergencyExitBtn" class="emergencyExit hidden">↩ SORTIR</button>
 
 
   <div id="followerCard" class="followerCard hidden">
@@ -132,7 +132,7 @@
 
   <div id="mapOverlay" class="mapOverlay hidden">
    <div class="mapOverlayBox">
-    <div class="sheetHead"><h2>Grande mini-carte</h2><button id="closeMapOverlay" class="roundBtn">✕</button></div>
+    <div class="sheetHead"><div><h2>Grande mini-carte</h2><small id="mapGpsReadout" class="mapGpsReadout">SQ N0000 E0000</small></div><button id="closeMapOverlay" class="roundBtn">✕</button></div>
     <div class="mapZoomBar">
      <button id="mapZoomOut" class="roundBtn">−</button>
      <span id="mapZoomLabel">100%</span>

@@ -127,10 +127,38 @@ body{background:radial-gradient(circle at top,#10263c 0%,#07111a 45%,#040910 100
 .lifeStat{display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid #1e3546}.lifeStat:last-child{border-bottom:0}.lifeStat small{display:block;color:#8daabd;margin-top:3px}.qualification{display:inline-block;padding:4px 7px;border-radius:999px;background:#102c3b;border:1px solid #34627a;font-size:9px;margin:2px}.qualification.done{background:#12382b;border-color:#3a8b68}.jobBadge{padding:5px 8px;border-radius:9px;background:#172d3e;border:1px solid #33546a;font-size:9px}.companyCash{font-variant-numeric:tabular-nums}
 
 .mpNameInput{
-  width:100%;
-  min-height:46px;
-  font-size:16px!important;
-  touch-action:manipulation;
-  -webkit-user-select:text;
-  user-select:text;
+ width:100%;min-height:46px;font-size:16px!important;
+ -webkit-user-select:text;user-select:text;touch-action:manipulation;
+}
+
+.gpsChip{
+ position:absolute;z-index:27;right:16px;top:calc(210px + var(--safe-top));
+ background:rgba(6,18,29,.82);border:1px solid rgba(126,208,255,.28);
+ border-radius:999px;padding:5px 9px;font-size:9px;font-weight:900;
+ letter-spacing:.04em;color:#dff7ff;backdrop-filter:blur(12px)
+}
+.mapGpsReadout{display:block;color:#9fdcf4;font-size:10px;margin-top:2px}
+.avatarPreview{
+ height:190px;border-radius:18px;border:1px solid rgba(126,208,255,.18);
+ background:linear-gradient(180deg,#102235,#08131f);position:relative;overflow:hidden;
+ display:grid;place-items:center;margin-bottom:12px
+}
+.avatarPreview .av{position:relative;width:86px;height:160px}
+.avatarPreview .head{position:absolute;width:42px;height:42px;border-radius:50%;left:22px;top:12px;background:var(--skin)}
+.avatarPreview .hair{position:absolute;width:44px;height:21px;border-radius:22px 22px 7px 7px;left:21px;top:7px;background:var(--hair)}
+.avatarPreview .body{position:absolute;width:54px;height:62px;border-radius:16px 16px 10px 10px;left:16px;top:52px;background:var(--top)}
+.avatarPreview .arm{position:absolute;width:12px;height:58px;border-radius:8px;background:var(--skin);top:58px}
+.avatarPreview .arm.l{left:4px}.avatarPreview .arm.r{right:4px}
+.avatarPreview .leg{position:absolute;width:19px;height:54px;border-radius:6px;background:var(--pants);top:106px}
+.avatarPreview .leg.l{left:20px}.avatarPreview .leg.r{right:20px}
+.avatarPreview .shoe{position:absolute;width:21px;height:9px;border-radius:5px;background:var(--shoes);top:151px}
+.avatarPreview .shoe.l{left:18px}.avatarPreview .shoe.r{right:18px}
+.avatarPreview .cap{position:absolute;width:46px;height:10px;border-radius:10px 10px 3px 3px;left:20px;top:5px;background:#20252b}
+.avatarPreview .glasses{position:absolute;width:38px;height:8px;border:3px solid #15191e;border-radius:7px;left:24px;top:28px}
+.avatarPreview .backpack{position:absolute;width:44px;height:48px;border-radius:12px;background:#313843;left:21px;top:62px;transform:translateX(15px);opacity:.85}
+.avatarGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.avatarGrid label{font-size:10px;color:#b8ccda;display:flex;flex-direction:column;gap:4px}
+.avatarGrid select,.avatarGrid input[type=color]{
+ min-height:44px;width:100%;font-size:16px;border-radius:10px;border:1px solid #29465c;
+ background:#0c1a26;color:#e7f7ff;padding:7px
 }
