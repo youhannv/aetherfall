@@ -125,7 +125,7 @@ function normalizedAvatar(a={}){
   build:builds.includes(a.build)?a.build:'standard'
  }
 }
-function avatarPayload(){return normalizedAvatar(state.avatar)}
+function avatarPayload(){return {...normalizedAvatar(state.avatar),version:state.avatarVersion||1}}
 
 SHOPS.clothes={name:'NeoStyle',icon:'👕',stock:Object.values(COSMETIC_ITEMS).map(x=>({id:x.id,name:x.name,icon:x.icon,price:x.price,desc:'Apparence multijoueur'}))};
 
@@ -203,12 +203,12 @@ const base={
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
  landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:120,
- gameDay:1,gameMonth:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
+ gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
 function loadState(){
  try{
-   let raw=JSON.parse(localStorage.getItem('sq3d-v16')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v15')||'null');
+   let raw=JSON.parse(localStorage.getItem('sq3d-v17')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v16')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v15')||'null');
    let migrated=false;
    if(!raw){raw=JSON.parse(localStorage.getItem('sq3d-v12')||'null');migrated=!!raw}
    if(!raw){raw=JSON.parse(localStorage.getItem('sq3d-v11')||'{}');migrated=!!Object.keys(raw).length}
@@ -217,7 +217,7 @@ function loadState(){
      pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},
      homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[],artifactBag:raw.artifactBag||[],discoveredShops:raw.discoveredShops||[],
      propertyCatalog:raw.propertyCatalog||[],propertyPortfolio:raw.propertyPortfolio||[],
-     education:{current:null,completed:[],...(raw.education||{})},companies:{...freshCompanies(),...(raw.companies||{})},salaryHistory:raw.salaryHistory||[],avatar:normalizedAvatar(raw.avatar||AVATAR_DEFAULT),avatarCreated:!!raw.avatarCreated,cosmeticsUnlocked:raw.cosmeticsUnlocked||[]
+     education:{current:null,completed:[],...(raw.education||{})},companies:{...freshCompanies(),...(raw.companies||{})},salaryHistory:raw.salaryHistory||[],agendaCustom:raw.agendaCustom||[],knownNpcOccupations:raw.knownNpcOccupations||[],soundEnabled:raw.soundEnabled!==false,avatar:normalizedAvatar(raw.avatar||AVATAR_DEFAULT),avatarCreated:!!raw.avatarCreated,avatarVersion:raw.avatarVersion||1,cosmeticsUnlocked:raw.cosmeticsUnlocked||[]
    };
    if(loaded.interior){loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)?{x:raw.returnPos.x,z:raw.returnPos.z}:{...base.pos};loaded.interior=null;loaded.returnPos=null}
    if(migrated&&raw.housingStage){loaded.propertyCredit=(loaded.propertyCredit||0)+(raw.housingStage===1?180:raw.housingStage===2?1030:raw.housingStage>=3?2830:0);loaded.housingStage=0;loaded.landOwned=false}
@@ -227,7 +227,7 @@ function loadState(){
 function save(){
  const snapshot={...state};
  if(state.interior){snapshot.pos=state.returnPos?{...state.returnPos}:{...base.pos};snapshot.interior=null;snapshot.returnPos=null}
- localStorage.setItem('sq3d-v16',JSON.stringify(snapshot))
+ localStorage.setItem('sq3d-v17',JSON.stringify(snapshot))
 }
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
@@ -255,10 +255,10 @@ function districtFor(cx,cz){
 function districtId(cx,cz){return `${state.cityId}:${cx}:${cz}`}
 function progress(goal){if(goal==='stolenCoins')return state.stolenCoins;if(goal==='coinsEarned')return state.coinsEarned;if(goal==='npcMissions')return state.npcMissions;if(goal==='districtsSeen')return state.seenDistricts.length;if(goal==='containersOpened')return state.containersOpened;if(goal==='districtsOwned')return state.ownedDistricts.length;if(goal==='housingStage')return state.residenceId?1:0;return 0}
 function activeQuest(){return QUESTS.find(q=>!state.completedQuests.includes(q.id))||{id:'free',title:'Légende urbaine',text:'Explore librement, collectionne les artefacts et sécurise les quartiers.',goal:'districtsOwned',target:999}}
-function checkQuests(){for(const q of QUESTS){if(state.completedQuests.includes(q.id))continue;if(progress(q.goal)>=q.target){state.completedQuests.push(q.id);state.coins+=q.reward;toast(`Quête terminée : ${q.title} +${q.reward} crédits`)}}}
+function checkQuests(){}
 
 let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],properties=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],clouds=[],starSystem=null,ambientGlowSystem=null;
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpStatusMessage='Hors ligne',mpRoomCount=0;
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
 
 
 function mpServerUrl(){return 'https://streetquest-multiplayer.onrender.com'}
@@ -271,50 +271,45 @@ function buildRemoteAvatarMesh(p){
  const pants=new THREE.MeshStandardMaterial({color:a.pants,roughness:.88});
  const shoes=new THREE.MeshStandardMaterial({color:a.shoes,roughness:.94});
  const hairM=new THREE.MeshStandardMaterial({color:a.hair,roughness:.95});
- const scaleX=a.build==='strong'?1.13:a.build==='slim'?.90:1;
-
- const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28*scaleX,.75,5,8),top);body.position.y=1.04;g.add(body);
- const shoulder=new THREE.Mesh(new THREE.BoxGeometry(.70*scaleX,.17,.28),top);shoulder.position.y=1.34;g.add(shoulder);
+ const buildScale=a.build==='strong'?1.18:a.build==='slim'?.86:1;
+ const armX=.35*buildScale,legX=.13*buildScale;
+ const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28*buildScale,.75,5,8),top);body.position.y=1.04;g.add(body);
+ const shoulder=new THREE.Mesh(new THREE.BoxGeometry(.70*buildScale,.17,.28),top);shoulder.position.y=1.34;g.add(shoulder);
  const neck=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.11,10),skin);neck.position.y=1.50;g.add(neck);
  const head=new THREE.Mesh(new THREE.SphereGeometry(.25,16,14),skin);head.position.y=1.76;g.add(head);
-
- if(a.hairStyle!=='buzz'){
-   const hair=new THREE.Mesh(new THREE.SphereGeometry(.258,14,11),hairM);
-   hair.scale.set(1,a.hairStyle==='long'?.82:a.hairStyle==='curly'?.70:.55,1);
-   hair.position.set(0,a.hairStyle==='long'?1.86:1.91,.015);g.add(hair)
+ // Four deliberately distinct hair meshes so every hairstyle is visible remotely.
+ if(a.hairStyle==='buzz'){
+   const h=new THREE.Mesh(new THREE.SphereGeometry(.257,14,10),hairM);h.scale.set(1,.22,1);h.position.set(0,1.94,.01);g.add(h)
+ }else if(a.hairStyle==='long'){
+   const crown=new THREE.Mesh(new THREE.SphereGeometry(.262,14,11),hairM);crown.scale.set(1,.52,1);crown.position.set(0,1.92,.02);g.add(crown);
+   const back=new THREE.Mesh(new THREE.BoxGeometry(.42,.48,.18),hairM);back.position.set(0,1.66,.15);g.add(back)
+ }else if(a.hairStyle==='curly'){
+   for(const [x,y,z,s] of [[0,1.96,0,.17],[-.16,1.90,0,.13],[.16,1.90,0,.13],[-.10,2.04,.02,.12],[.10,2.04,.02,.12]]){
+     const curl=new THREE.Mesh(new THREE.SphereGeometry(s,10,8),hairM);curl.position.set(x,y,z);g.add(curl)
+   }
  }else{
-   const hair=new THREE.Mesh(new THREE.SphereGeometry(.255,14,11),hairM);hair.scale.y=.25;hair.position.set(0,1.94,.01);g.add(hair)
+   const h=new THREE.Mesh(new THREE.SphereGeometry(.259,14,11),hairM);h.scale.set(1,.48,1);h.position.set(0,1.92,.01);g.add(h)
  }
-
  const fc=document.createElement('canvas');fc.width=96;fc.height=96;const f=fc.getContext('2d');
  f.fillStyle='#14181c';f.beginPath();f.arc(31,39,5,0,Math.PI*2);f.arc(65,39,5,0,Math.PI*2);f.fill();
  f.strokeStyle='#74404a';f.lineWidth=5;f.beginPath();f.moveTo(35,66);f.quadraticCurveTo(48,72,61,66);f.stroke();
  const ft=new THREE.CanvasTexture(fc);ft.colorSpace=THREE.SRGBColorSpace;
- const face=new THREE.Mesh(new THREE.PlaneGeometry(.235,.235),new THREE.MeshBasicMaterial({map:ft,transparent:true,depthWrite:false,side:THREE.DoubleSide}));
- face.position.set(0,1.75,-.252);face.rotation.y=Math.PI;g.add(face);
-
- for(const sx of [-.35,.35]){
-   const arm=new THREE.Mesh(new THREE.BoxGeometry(.12,.56,.12),skin);arm.position.set(sx*scaleX,1.02,0);g.add(arm)
- }
- for(const sx of [-.13,.13]){
-   const leg=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),pants);leg.position.set(sx,.38,0);g.add(leg);
-   const shoe=new THREE.Mesh(new THREE.BoxGeometry(.17,.09,.27),shoes);shoe.position.set(sx,.04,-.03);g.add(shoe)
- }
-
+ const face=new THREE.Mesh(new THREE.PlaneGeometry(.235,.235),new THREE.MeshBasicMaterial({map:ft,transparent:true,depthWrite:false,side:THREE.DoubleSide}));face.position.set(0,1.75,-.252);face.rotation.y=Math.PI;g.add(face);
+ for(const sx of [-armX,armX]){const arm=new THREE.Mesh(new THREE.BoxGeometry(.12*buildScale,.56,.12),skin);arm.position.set(sx,1.02,0);g.add(arm)}
+ for(const sx of [-legX,legX]){const leg=new THREE.Mesh(new THREE.BoxGeometry(.15*buildScale,.67,.17),pants);leg.position.set(sx,.38,0);g.add(leg);const shoe=new THREE.Mesh(new THREE.BoxGeometry(.17*buildScale,.09,.27),shoes);shoe.position.set(sx,.04,-.03);g.add(shoe)}
  if(a.accessory==='cap'){
-   const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.10,12),new THREE.MeshStandardMaterial({color:0x20252b,roughness:.9}));cap.position.y=1.99;g.add(cap)
+   const capM=new THREE.MeshStandardMaterial({color:0x20252b,roughness:.9});const cap=new THREE.Mesh(new THREE.CylinderGeometry(.29,.29,.10,12),capM);cap.position.y=2.00;g.add(cap);const visor=new THREE.Mesh(new THREE.BoxGeometry(.38,.04,.18),capM);visor.position.set(0,1.96,-.22);g.add(visor)
  }else if(a.accessory==='glasses'){
-   const gl=new THREE.Mesh(new THREE.BoxGeometry(.40,.08,.04),new THREE.MeshStandardMaterial({color:0x15191e,metalness:.25}));gl.position.set(0,1.78,-.235);g.add(gl)
+   const glM=new THREE.MeshStandardMaterial({color:0x15191e,metalness:.25});for(const x of [-.105,.105]){const lens=new THREE.Mesh(new THREE.TorusGeometry(.10,.018,6,12),glM);lens.position.set(x,1.78,-.235);lens.rotation.y=Math.PI;g.add(lens)}const bridge=new THREE.Mesh(new THREE.BoxGeometry(.09,.025,.025),glM);bridge.position.set(0,1.78,-.24);g.add(bridge)
  }else if(a.accessory==='backpack'){
-   const bp=new THREE.Mesh(new THREE.BoxGeometry(.42,.52,.18),new THREE.MeshStandardMaterial({color:0x303944,roughness:.9}));bp.position.set(0,1.02,.27);g.add(bp)
+   const bp=new THREE.Mesh(new THREE.BoxGeometry(.42*buildScale,.52,.18),new THREE.MeshStandardMaterial({color:0x303944,roughness:.9}));bp.position.set(0,1.02,.27);g.add(bp)
  }
- g.add(makeRemoteName(p.name||'Joueur'));
- return g
+ g.add(makeRemoteName(p.name||'Joueur'));return g
 }
 function createRemoteAvatar(p){
  if(!scene||remotePlayers.has(p.id))return;
  const g=buildRemoteAvatarMesh(p);g.position.set(p.x||0,0,p.z||0);g.rotation.y=p.yaw||0;scene.add(g);
- remotePlayers.set(p.id,{group:g,targetX:p.x||0,targetZ:p.z||0,targetYaw:p.yaw||0,name:p.name,avatar:normalizedAvatar(p.avatar||{})})
+ remotePlayers.set(p.id,{id:p.id,group:g,targetX:p.x||0,targetZ:p.z||0,targetYaw:p.yaw||0,name:p.name,avatar:normalizedAvatar(p.avatar||{}),avatarVersion:p.avatarVersion||1,voice:!!p.voice})
 }
 function refreshRemoteAvatar(p){
  const old=remotePlayers.get(p.id);if(!old)return createRemoteAvatar(p);
@@ -354,7 +349,70 @@ function setMpStatus(ok,count=0,message=''){
  const rc=$('#mpRoomCount');if(rc)rc.textContent=String(mpRoomCount)
 }
 
-function disconnectMultiplayer(){if(mpSocket){mpSocket.disconnect();mpSocket=null}for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);setMpStatus(false,0);addChatLine('', 'Mode solo.',true)}
+
+function playUiTone(kind='tap'){
+ if(!state.soundEnabled)return;
+ try{uiAudioCtx=uiAudioCtx||new (window.AudioContext||window.webkitAudioContext)();if(uiAudioCtx.state==='suspended')uiAudioCtx.resume();const o=uiAudioCtx.createOscillator(),g=uiAudioCtx.createGain();o.type='sine';o.frequency.value=kind==='confirm'?660:kind==='alert'?260:440;g.gain.setValueAtTime(.0001,uiAudioCtx.currentTime);g.gain.exponentialRampToValueAtTime(.035,uiAudioCtx.currentTime+.008);g.gain.exponentialRampToValueAtTime(.0001,uiAudioCtx.currentTime+.10);o.connect(g);g.connect(uiAudioCtx.destination);o.start();o.stop(uiAudioCtx.currentTime+.11)}catch{}
+}
+function voiceLabel(){return voiceEnabled?'🎙️ Vocal actif':'🎙️ Activer le vocal'}
+function closeVoicePeer(id){const v=voicePeers.get(id);if(!v)return;try{v.pc?.close()}catch{};if(v.audio?.parentNode)v.audio.remove();voicePeers.delete(id)}
+function closeAllVoicePeers(){for(const id of [...voicePeers.keys()])closeVoicePeer(id)}
+function voicePeer(id){
+ let v=voicePeers.get(id);if(v)return v;
+ const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+ const audio=document.createElement('audio');audio.autoplay=true;audio.playsInline=true;audio.dataset.peer=id;$('#audioHost')?.appendChild(audio);
+ v={pc,audio,pendingIce:[]};voicePeers.set(id,v);
+ if(localVoiceStream)for(const tr of localVoiceStream.getTracks())pc.addTrack(tr,localVoiceStream);
+ pc.onicecandidate=e=>{if(e.candidate&&mpSocket?.connected)mpSocket.emit('voice:signal',{to:id,kind:'ice',candidate:e.candidate})};
+ pc.ontrack=e=>{audio.srcObject=e.streams[0];audio.play().catch(()=>{})};
+ pc.onconnectionstatechange=()=>{if(['failed','closed'].includes(pc.connectionState))closeVoicePeer(id)};
+ return v
+}
+async function flushVoiceIce(v){if(!v?.pc.remoteDescription)return;for(const c of v.pendingIce.splice(0)){try{await v.pc.addIceCandidate(c)}catch{}}}
+async function voiceMaybeConnect(id){
+ if(!voiceEnabled||!mpSocket?.connected||!id||id===mpSocket.id)return;
+ const r=remotePlayers.get(id);if(!r?.voice||voicePeers.has(id))return;
+ if(String(mpSocket.id)>String(id))return; // one deterministic initiator
+ try{const v=voicePeer(id),offer=await v.pc.createOffer();await v.pc.setLocalDescription(offer);mpSocket.emit('voice:signal',{to:id,kind:'offer',sdp:v.pc.localDescription})}catch(e){console.warn('voice offer',e)}
+}
+async function handleVoiceSignal(m){
+ if(!voiceEnabled||!m?.from)return;
+ try{
+   const v=voicePeer(m.from);
+   if(m.kind==='offer'){await v.pc.setRemoteDescription(m.sdp);await flushVoiceIce(v);const answer=await v.pc.createAnswer();await v.pc.setLocalDescription(answer);mpSocket.emit('voice:signal',{to:m.from,kind:'answer',sdp:v.pc.localDescription})}
+   else if(m.kind==='answer'){await v.pc.setRemoteDescription(m.sdp);await flushVoiceIce(v)}
+   else if(m.kind==='ice'&&m.candidate){if(v.pc.remoteDescription)await v.pc.addIceCandidate(m.candidate);else v.pendingIce.push(m.candidate)}
+ }catch(e){console.warn('voice signal',e)}
+}
+async function enableVoice(){
+ if(voiceEnabled)return;
+ if(!navigator.mediaDevices?.getUserMedia)return toast('Le micro n’est pas disponible sur ce navigateur.');
+ try{localVoiceStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});voiceEnabled=true;mpSocket?.emit('voice:state',{enabled:true});for(const [id,r] of remotePlayers)if(r.voice)voiceMaybeConnect(id);playUiTone('confirm');toast('🎙️ Vocal de proximité activé.');if(currentPanel==='social')openSheet('social')}
+ catch(e){console.warn(e);toast('Autorisation micro refusée ou indisponible.')}
+}
+function disableVoice(){voiceEnabled=false;mpSocket?.emit('voice:state',{enabled:false});closeAllVoicePeers();if(localVoiceStream){for(const t of localVoiceStream.getTracks())t.stop();localVoiceStream=null}toast('Micro coupé.');if(currentPanel==='social')openSheet('social')}
+function updateVoiceVolumes(){
+ for(const [id,v] of voicePeers){const r=remotePlayers.get(id);if(!r||!v.audio)continue;const d=Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z);let vol=d<=5?1:d>=25?0:1-(d-5)/20;if(mutedPlayers.has(id))vol=0;v.audio.volume=clamp(vol,0,1)}
+}
+function nearestRemotePlayer(max=2.4){let best=null,bd=max;for(const [id,r] of remotePlayers){if(!r?.group?.parent)continue;const d=Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z);if(d<bd){best={id,...r,d};bd=d}}return best}
+function openPlayerInteraction(id){if(!remotePlayers.has(id))return toast('Ce joueur n’est plus ici.');selectedRemotePlayerId=id;openSheet('player')}
+function playerInteractionHTML(){
+ const r=remotePlayers.get(selectedRemotePlayerId);if(!r)return `<div class="card"><p class="sub">Ce joueur n’est plus à proximité.</p></div>`;
+ const d=Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z),muted=mutedPlayers.has(selectedRemotePlayerId);
+ return `<div class="card playerIdentity"><div class="sectionKicker">JOUEUR À ${d.toFixed(1)} M</div><h3>👤 ${r.name}</h3><p class="sub">${r.voice?'🎙️ Vocal disponible':'🔇 Micro non actif'} • ${streetCoords()}</p></div>
+ <div class="card"><div class="grid2"><button class="menuBtn playerWave">👋 Saluer</button><button class="menuBtn playerCoords">📍 Partager ma position</button><button class="menuBtn playerGroup">👥 Inviter au groupe</button><button class="menuBtn playerMute">${muted?'🔊 Réactiver':'🔇 Couper sa voix'}</button></div></div>
+ <div class="card"><label class="sub">Message privé</label><div class="directRow"><input id="directMsg" class="lifeInput" maxlength="100" placeholder="Écrire à ${r.name}"><button class="menuBtn primary sendDirect">Envoyer</button></div></div>`
+}
+function bindPlayerInteraction(){
+ const id=selectedRemotePlayerId,r=remotePlayers.get(id);if(!r)return;
+ $('.playerWave')?.addEventListener('click',()=>{mpSocket?.emit('player:interaction',{to:id,type:'wave'});mpSocket?.emit('player:emote',{emote:'👋'});toast(`Tu salues ${r.name}.`)});
+ $('.playerCoords')?.addEventListener('click',()=>{mpSocket?.emit('player:interaction',{to:id,type:'coords',text:streetCoords()});toast('Position partagée.')});
+ $('.playerGroup')?.addEventListener('click',()=>{mpSocket?.emit('player:interaction',{to:id,type:'group'});toast('Invitation envoyée.')});
+ $('.playerMute')?.addEventListener('click',()=>{mutedPlayers.has(id)?mutedPlayers.delete(id):mutedPlayers.add(id);updateVoiceVolumes();openSheet('player')});
+ $('.sendDirect')?.addEventListener('click',()=>{const i=$('#directMsg'),m=i?.value.trim();if(!m)return;mpSocket?.emit('chat:direct',{to:id,message:m});addChatLine(`🔒 Moi → ${r.name}`,m);i.value='';toast('Message privé envoyé.')})
+}
+
+function disconnectMultiplayer(){disableVoice();if(mpSocket){mpSocket.disconnect();mpSocket=null}for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);setMpStatus(false,0);addChatLine('', 'Mode solo.',true)}
 function connectMultiplayer(_url=mpServerUrl(),name=mpNickname()){
  const url='https://streetquest-multiplayer.onrender.com';
  localStorage.setItem('sq-mp-url',url);
@@ -380,20 +438,21 @@ function connectMultiplayer(_url=mpServerUrl(),name=mpNickname()){
  });
  mpSocket.on('connect',()=>{
    setMpStatus(true,1,'Connecté — inscription dans '+state.cityId);
-   mpSocket.emit('player:join',{name:(name||mpNickname()).slice(0,18),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,color:0x5fa7d8,avatar:avatarPayload()});
+   mpSocket.emit('player:join',{name:(name||mpNickname()).slice(0,18),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,color:0x5fa7d8,avatar:avatarPayload(),avatarVersion:state.avatarVersion||1});
+   if(voiceEnabled)setTimeout(()=>mpSocket?.emit('voice:state',{enabled:true}),80);
    addChatLine('',`Connecté au serveur comme ${name||mpNickname()}. Ville : ${state.cityId}.`,true)
  });
  mpSocket.on('world:players',list=>{
    for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);
-   for(const p of list||[])if(p.id!==mpSocket.id)createRemoteAvatar(p);
+   for(const p of list||[])if(p.id!==mpSocket.id){createRemoteAvatar(p);if(voiceEnabled&&p.voice)voiceMaybeConnect(p.id)};
    setMpStatus(true,(list||[]).length,`Connecté • ${(list||[]).length} joueur(s) à ${state.cityId}`)
  });
  mpSocket.on('world:count',n=>setMpStatus(true,n,`Connecté • ${n} joueur(s) à ${state.cityId}`));
  mpSocket.on('player:joined',p=>{
-   if(p.id!==mpSocket.id)createRemoteAvatar(p);
+   if(p.id!==mpSocket.id){createRemoteAvatar(p);if(voiceEnabled&&p.voice)voiceMaybeConnect(p.id)}
    addChatLine('',`${p.name} arrive dans ${state.cityId}.`,true)
  });
- mpSocket.on('player:left',p=>{removeRemoteAvatar(p.id);addChatLine('',`${p.name||'Un joueur'} est parti.`,true)});
+ mpSocket.on('player:left',p=>{closeVoicePeer(p.id);removeRemoteAvatar(p.id);addChatLine('',`${p.name||'Un joueur'} est parti.`,true)});
  mpSocket.on('player:appearance',p=>{if(p.id!==mpSocket.id)refreshRemoteAvatar(p)});
  mpSocket.on('player:moved',p=>{
    let r=remotePlayers.get(p.id);
@@ -402,14 +461,18 @@ function connectMultiplayer(_url=mpServerUrl(),name=mpNickname()){
  });
  mpSocket.on('chat:message',m=>addChatLine(m.name,m.message));
  mpSocket.on('player:emote',m=>{const r=remotePlayers.get(m.id);if(r)toast(`${m.name} ${m.emote}`)});
- mpSocket.on('disconnect',reason=>setMpStatus(false,0,'Déconnecté : '+reason));
+ mpSocket.on('player:voice',p=>{const r=remotePlayers.get(p.id);if(r){r.voice=!!p.voice;if(r.voice&&voiceEnabled)voiceMaybeConnect(p.id);if(!r.voice)closeVoicePeer(p.id)}if(currentPanel==='social')openSheet('social')});
+ mpSocket.on('voice:signal',handleVoiceSignal);
+ mpSocket.on('chat:direct',m=>{addChatLine(`🔒 ${m.name}`,m.message);toast(`Message privé de ${m.name}`)});
+ mpSocket.on('player:interaction',m=>{if(m.type==='wave')toast(`${m.name} te salue 👋`);if(m.type==='coords'){addChatLine('',`${m.name} partage sa position : ${m.text}`,true);toast(`📍 Position reçue de ${m.name}`)}if(m.type==='group')toast(`👥 ${m.name} t’invite dans son groupe.`)});
+ mpSocket.on('disconnect',reason=>{closeAllVoicePeers();setMpStatus(false,0,'Déconnecté : '+reason)});
  mpSocket.on('connect_error',err=>{
    setMpStatus(false,0,'Connexion impossible : '+(err?.message||'erreur'));
    console.warn('StreetQuest multiplayer',err?.message||err)
  })
 }
 function multiplayerTick(t,dt){
- updateRemotePlayers(dt);
+ updateRemotePlayers(dt);updateVoiceVolumes();
  if(!mpSocket?.connected||state.interior)return;
  if(t-mpLastSend<100)return;
  const moved=Math.hypot(state.pos.x-mpLastX,state.pos.z-mpLastZ)>.03||Math.abs(state.yaw-mpLastYaw)>.02;
@@ -736,9 +799,7 @@ function createChunk(cx,cz){
  for(let i=0;i<cont;i++){const p=r()<.42?randomAlleyPoint(x0,z0,r):randomSidewalk(x0,z0,r),type=r()<.72?'bin':'chest',idc=`${key}:container:${i}`;if(!state.collected.includes(idc))addContainer(g,key,idc,p.x,p.z,type)}
  const lootN=1+Math.floor(r()*3);
  for(let i=0;i<lootN;i++){const p=r()<.38?randomAlleyPoint(x0,z0,r):randomSidewalk(x0,z0,r),type=r()<.67?'medkit':'rare',idl=`${key}:loot:${i}`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,type)}
- if(!state.artifacts.includes(state.cityId)&&((Math.abs(cx)+Math.abs(cz)>1&&r()<.055)||(cx===3&&cz===-2))){
-   const p=randomAlleyPoint(x0,z0,r),idl=`${key}:artifact`;if(!state.collected.includes(idl))addPickup(g,key,idl,p.x,p.z,'artifact')
- }
+ // V17 life-sim: legacy artefact spawns disabled.
 
  const npcN=5+Math.floor(r()*5)+(d.tier==='luxury'?2:0);
  for(let i=0;i<npcN;i++){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addNPC(g,key,p.x,p.z,r,p)}
@@ -1107,8 +1168,9 @@ function createPerson(role,key,x,z,r,path=null){
    money:hasCash?Math.max(1,Math.round((2+r()*42)*socio.cashMult)):0,pocketItems,occupation,
    legs:[l1,l2],arms:[a1,a2],phase:r()*6.2,
    name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),
-   missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false,following:false,trust:.25+r()*.7,courage:.2+r()*.75,followDoubt:r()*.55,routeStuck:0,followStuck:0,lastSafe:{x,z}
+   missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false,following:false,trust:.25+r()*.7,courage:.2+r()*.75,followDoubt:r()*.55,routeStuck:0,followStuck:0,lastSafe:{x,z},talking:false
  };
+ n.npcId=`${state.cityId}:${key}:${Math.round(x*10)}:${Math.round(z*10)}:${n.name}`;
  group.traverse(o=>{o.userData.person=n;o.frustumCulled=false});
  return n
 }
@@ -1495,11 +1557,15 @@ function callNearbyPolice(n,t){
 function updatePeople(dt,t){
  policeSeeing=false;
  for(const n of npcs){
-   if(n.aggroTime>0) updateAngryCivilian(n,dt,t);
+   let walking=true;
+   if(n.talking){
+     const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);
+     if(dist>3.6){endNpcConversation(n);patrolPerson(n,dt)}else{setHeading(n,dx,dz);walking=false}
+   }else if(n.aggroTime>0) updateAngryCivilian(n,dt,t);
    else if(n.following) updateFollower(n,dt);
    else patrolPerson(n,dt);
-   n.legs[0].rotation.x=Math.sin(t*.006*n.speed+n.phase)*.55;n.legs[1].rotation.x=-n.legs[0].rotation.x;
-   if(n.arms){n.arms[0].rotation.x=-n.legs[0].rotation.x*.7;n.arms[1].rotation.x=-n.legs[1].rotation.x*.7}
+   const swing=walking?Math.sin(t*.006*n.speed+n.phase)*.55:0;n.legs[0].rotation.x=swing;n.legs[1].rotation.x=-swing;
+   if(n.arms){n.arms[0].rotation.x=-swing*.7;n.arms[1].rotation.x=swing*.7}
  }
  for(const n of enemies){
    if(n===activeEnemyEntity)continue;
@@ -1648,6 +1714,7 @@ function checkInteraction(){
      return setPrompt(`Cible : ${selectedNPC.name}`,'Place-toi derrière la personne. La fouille démarre toute seule quand tu es bien placé.','SUIVRE',()=>toast('Passe derrière la cible sans la dépasser.'))
    }
  }
+ const rp=nearestRemotePlayer(2.5);if(rp)return setPrompt(`👤 ${rp.name}`,`${rp.d.toFixed(1)} m • joueur en ligne`,'INTERAGIR',()=>openPlayerInteraction(rp.id));
  const hp=nearest(homePlots,2.35);if(hp)return setPrompt(state.landOwned?'Ton terrain':'Terrain à vendre',state.landOwned?'Entrer dans ta base pour stocker tes gains et aménager ton chez-toi.':`Acheter ce terrain pour ${HOME_PLOT_PRICE} crédits.` ,state.landOwned?'ENTRER':'ACHETER',()=>state.landOwned?enterInterior('home',hp):buyLand());
  const p=nearest(pickups.filter(x=>x.parent),1.6);if(p)return setPrompt(pickupName(p.userData.type),'Objet trouvé dans la rue.','RAMASSER',()=>collectPickup(p));
  const c=nearest(containers.filter(x=>x.parent),1.7);if(c)return setPrompt(c.userData.type==='bin'?'Poubelle':'Coffre',c.userData.type==='bin'?'Fouiller du matériel.':'Ouvrir le coffre.','FOUILLER',()=>openContainer(c));
@@ -1661,7 +1728,7 @@ function checkInteraction(){
    if(rec)return setPrompt(propertyLabel(pr),rec.tenure==='rent'?`${rec.rent} crédits/mois`:'Bien dont tu es propriétaire.','ENTRER',()=>enterInterior('property',pr));
    if(pr.marketed)return setPrompt('Panneau immobilier',`${propertyLabel(pr)} • ${pr.offer==='rent'?'à louer':pr.offer==='sale'?'à vendre':'vente/location'} • Agence Habitat.`,'LIRE',()=>toast(`🔑 Va à l’Agence Habitat pour le dossier de ce bien.`));
  }
- const n=nearest(npcs,1.5);if(n)return setPrompt(n.name,'Touche le passant pour le choisir comme cible, ou ouvre le dialogue.','PARLER',()=>talkNPC(n));
+ const n=nearest(npcs,1.5);if(n)return setPrompt(n.name,'Le connaître en discutant.','PARLER',()=>talkNPC(n));
  hidePrompt()
 }
 function setPrompt(t,d,b,fn){
@@ -1701,31 +1768,30 @@ function openContainer(m){
  if(m.parent)m.parent.remove(m);containers=containers.filter(x=>x!==m);checkQuests();save();hidePrompt()
 }
 
+function npcOccupationKnown(n){return !!n&&state.knownNpcOccupations.includes(n.npcId)}
+function learnNpcOccupation(n){if(!n||npcOccupationKnown(n))return;if(!state.knownNpcOccupations.includes(n.npcId))state.knownNpcOccupations.push(n.npcId);save()}
+function startNpcConversation(n){if(conversationNPC&&conversationNPC!==n)endNpcConversation(conversationNPC);conversationNPC=n;n.talking=true;const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z;setHeading(n,dx,dz)}
+function endNpcConversation(n=conversationNPC){if(n)n.talking=false;if(conversationNPC===n)conversationNPC=null}
 function talkNPC(n){
- const dirty=state.hygiene<25;
- const lines=dirty
-   ?['Tu as l’air de sortir d’une longue journée…','Tout va bien ? Tu devrais peut-être te laver un peu.']
-   :[`Salut ! ${city().name} est tranquille aujourd’hui.`,`Je connais quelques ruelles et commerces dans le quartier.`,`On trouve toujours quelque chose à faire ici.`];
+ startNpcConversation(n);const dirty=state.hygiene<25;
+ const lines=dirty?['Salut… grosse journée ?','Tu as l’air épuisé, tout va bien ?']:[`Salut ! Moi c’est ${n.name}.`,`Bonjour. Tu habites dans le quartier ?`,`Salut ! Belle journée à ${city().name}.`];
  showDialogue(n.name,choice(lines),()=>showNpcChoices(n))
 }
 function showNpcChoices(n){
- $('#dialogue').classList.add('hidden');
- openSheet('npc');$('#sheetTitle').textContent=n.name;
- const occ=n.occupation?.title||'Habitant';
- $('#sheetBody').innerHTML=`<div class="card"><p class="sub">💼 ${occ}${n.occupation?.employer?` • ${n.occupation.employer}`:''}</p></div><div class="card"><div class="grid2">
- <button class="menuBtn primary" id="talkAgain">💬 Discuter</button>
- <button class="menuBtn primary" id="askFollow" ${n.caught||n.following?'disabled':''}>🚶 SUIS-MOI<small>${n.following?'Cette personne te suit':'Lui demander de venir avec toi'}</small></button>
- <button class="menuBtn" id="askMission">📋 Petit boulot<small>${n.missionGiven?'Déjà proposé':'Demander une mission'}</small></button>
- <button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Cibler<small>${n.pickpocketed?'Déjà fouillé':'Le/la suivre discrètement'}</small></button>
+ startNpcConversation(n);$('#dialogue').classList.add('hidden');openSheet('npc');$('#sheetTitle').textContent=n.name;
+ const known=npcOccupationKnown(n),occ=n.occupation?.title||'Habitant',employer=n.occupation?.employer;
+ $('#sheetBody').innerHTML=`<div class="card npcProfile"><div class="sectionKicker">RENCONTRE</div><h3>${n.name}</h3><p class="sub">${known?`💼 ${occ}${employer?` • ${employer}`:''}`:'💼 Métier : inconnu — demande-lui.'}</p></div><div class="card"><div class="grid2">
+ <button class="menuBtn" id="talkAgain">💬 Discuter</button>
+ <button class="menuBtn" id="askOccupation" ${known?'disabled':''}>💼 ${known?'Métier connu':'Tu fais quoi ?'}</button>
+ <button class="menuBtn" id="askFollow" ${n.caught||n.following?'disabled':''}>🚶 Suis-moi</button>
+ <button class="menuBtn" id="askMission">🧾 Petit boulot</button>
+ <button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Cibler discrètement</button>
  </div></div>`;
- $('#talkAgain').onclick=()=>{closeSheet();showDialogue(n.name,'Bonne route.',hideDialogue)};
+ $('#talkAgain').onclick=()=>{closeSheet();startNpcConversation(n);showDialogue(n.name,'Ça fait plaisir de discuter un peu.',hideDialogue)};
+ const ao=$('#askOccupation');if(ao)ao.onclick=()=>{learnNpcOccupation(n);closeSheet();startNpcConversation(n);showDialogue(n.name,`Je travaille comme ${occ}${employer?` chez ${employer}`:''}.`,()=>showNpcChoices(n))};
  const af=$('#askFollow');if(af)af.onclick=()=>askFollow(n);
- const am=$('#askMission');if(am)am.onclick=()=>{
-   closeSheet();
-   if(n.missionGiven)return toast('Cette personne t’a déjà proposé quelque chose.');
-   n.missionGiven=true;assignNpcMission(n);showDialogue(n.name,`J’ai un petit boulot : ${state.activeNpcMission.text}`,hideDialogue)
- };
- const pp=$('#pickpocket');if(pp)pp.onclick=()=>{closeSheet();selectTarget(n);toast('Cible sélectionnée.')}
+ const am=$('#askMission');if(am)am.onclick=()=>{closeSheet();startNpcConversation(n);if(n.missionGiven)return showDialogue(n.name,'Je n’ai rien d’autre pour le moment.',hideDialogue);n.missionGiven=true;assignNpcMission(n);showDialogue(n.name,`J’ai un petit boulot : ${state.activeNpcMission.text}`,hideDialogue)};
+ const pp=$('#pickpocket');if(pp)pp.onclick=()=>{endNpcConversation(n);closeSheet();selectTarget(n);toast('Cible sélectionnée.')}
 }
 function assignNpcMission(n){const occ=n.occupation?.title||'Habitant',opts=[{kind:'pockets',text:`aide ${occ.toLowerCase()} : récupère 30 crédits sur des passants`,target:30,start:state.stolenCoins,reward:90},{kind:'container',text:`trouve 2 fournitures utiles pour ${occ.toLowerCase()}`,target:2,start:state.containersOpened,reward:110},{kind:'explore',text:`repère 2 nouveaux quartiers pour ${occ.toLowerCase()}`,target:2,start:state.seenDistricts.length,reward:120}];state.activeNpcMission={...choice(opts),giver:n.name,giverOccupation:occ};save()}
 function npcMissionProgress(){const m=state.activeNpcMission;if(!m)return null;const now=m.kind==='pockets'?state.stolenCoins:m.kind==='container'?state.containersOpened:state.seenDistricts.length;return now-m.start}
@@ -1839,7 +1905,7 @@ function setupWorldTap(){
 }
 
 function showDialogue(name,text,next){$('#dialogueName').textContent=name;$('#dialogueText').textContent=text;$('#dialogueIcon').textContent='🙂';$('#dialogue').classList.remove('hidden');$('#dialogueNext').onclick=next}
-function hideDialogue(){$('#dialogue').classList.add('hidden')}
+function hideDialogue(){$('#dialogue').classList.add('hidden');endNpcConversation()}
 
 
 function addInteriorExitDoor(width,depth){
@@ -1950,10 +2016,6 @@ function buildHomeInterior(){
    const sizes={wallKit:[1.7,.25],sofa:[1.45,.75],table:[.95,.75],lamp:[.35,.35],plant:[.55,.55],wardrobe:[.9,.5],chest:[.75,.55],safe:[.7,.6]};
    const s=sizes[id]||[.5,.5];interiorColliders.push({minX:slot.x-s[0],maxX:slot.x+s[0],minZ:slot.z-s[1],maxZ:slot.z+s[1]})
  });
- if(state.artifacts.length){
-   const shelf=new THREE.Mesh(new THREE.BoxGeometry(5,.16,.65),new THREE.MeshStandardMaterial({color:0x66482f}));shelf.position.set(0,1.25,7.9);interiorGroup.add(shelf);
-   state.artifacts.slice(0,5).forEach((id,i)=>{const art=new THREE.Mesh(new THREE.OctahedronGeometry(.32),new THREE.MeshStandardMaterial({color:0x61d7ff,emissive:0x15546c,emissiveIntensity:.9}));art.position.set(-2+i,1.65,7.85);interiorGroup.add(art)})
- }
 }
 
 function exitInterior(){leaveInterior()}
@@ -1962,7 +2024,7 @@ function physicalShopHTML(){
  if(state.interior.shopType==='school')return `${schoolHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
  if(state.interior.shopType==='jobcenter')return `${employmentHTML()}${companyEconomyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
  if(state.interior.shopType==='clinic')return `<div class="card"><h3>🏥 Hôpital Horizon</h3><p class="sub">Établissement public. Les salariés formés peuvent y effectuer leurs missions.</p></div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
- const s=SHOPS[state.interior.shopType],arts=[...new Set(state.artifactBag)];
+ const s=SHOPS[state.interior.shopType];
  if(state.interior.shopType==='housing')return `${housingAgencyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
  const valuables=state.inventory.filter(i=>STREET_ITEMS[i.id]&&i.qty>0);
  const resale=state.interior.shopType==='pawn'
@@ -1971,17 +2033,16 @@ function physicalShopHTML(){
  return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits${state.reputation?` • remise ${Math.min(15,state.reputation)}%`:''}</p></div>
  <div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price}</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div>
  ${resale}
- <div class="card"><h3>💎 Artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • 500 crédits</small></div><button class="menuBtn sellArtifact" data-id="${id}">Vendre</button></div>`).join(''):'<p class="sub">Aucun artefact.</p>'}</div>
  <button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`
 }
 function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),finalPrice=Math.max(1,Math.round(price*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');if(COSMETIC_ITEMS[id]&&state.cosmeticsUnlocked.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(CONSUMABLES[id])addInv(id);if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(id==='map')state.scanner=1;if(HOME_ITEMS[id])addHomeItem(id);
  if(COSMETIC_ITEMS[id]){
-   state.cosmeticsUnlocked.push(id);
+   state.cosmeticsUnlocked.push(id);state.avatarVersion=(state.avatarVersion||1)+1;
    const c=COSMETIC_ITEMS[id];
    if(c.kind==='accessory')state.avatar.accessory=c.value;
    if(c.kind==='top')state.avatar.top=c.value;
    if(c.kind==='shoes')state.avatar.shoes=c.value;
-   if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload()})
+   if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload(),avatarVersion:state.avatarVersion})
  }
  save();updateHUD();toast(COSMETIC_ITEMS[id]?'Style acheté et équipé':'Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
 function sellLoot(id){
@@ -2238,16 +2299,41 @@ function emergencyExit(){
  if(!state.interior)return;
  leaveInterior();toast('Retour dans la rue.')
 }
-function updateHUD(){
- const {cx,cz}=currentChunk(),d=districtFor(cx,cz),aq=activeQuest(),prog=Math.min(aq.target,progress(aq.goal));$('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;$('#level').textContent=state.level;$('#wanted').textContent=state.wanted;
- $('#hungerVal').textContent=Math.round(state.hunger);$('#thirstVal').textContent=Math.round(state.thirst);$('#hygieneVal').textContent=Math.round(state.hygiene);
- $('#hungerBar').style.width=`${state.hunger}%`;$('#thirstBar').style.width=`${state.thirst}%`;$('#hygieneBar').style.width=`${state.hygiene}%`;
- $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()} • M${state.gameMonth} J${state.gameDay}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
- $('#gpsChip').textContent=`⌖ ${streetCoords()}`;const mg=$('#mapGpsReadout');if(mg)mg.textContent=`Origine O(0,0) • ${streetCoords()} • ${d.name}`;
- const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️',period=state.timeOfDay<6||state.timeOfDay>20?'NUIT':state.timeOfDay<9?'MATIN':state.timeOfDay>17?'SOIR':'JOUR';$('#weatherChip').textContent=`${icon} ${period}`;
- maybeCompleteNpcMission();updateTargetHUD();updateFollowerCard()
+
+const WEEKDAYS=['LUN','MAR','MER','JEU','VEN','SAM','DIM'];
+function formatGameTime(v=state.timeOfDay){const h=Math.floor(v)%24,m=Math.floor((v-Math.floor(v))*60);return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`}
+function weekdayName(abs=absoluteGameDay()){return WEEKDAYS[(Math.max(1,abs)-1)%7]}
+function agendaWhen(absDay,time){const delta=absDay-absoluteGameDay();return `${delta===0?'Aujourd’hui':delta===1?'Demain':`J+${delta}`} • ${time}`}
+function builtAgendaItems(){
+ const now=absoluteGameDay(),items=[];
+ if(state.job){const j=jobDef(),day=state.timeOfDay<17?now:now+1;items.push({day,time:'08:00',title:`${j.icon} Travail — ${j.name}`,note:'Journée professionnelle'})}
+ if(state.education.current){const p=EDUCATION_PROGRAMS[state.education.current.id],day=state.timeOfDay<16?now:now+1;items.push({day,time:'09:00',title:`${p.icon} Formation — ${p.name}`,note:`Jour ${state.education.current.attended+1}/${p.days}`})}
+ if(state.activeNpcMission)items.push({day:now,time:formatGameTime(),title:`🧾 Petit boulot — ${state.activeNpcMission.giver}`,note:state.activeNpcMission.text});
+ const monthEnd=now+(31-(state.gameDay||1));items.push({day:monthEnd,time:'00:00',title:'🏦 Nouveau mois',note:'Salaire, loyer, impôts et revenus locatifs'});
+ for(const e of state.agendaCustom||[])if(e.day>=now)items.push({...e,custom:true});
+ return items.sort((a,b)=>a.day-b.day||a.time.localeCompare(b.time)).slice(0,12)
+}
+function agendaHTML(){
+ const items=builtAgendaItems();return `<div class="timeHero"><div class="sectionKicker">MAINTENANT</div><b>${formatGameTime()}</b><span>${weekdayName()} • Mois ${state.gameMonth} • Jour ${state.gameDay}</span></div>
+ <div class="card"><h3>À venir</h3>${items.length?items.map((e,i)=>`<div class="agendaRow"><div class="agendaDate">${agendaWhen(e.day,e.time)}</div><div class="itemMain"><b>${e.title}</b><small>${e.note||''}</small></div>${e.custom?`<button class="targetClose agendaDelete" data-day="${e.day}" data-time="${e.time}" data-title="${encodeURIComponent(e.title)}">✕</button>`:''}</div>`).join(''):'<p class="sub">Rien de prévu.</p>'}</div>
+ <div class="card"><h3>Ajouter un rendez-vous</h3><input id="agendaTitle" class="lifeInput full" maxlength="40" placeholder="Ex : Retrouver Noah"><div class="agendaForm"><select id="agendaDay" class="lifeInput"><option value="0">Aujourd’hui</option><option value="1">Demain</option><option value="2">Dans 2 jours</option><option value="3">Dans 3 jours</option></select><input id="agendaTime" class="lifeInput" type="time" value="18:00"></div><button id="agendaAdd" class="menuBtn primary full">Ajouter à l’agenda</button></div>`
+}
+function bindAgenda(){
+ $('#agendaAdd')?.addEventListener('click',()=>{const title=$('#agendaTitle')?.value.trim(),time=$('#agendaTime')?.value||'18:00',off=Number($('#agendaDay')?.value||0);if(!title)return toast('Donne un nom au rendez-vous.');state.agendaCustom.push({day:absoluteGameDay()+off,time,title,note:'Rendez-vous personnel'});save();openSheet('agenda')});
+ $$('.agendaDelete').forEach(b=>b.onclick=()=>{const title=decodeURIComponent(b.dataset.title),day=Number(b.dataset.day),time=b.dataset.time;state.agendaCustom=state.agendaCustom.filter(e=>!(e.title===title&&e.day===day&&e.time===time));save();openSheet('agenda')})
 }
 
+function updateHUD(){
+ const {cx,cz}=currentChunk(),d=districtFor(cx,cz);
+ $('#hp').textContent=Math.round(state.hp);$('#armor').textContent=Math.round(state.armor);$('#coins').textContent=state.coins;
+ $('#hungerVal').textContent=Math.round(state.hunger);$('#thirstVal').textContent=Math.round(state.thirst);$('#hygieneVal').textContent=Math.round(state.hygiene);
+ $('#hungerBar').style.width=`${state.hunger}%`;$('#thirstBar').style.width=`${state.thirst}%`;$('#hygieneBar').style.width=`${state.hygiene}%`;
+ $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()}`;
+ $('#clockTime').textContent=formatGameTime();const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️';$('#clockMeta').textContent=`${weekdayName()} • M${state.gameMonth} J${state.gameDay} • ${icon}`;
+ $('#gpsChip').textContent=streetCoords();const mg=$('#mapGpsReadout');if(mg)mg.textContent=`Origine O(0,0) • ${streetCoords()} • ${d.name}`;
+ const pc=$('#policeChip');if(pc){let nearestD=Infinity,chasing=false;for(const p of police){if(!p?.group?.parent)continue;const pd=Math.hypot(state.pos.x-p.group.position.x,state.pos.z-p.group.position.z);nearestD=Math.min(nearestD,pd);if(p.chasing)chasing=true}const visible=!state.interior&&nearestD<=55;if(!visible)pc.classList.add('hidden');else{pc.classList.remove('hidden');pc.classList.toggle('chasing',chasing||policeSeeing);pc.textContent=(chasing||policeSeeing)?'🚔 POURSUITE':`👮 Police ${Math.round(nearestD)} m`}}
+ maybeCompleteNpcMission();updateTargetHUD();updateFollowerCard()
+}
 
 function setupMapUI(){
  const open=()=>{$('#mapOverlay').classList.remove('hidden');drawMap()},close=()=>$('#mapOverlay').classList.add('hidden');
@@ -2290,62 +2376,33 @@ makeJoy('#moveJoy','#moveKnob',moveStick);makeJoy('#lookJoy','#lookKnob',lookSti
 
 function avatarCreatorHTML(){
  const a=avatarPayload(),unlocked=state.cosmeticsUnlocked||[];
- const acc=[
-  ['none','Aucun',true],
-  ['cap','Casquette',unlocked.includes('cap_black')],
-  ['glasses','Lunettes',unlocked.includes('glasses_black')],
-  ['backpack','Sac à dos',unlocked.includes('backpack_city')]
- ].filter(x=>x[2]);
- const premiumTops=[
-  ['#9b3d4a','Rouge Neo',unlocked.includes('top_red')],
-  ['#6553a8','Violet Neo',unlocked.includes('top_purple')],
-  ['#202733','Noir premium',unlocked.includes('top_black')]
- ].filter(x=>x[2]);
+ const acc=[['none','Aucun',true],['cap','Casquette',unlocked.includes('cap_black')],['glasses','Lunettes',unlocked.includes('glasses_black')],['backpack','Sac à dos',unlocked.includes('backpack_city')]].filter(x=>x[2]);
+ const premiumTops=[['#9b3d4a','Rouge Neo',unlocked.includes('top_red')],['#6553a8','Violet Neo',unlocked.includes('top_purple')],['#202733','Noir premium',unlocked.includes('top_black')]].filter(x=>x[2]);
  const topOptions=[['#355f8a','Bleu'],['#486d45','Vert'],['#785f42','Brun'],...premiumTops];
  const shoeOptions=[['#11151a','Noir'],['#39424c','Gris'],...(unlocked.includes('shoes_white')?[['#e7edf1','Blanc premium']]:[])];
- return `<div class="card">
-   <h3>🎨 Ton personnage</h3>
-   <p class="sub">Cette apparence est synchronisée : les autres joueurs voient exactement ton skin.</p>
-   <div class="avatarPreview" id="avatarPreview" style="--skin:${a.skin};--hair:${a.hair};--top:${a.top};--pants:${a.pants};--shoes:${a.shoes}">
-    <div class="av"><div class="backpack ${a.accessory==='backpack'?'':'hidden'}"></div><div class="body"></div><div class="arm l"></div><div class="arm r"></div><div class="leg l"></div><div class="leg r"></div><div class="shoe l"></div><div class="shoe r"></div><div class="head"></div><div class="hair"></div><div class="cap ${a.accessory==='cap'?'':'hidden'}"></div><div class="glasses ${a.accessory==='glasses'?'':'hidden'}"></div></div>
-   </div>
-   <div class="avatarGrid">
-    <label>Peau<select id="avSkin">${[['#f0c3a1','Claire'],['#d5a47c','Dorée'],['#c38e68','Mate'],['#9f684c','Brune'],['#714834','Foncée']].map(x=>`<option value="${x[0]}" ${a.skin===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
-    <label>Coiffure<select id="avHairStyle">${[['short','Courte'],['buzz','Très courte'],['long','Longue'],['curly','Bouclée']].map(x=>`<option value="${x[0]}" ${a.hairStyle===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
-    <label>Cheveux<input type="color" id="avHair" value="${a.hair}"></label>
-    <label>Corpulence<select id="avBuild">${[['slim','Fine'],['standard','Standard'],['strong','Forte']].map(x=>`<option value="${x[0]}" ${a.build===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
-    <label>Haut<select id="avTop">${topOptions.map(x=>`<option value="${x[0]}" ${a.top===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
-    <label>Pantalon<select id="avPants">${[['#202a34','Noir'],['#3a4655','Bleu nuit'],['#564a45','Brun']].map(x=>`<option value="${x[0]}" ${a.pants===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
-    <label>Chaussures<select id="avShoes">${shoeOptions.map(x=>`<option value="${x[0]}" ${a.shoes===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
-    <label>Accessoire<select id="avAccessory">${acc.map(x=>`<option value="${x[0]}" ${a.accessory===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
-   </div>
-   <button class="menuBtn primary" id="saveAvatar" style="width:100%;margin-top:12px">✅ ENREGISTRER LE PERSONNAGE</button>
-   <p class="sub">D’autres vêtements et accessoires sont disponibles chez 👕 NeoStyle.</p>
- </div>`
+ return `<div class="card avatarCard"><div class="sectionKicker">IDENTITÉ</div><h3>Ton personnage</h3><p class="sub">L’aperçu et l’avatar vu par les autres utilisent maintenant exactement les mêmes caractéristiques.</p>
+ <div class="avatarPreview" id="avatarPreview" data-hair="${a.hairStyle}" data-build="${a.build}" style="--skin:${a.skin};--hair:${a.hair};--top:${a.top};--pants:${a.pants};--shoes:${a.shoes}">
+  <div class="av"><div class="backpack ${a.accessory==='backpack'?'':'hidden'}"></div><div class="body"></div><div class="arm l"></div><div class="arm r"></div><div class="leg l"></div><div class="leg r"></div><div class="shoe l"></div><div class="shoe r"></div><div class="head"></div><div class="hair"></div><div class="cap ${a.accessory==='cap'?'':'hidden'}"></div><div class="glasses ${a.accessory==='glasses'?'':'hidden'}"></div></div>
+ </div>
+ <div class="avatarGrid">
+  <label>Peau<select id="avSkin">${[['#f0c3a1','Claire'],['#d5a47c','Dorée'],['#c38e68','Mate'],['#9f684c','Brune'],['#714834','Foncée']].map(x=>`<option value="${x[0]}" ${a.skin===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+  <label>Coiffure<select id="avHairStyle">${[['short','Courte'],['buzz','Très courte'],['long','Longue'],['curly','Bouclée']].map(x=>`<option value="${x[0]}" ${a.hairStyle===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+  <label>Cheveux<input type="color" id="avHair" value="${a.hair}"></label>
+  <label>Corpulence<select id="avBuild">${[['slim','Fine'],['standard','Standard'],['strong','Forte']].map(x=>`<option value="${x[0]}" ${a.build===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+  <label>Haut<select id="avTop">${topOptions.map(x=>`<option value="${x[0]}" ${a.top===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+  <label>Pantalon<select id="avPants">${[['#202a34','Noir'],['#3a4655','Bleu nuit'],['#564a45','Brun']].map(x=>`<option value="${x[0]}" ${a.pants===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+  <label>Chaussures<select id="avShoes">${shoeOptions.map(x=>`<option value="${x[0]}" ${a.shoes===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+  <label>Accessoire<select id="avAccessory">${acc.map(x=>`<option value="${x[0]}" ${a.accessory===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+ </div><button class="menuBtn primary full" id="saveAvatar">Enregistrer & synchroniser</button><p class="sub">Les styles premium restent disponibles chez NeoStyle.</p></div>`
 }
-function readAvatarForm(){
- return normalizedAvatar({
-  skin:$('#avSkin')?.value,hair:$('#avHair')?.value,hairStyle:$('#avHairStyle')?.value,
-  top:$('#avTop')?.value,pants:$('#avPants')?.value,shoes:$('#avShoes')?.value,
-  accessory:$('#avAccessory')?.value,build:$('#avBuild')?.value
- })
-}
+function readAvatarForm(){return normalizedAvatar({skin:$('#avSkin')?.value,hair:$('#avHair')?.value,hairStyle:$('#avHairStyle')?.value,top:$('#avTop')?.value,pants:$('#avPants')?.value,shoes:$('#avShoes')?.value,accessory:$('#avAccessory')?.value,build:$('#avBuild')?.value})}
 function updateAvatarPreview(){
  const p=$('#avatarPreview');if(!p)return;const a=readAvatarForm();
- p.style.setProperty('--skin',a.skin);p.style.setProperty('--hair',a.hair);p.style.setProperty('--top',a.top);p.style.setProperty('--pants',a.pants);p.style.setProperty('--shoes',a.shoes);
- p.querySelector('.cap')?.classList.toggle('hidden',a.accessory!=='cap');
- p.querySelector('.glasses')?.classList.toggle('hidden',a.accessory!=='glasses');
- p.querySelector('.backpack')?.classList.toggle('hidden',a.accessory!=='backpack')
+ p.style.setProperty('--skin',a.skin);p.style.setProperty('--hair',a.hair);p.style.setProperty('--top',a.top);p.style.setProperty('--pants',a.pants);p.style.setProperty('--shoes',a.shoes);p.dataset.hair=a.hairStyle;p.dataset.build=a.build;
+ p.querySelector('.cap')?.classList.toggle('hidden',a.accessory!=='cap');p.querySelector('.glasses')?.classList.toggle('hidden',a.accessory!=='glasses');p.querySelector('.backpack')?.classList.toggle('hidden',a.accessory!=='backpack')
 }
-function saveAvatar(){
- state.avatar=readAvatarForm();state.avatarCreated=true;save();
- if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload()});
- toast('🎨 Apparence enregistrée et synchronisée.');openSheet('settings')
-}
-function bindAvatarCreator(){
- ['#avSkin','#avHair','#avHairStyle','#avTop','#avPants','#avShoes','#avAccessory','#avBuild'].forEach(s=>$(s)?.addEventListener('input',updateAvatarPreview));
- const b=$('#saveAvatar');if(b)b.onclick=saveAvatar
-}
+function saveAvatar(){state.avatar=readAvatarForm();state.avatarCreated=true;state.avatarVersion=(state.avatarVersion||1)+1;save();if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload(),avatarVersion:state.avatarVersion});playUiTone('confirm');toast('Apparence synchronisée.');openSheet('menu')}
+function bindAvatarCreator(){['#avSkin','#avHair','#avHairStyle','#avTop','#avPants','#avShoes','#avAccessory','#avBuild'].forEach(s=>$(s)?.addEventListener('input',updateAvatarPreview));const b=$('#saveAvatar');if(b)b.onclick=saveAvatar}
 function applyCosmetic(id){
  const c=COSMETIC_ITEMS[id];if(!c)return;
  if(c.kind==='accessory')state.avatar.accessory=c.value;
@@ -2354,43 +2411,37 @@ function applyCosmetic(id){
 }
 
 function openSheet(panel){
- $('#sheet').classList.remove('hidden');
- $$('.nav').forEach(n=>n.classList.toggle('active',n.dataset.panel===panel));
- const t=$('#sheetTitle'),b=$('#sheetBody');
- if(panel==='world'){t.textContent='Monde';b.innerHTML=worldHTML()}
- if(panel==='bag'){t.textContent='Inventaire';b.innerHTML=bagHTML()}
- if(panel==='home'){t.textContent='Immobilier';b.innerHTML=homeHTML()}
- if(panel==='quests'){t.textContent='Quêtes';b.innerHTML=questsHTML()}
- if(panel==='districts'){t.textContent='Quartiers';b.innerHTML=districtHTML()}
+ currentPanel=panel;const s=$('#sheet'),t=$('#sheetTitle'),b=$('#sheetBody');s.classList.remove('hidden');$$('.nav').forEach(n=>n.classList.toggle('active',n.dataset.panel===panel));
+ if(panel==='menu'){t.textContent='Menu';b.innerHTML=menuHTML()}
+ if(panel==='world'){t.textContent='Voyager';b.innerHTML=worldHTML()}
+ if(panel==='bag'){t.textContent='Sac';b.innerHTML=bagHTML()}
+ if(panel==='agenda'){t.textContent='Agenda';b.innerHTML=agendaHTML()}
+ if(panel==='social'){t.textContent='Social';b.innerHTML=socialHTML()}
+ if(panel==='home'){t.textContent='Logement';b.innerHTML=homeHTML()}
+ if(panel==='districts'){t.textContent='Quartier';b.innerHTML=districtHTML()}
  if(panel==='settings'){t.textContent='Réglages';b.innerHTML=settingsHTML()}
  if(panel==='avatar'){t.textContent='Personnage';b.innerHTML=avatarCreatorHTML()}
+ if(panel==='player'){t.textContent='Interaction';b.innerHTML=playerInteractionHTML()}
+ if(panel==='physicalShop'){t.textContent=SHOPS[state.interior?.shopType]?.name||'Commerce';b.innerHTML=physicalShopHTML()}
  if(panel==='work'){t.textContent='Travail';b.innerHTML=workHTML()}
- if(panel==='physicalShop'){t.textContent=SHOPS[state.interior.shopType].name;b.innerHTML=physicalShopHTML()}
- if(panel==='property'&&selectedProperty){t.textContent='Immobilier';b.innerHTML=propertySheetHTML(selectedProperty)}
+ if(panel==='property'){t.textContent='Dossier immobilier';b.innerHTML=propertySheetHTML(selectedProperty)}
  bindSheet(panel)
 }
-function worldHTML(){
- return `<div class="card"><h3>Vie urbaine</h3><p class="sub">Explore des quartiers pauvres, populaires, centraux, aisés et très riches. Les prix, la sécurité, les logements et le niveau de vie changent réellement.</p></div>
- <div class="card"><h3>Voyager</h3>${CITIES.map(c=>`<button class="menuBtn cityBtn" data-city="${c.id}" style="width:100%;margin-bottom:7px">${c.name}<small>${state.artifacts.includes(c.id)?'✅ Artefact trouvé':c.artifact}</small></button>`).join('')}</div>`
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V17</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+ <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>✈️</span><b>Voyager</b><small>Changer de ville</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
+function socialHTML(){
+ const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
+ return `<div class="socialHero"><div><div class="sectionKicker">RÉSEAU</div><h3>${mpSocket?.connected?'En ligne':'Hors ligne'}</h3><p>${mpRoomCount} joueur(s) • ${city().name}</p></div><span class="liveDot ${mpSocket?.connected?'on':''}"></span></div>
+ <div class="card"><div class="voiceLine"><div><b>${voiceLabel()}</b><small>Volume automatique selon la distance : plein à 5 m, coupé après 25 m.</small></div><button id="voiceToggle" class="menuBtn ${voiceEnabled?'red':'primary'}">${voiceEnabled?'Couper':'Activer'}</button></div><p class="sub">Le micro demande ton autorisation. En Wi‑Fi/4G certains réseaux peuvent nécessiter plus tard un relais TURN.</p></div>
+ <div class="card"><div class="sectionRow"><h3>Joueurs proches</h3><button id="openChatSocial" class="tinyBtn">💬 Chat</button></div>${players.length?players.map(p=>`<div class="socialPlayer"><div class="socialAvatar">👤</div><div class="itemMain"><b>${p.name} ${p.voice?'🎙️':''}</b><small>${p.d.toFixed(1)} m • ${Math.round(p.group.position.x)}, ${Math.round(-p.group.position.z)}</small></div><button class="menuBtn interactRemote" data-id="${p.id}">Interagir</button></div>`).join(''):'<p class="sub">Aucun autre joueur dans cette ville pour le moment.</p>'}</div>`
 }
+function worldHTML(){return `<div class="card"><div class="sectionKicker">VOYAGE</div><h3>Changer de ville</h3><p class="sub">Chaque ville possède sa propre salle multijoueur. Les joueurs doivent être dans la même ville pour se voir.</p></div><div class="card">${CITIES.map(c=>`<button class="menuBtn cityBtn full" data-city="${c.id}">${c.name}<small>${c.id===state.cityId?'Ville actuelle':'Voyager'}</small></button>`).join('')}</div>`}
 function bagHTML(){
  const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join('');
- const inv=state.inventory.length?state.inventory.map(i=>{
-   const info=itemInfo(i.id);
-   const use=CONSUMABLES[i.id]?`<button class="menuBtn useConsumable" data-id="${i.id}">Utiliser</button>`:i.id==='medkit'?'<button class="menuBtn useMed">Utiliser</button>':'';
-   return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty}${info.value?` • revente ${info.value}`:''}</small></div>${use}</div>`
- }).join(''):'<p class="sub">Sac vide.</p>';
- const arts=[...new Set(state.artifactBag)];
- return `<div class="card"><h3>État</h3><p class="sub">🍗 ${Math.round(state.hunger)} • 💧 ${Math.round(state.thirst)} • 🧼 ${Math.round(state.hygiene)}</p></div>
- <div class="card"><h3>Armes</h3>${ws}</div>
- <div class="card"><h3>Sac ${invCount()}/${state.bagMax}</h3>${inv}</div>
- <div class="card"><h3>Artefacts</h3>${arts.length?arts.map(id=>`<div class="item"><div class="itemIcon">💎</div><div class="itemMain"><b>${artifactLabel(id)}</b><small>×${artifactCount(id)} • 500 crédits</small></div></div>`).join(''):'<p class="sub">Aucun artefact.</p>'}</div>`
+ const inv=state.inventory.length?state.inventory.map(i=>{const info=itemInfo(i.id);const use=CONSUMABLES[i.id]?`<button class="menuBtn useConsumable" data-id="${i.id}">Utiliser</button>`:i.id==='medkit'?'<button class="menuBtn useMed">Utiliser</button>':'';return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty}${info.value?` • valeur ${info.value}`:''}</small></div>${use}</div>`}).join(''):'<p class="sub">Sac vide.</p>';
+ return `<div class="card bagSummary"><div><b>${invCount()}/${state.bagMax}</b><small>objets</small></div><div><b>${Math.round(state.hunger)}</b><small>faim</small></div><div><b>${Math.round(state.thirst)}</b><small>soif</small></div><div><b>${Math.round(state.hygiene)}</b><small>hygiène</small></div></div><div class="card"><h3>Équipement</h3>${ws}</div><div class="card"><h3>Inventaire</h3>${inv}</div>`
 }
-function questsHTML(){
- return `<div class="card"><h3>Progression générale</h3><p class="sub">Niveau ${state.level} • ${state.ownedDistricts.length} quartiers sécurisés • ${state.npcMissions} missions PNJ • ${state.artifacts.length}/${CITIES.length} artefacts.</p></div>
- ${QUESTS.map(q=>{const done=state.completedQuests.includes(q.id),p=Math.min(q.target,progress(q.goal));return `<div class="card"><h3>${done?'✅':'📌'} ${q.title}</h3><p class="sub">${q.text}</p><div class="progress"><i style="width:${p/q.target*100}%"></i></div><p class="sub">${p}/${q.target} • récompense ${q.reward} crédits</p></div>`}).join('')}
- ${state.activeNpcMission?`<div class="card"><h3>Mission de ${state.activeNpcMission.giver}</h3><p class="sub">${state.activeNpcMission.text} — ${Math.min(state.activeNpcMission.target,npcMissionProgress())}/${state.activeNpcMission.target}</p></div>`:''}`
-}
+function questsHTML(){return ''}
 function districtHTML(){
  const {cx,cz}=currentChunk(),d=districtFor(cx,cz),id=districtId(cx,cz);
  return `<div class="card"><h3>${d.name}</h3><p class="sub"><span class="${districtTierClass(d)}">${districtTierLabel(d)}</span> • richesse ${Math.round(d.wealth*100)}%</p>
@@ -2399,48 +2450,37 @@ function districtHTML(){
  <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){
- return `<div class="card"><h3>StreetQuest V16.2</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>${multiplayerSettingsHTML()}
- <div class="card"><h3>Identité</h3><p class="sub">Crée le skin visible par les autres joueurs.</p><button class="menuBtn primary" id="openAvatar" style="width:100%">🎨 Modifier mon personnage</button></div>
- <div class="card"><h3>Économie</h3><p class="sub">École → diplôme → emploi → missions → salaire → impôts → logement.</p><button class="menuBtn" id="openWork" style="width:100%">💼 Voir mon travail</button></div>
- <div class="card"><h3>Immobilier</h3><p class="sub">Pour louer : emploi obligatoire et salaire brut au moins égal à trois fois le loyer.</p></div>
- <div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`
-}
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V17</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+ ${multiplayerSettingsHTML()}
+ <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
+ <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
 function bindSheet(panel){
+ if(panel==='menu'){$$('.menuTile').forEach(b=>b.onclick=()=>openSheet(b.dataset.open));$('#menuAvatar')?.addEventListener('click',()=>openSheet('avatar'))}
  if(panel==='world')$$('.cityBtn').forEach(b=>b.onclick=()=>switchCity(b.dataset.city));
- if(panel==='bag'){
-   $$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});
-   $$('.useMed').forEach(b=>b.onclick=useMed);
-   $$('.useConsumable').forEach(b=>b.onclick=()=>useConsumable(b.dataset.id))
- }
- if(panel==='home'){
-   const rough=$('#sleepRough');if(rough)rough.onclick=sleepRough;
-   $$('.setResidence').forEach(b=>b.onclick=()=>setResidence(b.dataset.id));
-   $$('.endRental').forEach(b=>b.onclick=()=>endRental(b.dataset.id));
-   $$('.toggleListing').forEach(b=>b.onclick=()=>togglePropertyListing(b.dataset.id));
-   $$('.adjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta)))
- }
+ if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed);$$('.useConsumable').forEach(b=>b.onclick=()=>useConsumable(b.dataset.id))}
+ if(panel==='agenda')bindAgenda();
+ if(panel==='social'){$('#voiceToggle')?.addEventListener('click',()=>voiceEnabled?disableVoice():enableVoice());$('#openChatSocial')?.addEventListener('click',()=>{closeSheet();$('#chatPanel').classList.remove('hidden')});$$('.interactRemote').forEach(b=>b.onclick=()=>openPlayerInteraction(b.dataset.id))}
+ if(panel==='player')bindPlayerInteraction();
+ if(panel==='home'){const rough=$('#sleepRough');if(rough)rough.onclick=sleepRough;$$('.setResidence').forEach(b=>b.onclick=()=>setResidence(b.dataset.id));$$('.endRental').forEach(b=>b.onclick=()=>endRental(b.dataset.id));$$('.toggleListing').forEach(b=>b.onclick=()=>togglePropertyListing(b.dataset.id));$$('.adjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta)))}
  if(panel==='districts'){const x=$('#secureDistrict');if(x)x.onclick=secureDistrict}
  if(panel==='avatar')bindAvatarCreator();
  if(panel==='settings'){
-   const u=$('#forceUpdate');if(u)u.onclick=()=>window.streetQuestUpdate?.();
-   const ni=$('#mpName');if(ni)ni.oninput=()=>localStorage.setItem('sq-mp-name',(ni.value.trim()||'Joueur').slice(0,18));const mc=$('#mpConnect');if(mc)mc.onclick=()=>connectMultiplayer(mpServerUrl(),($('#mpName')?.value||mpNickname()).trim()||'Joueur');
-   const md=$('#mpDisconnect');if(md)md.onclick=disconnectMultiplayer;
-   const oa=$('#openAvatar');if(oa)oa.onclick=()=>openSheet('avatar');const ow=$('#openWork');if(ow)ow.onclick=()=>openSheet('work');
-   $('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v16');localStorage.removeItem('sq3d-v15');location.reload()}}
+  $('#forceUpdate')?.addEventListener('click',()=>window.streetQuestUpdate?.());
+  const ni=$('#mpName');if(ni)ni.oninput=()=>localStorage.setItem('sq-mp-name',(ni.value.trim()||'Joueur').slice(0,18));
+  $('#mpConnect')?.addEventListener('click',()=>connectMultiplayer(mpServerUrl(),($('#mpName')?.value||mpNickname()).trim()||'Joueur'));
+  $('#mpDisconnect')?.addEventListener('click',disconnectMultiplayer);
+  $('#toggleSound')?.addEventListener('click',()=>{state.soundEnabled=!state.soundEnabled;save();if(state.soundEnabled)playUiTone('confirm');openSheet('settings')});
+  $('#resetGame')?.addEventListener('click',()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v17');localStorage.removeItem('sq3d-v16');localStorage.removeItem('sq3d-v15');location.reload()}})
  }
+ if(panel==='npc'){}
  if(panel==='physicalShop')bindShop();
  if(panel==='work'){const sw=$('.startWork');if(sw)sw.onclick=startWorkMission}
- if(panel==='property'){
-   $$('.rentProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)rentProperty(p)});
-   $$('.buyProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)buyProperty(p)});
-   $$('.enterProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){closeSheet();enterInterior('property',p)}})
- }
+ if(panel==='property'){$$('.rentProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)rentProperty(p)});$$('.buyProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)buyProperty(p)});$$('.enterProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){closeSheet();enterInterior('property',p)}})}
  $$('.inspectProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){selectedProperty=p;openSheet('property')}})
 }
-function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);if(mpSocket?.connected){setMpStatus(true,1,'Changement de ville…');mpSocket.emit('player:join',{name:mpNickname(),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,avatar:avatarPayload()})}toast(`Bienvenue à ${city().name}`)}
+function switchCity(id){clearTarget(false);state.cityId=id;state.pos={x:2,z:8};state.yaw=0;state.pitch=0;for(const[k]of[...chunks])unload(k);ensureChunks(true);save();closeSheet();for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);if(mpSocket?.connected){setMpStatus(true,1,'Changement de ville…');mpSocket.emit('player:join',{name:mpNickname(),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,avatar:avatarPayload(),avatarVersion:state.avatarVersion||1});if(voiceEnabled)setTimeout(()=>mpSocket?.emit('voice:state',{enabled:true}),80)}toast(`Bienvenue à ${city().name}`)}
 function useMed(){const x=state.inventory.find(i=>i.id==='medkit');if(!x)return toast('Aucun kit');if(state.hp>=state.maxHp)return toast('PV déjà au maximum');x.qty--;state.hp=clamp(state.hp+40,0,state.maxHp);if(x.qty<=0)state.inventory=state.inventory.filter(i=>i!==x);save();openSheet('bag')}
-function closeSheet(){$('#sheet').classList.add('hidden')}
+function closeSheet(){if(currentPanel==='npc')endNpcConversation();currentPanel=null;$('#sheet').classList.add('hidden')}
 let toastTimer;function toast(m){
  const now=Date.now();if(m===lastToastMessage&&now-lastToastAt<1800)return;
  lastToastMessage=m;lastToastAt=now;
@@ -2449,7 +2489,15 @@ let toastTimer;function toast(m){
 
 
 
-$('#chatBtn').onclick=()=>$('#chatPanel').classList.toggle('hidden');$('#closeChat').onclick=()=>$('#chatPanel').classList.add('hidden');$('#onlineBtn').onclick=()=>openSheet('settings');$('#chatForm').onsubmit=e=>{e.preventDefault();const i=$('#chatInput'),m=i.value.trim();if(!m)return;if(!mpSocket?.connected)return toast('Multijoueur non connecté.');mpSocket.emit('chat:send',{message:m});i.value=''};$$('.emoteRow button').forEach(b=>b.onclick=()=>{if(mpSocket?.connected)mpSocket.emit('player:emote',{emote:b.dataset.emote})});$('#updateBtn').onclick=()=>window.streetQuestUpdate?.();$('#emergencyExitBtn').onclick=emergencyExit;$('#scanBtn').onclick=scan;$('#interactBtn').onclick=()=>currentInteractFn?currentInteractFn():toast(selectedNPC?'Suis ta cible : quand tu es bien derrière, la fouille démarre automatiquement.':'Touche un passant pour le sélectionner, ou approche-toi d’un objet.');$('#clearTarget').onclick=()=>clearTarget();$('#dismissFollower').onclick=dismissFollower;$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;$('#menuBtn').onclick=()=>openSheet('world');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();$$('.nav').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
+$('#chatBtn').onclick=()=>$('#chatPanel').classList.toggle('hidden');
+$('#closeChat').onclick=()=>$('#chatPanel').classList.add('hidden');
+$('#onlineBtn').onclick=()=>openSheet('social');
+$('#chatForm').onsubmit=e=>{e.preventDefault();const i=$('#chatInput'),m=i.value.trim();if(!m)return;if(!mpSocket?.connected)return toast('Multijoueur non connecté.');mpSocket.emit('chat:send',{message:m});i.value=''};
+$$('.emoteRow button').forEach(b=>b.onclick=()=>{if(mpSocket?.connected)mpSocket.emit('player:emote',{emote:b.dataset.emote})});
+$('#emergencyExitBtn').onclick=emergencyExit;
+$('#clearTarget').onclick=()=>clearTarget();$('#dismissFollower').onclick=dismissFollower;$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;
+$('#menuBtn').onclick=()=>openSheet('menu');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();
+$('#navMap').onclick=()=>{$('#mapOverlay').classList.remove('hidden');drawMap()};$$('.nav[data-panel]').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
 init();

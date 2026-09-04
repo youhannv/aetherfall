@@ -676,3 +676,41 @@ V16.2 :
 - conserve les skins synchronisés
 - conserve NeoStyle
 - conserve l'anti-chevauchement V16.1
+
+
+# V17 — Social Life
+
+Interface entièrement repensée :
+- HUD allégé : vie, armure, argent et besoins seulement
+- suppression visuelle du niveau, des étoiles, du compteur de recherche, des quêtes, du radar/artefact et de la main
+- police affichée uniquement lorsqu’un policier réel est chargé à moins de 55 m ; poursuite signalée uniquement si elle a lieu
+- horloge HH:MM + jour/semaine + météo intégrés en haut
+- mini-carte déplacée sans chevauchement avec l’horloge ; coordonnées cartésiennes X/Y sous la carte
+- barre basse : Carte, Sac, Agenda, Social uniquement
+- réglages, personnage, logement, travail, quartier et voyage déplacés dans le menu ☰
+- Agenda avec travail, formation, petit boulot, échéance mensuelle et rendez-vous personnalisés
+- bouton d’interaction contextuel unique
+
+Personnages :
+- chaque attribut du créateur a un effet visuel dans l’aperçu ET sur l’avatar 3D distant
+- coiffures réellement différentes (courte, buzz, longue, bouclée)
+- corpulence modifie torse, épaules, bras, jambes et accessoires
+- vêtements, peau, cheveux, chaussures et accessoires synchronisés
+- avatarVersion force la reconstruction distante après chaque modification
+
+PNJ :
+- le métier n’est plus affiché avant de l’avoir demandé
+- le PNJ s’arrête et se tourne vers le joueur pendant une conversation
+- il reprend son chemin à la fermeture ou si le joueur s’éloigne
+
+Multijoueur :
+- interaction contextuelle avec les autres joueurs
+- saluer, message privé, partager X/Y, inviter au groupe, couper/réactiver leur voix
+- chat vocal de proximité WebRTC : plein volume à 5 m, décroissance jusqu’à silence à 25 m
+- activation du micro uniquement sur action volontaire ; autorisation iOS/Safari respectée
+- signalisation WebRTC transmise par Socket.IO
+- STUN intégré ; certains réseaux NAT stricts peuvent nécessiter un TURN ultérieurement
+
+Le serveur V17 doit être redéployé sur Render pour les nouvelles fonctions vocales/sociales.
+
+- Les anciens artefacts/scanner ne sont plus générés ni affichés en V17.

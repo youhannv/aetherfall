@@ -39,46 +39,45 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V16.2">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V17">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V16.2</title>
+<title>StreetQuest 3D V17</title>
 </head>
 <body>
 <div id="app">
  <div id="viewport">
   <div id="threeHost"></div>
-  <header class="topHud">
-   <div class="brand"><b>STREETQUEST 3D</b><small id="district">PARIS • CENTRE</small></div>
-   <div class="topActions"><button id="onlineBtn" class="roundBtn onlineBtn" title="Multijoueur">👥<small id="onlineCount">0</small></button><button id="chatBtn" class="roundBtn" title="Chat de proximité">💬</button><button id="updateBtn" class="roundBtn updateBtn" title="Rechercher une mise à jour">↻</button><button id="menuBtn" class="roundBtn">☰</button></div>
+  <header class="topHud v17Top">
+   <div class="brand"><b>STREETQUEST</b><small id="district">PARIS • CENTRE</small></div>
+   <div class="timeCluster"><b id="clockTime">09:00</b><small id="clockMeta">LUN • J1 • ☀️</small></div>
+   <div class="topActions">
+    <button id="onlineBtn" class="roundBtn onlineBtn" title="Social"><span>👥</span><small id="onlineCount">0</small></button>
+    <button id="chatBtn" class="roundBtn" title="Messages">💬</button>
+    <button id="menuBtn" class="roundBtn menuRound" title="Menu">☰</button>
+   </div>
   </header>
 
-  <div class="stats">
+  <div class="stats v17Stats">
    <span>❤️ <b id="hp">100</b></span>
    <span>🛡️ <b id="armor">0</b></span>
    <span>🪙 <b id="coins">100</b></span>
-   <span>⭐ <b id="level">1</b></span>
-   <span>🚨 <b id="wanted">0</b></span>
   </div>
 
-
-  <div class="needsHud">
+  <div class="needsHud v17Needs">
    <div class="need"><span>🍗</span><i><b id="hungerBar"></b></i><small id="hungerVal">70</small></div>
    <div class="need"><span>💧</span><i><b id="thirstBar"></b></i><small id="thirstVal">70</small></div>
    <div class="need"><span>🧼</span><i><b id="hygieneBar"></b></i><small id="hygieneVal">60</small></div>
   </div>
 
-  <div class="mapWrap"><canvas id="minimap" width="200" height="200"></canvas><button id="mapExpandBtn" class="mapExpandBtn">🗺️</button></div>
-
-  <div class="missionCard">
-   <small>AVENTURE</small>
-   <b id="missionTitle">Chargement…</b>
-   <span id="missionText"></span>
+  <div class="mapWrap v17MapWrap">
+   <canvas id="minimap" width="200" height="200"></canvas>
+   <button id="mapExpandBtn" class="mapExpandBtn" aria-label="Agrandir la carte">↗</button>
+   <div id="gpsChip" class="gpsChip">X +0 • Y +0</div>
   </div>
-
-  <div id="weatherChip" class="weatherChip">☀️ JOUR</div><div id="gpsChip" class="gpsChip">⌖ X +0 • Y +0</div><button id="emergencyExitBtn" class="emergencyExit hidden">↩ SORTIR</button>
-
+  <div id="policeChip" class="policeChip hidden">👮 Police</div>
+  <button id="emergencyExitBtn" class="emergencyExit hidden">↩ SORTIR</button>
 
   <div id="followerCard" class="followerCard hidden">
    <div class="followerHead"><span>🚶 <b id="followerName">Passant</b></span><button id="dismissFollower" class="targetClose">✕</button></div>
@@ -87,23 +86,19 @@
   </div>
 
   <div id="targetCard" class="targetCard hidden">
-   <div class="targetHead">
-    <small>CIBLE SÉLECTIONNÉE</small>
-    <button id="clearTarget" class="targetClose">✕</button>
-   </div>
-   <b id="targetName">Passant</b>
-   <span id="targetInfo">Suis cette personne discrètement.</span>
+   <div class="targetHead"><small>CIBLE</small><button id="clearTarget" class="targetClose">✕</button></div>
+   <b id="targetName">Passant</b><span id="targetInfo"></span>
    <div class="suspicion"><i id="suspicionBar"></i></div>
    <div class="targetFooter"><span id="targetDistance">— m</span><span id="targetLoot">🪙 ?</span></div>
   </div>
-
 
   <div id="dialogue" class="dialogue hidden">
    <div class="portrait" id="dialogueIcon">🙂</div>
    <div class="dialogueMain"><b id="dialogueName"></b><p id="dialogueText"></p></div>
    <button id="dialogueNext" class="smallBtn">Suite</button>
   </div>
-  <div id="prompt" class="prompt hidden">
+
+  <div id="prompt" class="prompt v17Prompt hidden">
    <div><b id="promptTitle"></b><small id="promptText"></small></div>
    <button id="promptBtn" class="promptBtn">INTERAGIR</button>
   </div>
@@ -114,44 +109,36 @@
    <div class="combatBtns"><button id="attackBtn" class="dangerBtn">⚔️ ATTAQUER</button><button id="fleeBtn" class="normalBtn">🏃 FUIR</button></div>
   </div>
 
-
   <div id="chatPanel" class="chatPanel hidden">
-   <div class="chatHead"><b>💬 Proximité</b><button id="closeChat" class="targetClose">✕</button></div>
-   <div id="chatMessages" class="chatMessages"><small>Connecte le serveur dans Réglages.</small></div>
+   <div class="chatHead"><div><b>💬 Messages</b><small> proximité & privés</small></div><button id="closeChat" class="targetClose">✕</button></div>
+   <div id="chatMessages" class="chatMessages"><small>Connexion au réseau StreetQuest…</small></div>
    <div class="emoteRow"><button data-emote="👋">👋</button><button data-emote="👍">👍</button><button data-emote="😂">😂</button><button data-emote="😮">😮</button></div>
    <form id="chatForm"><input id="chatInput" maxlength="100" autocomplete="off" placeholder="Message aux joueurs proches"><button>➤</button></form>
   </div>
 
-  <div class="controls">
+  <div class="controls v17Controls">
    <div class="joyWrap"><small>MARCHER</small><div class="joystick" id="moveJoy"><div class="knob" id="moveKnob"></div></div></div>
-   <div class="centerActions"><button id="scanBtn" class="actionCircle">📡</button><button id="interactBtn" class="actionCircle large">✋</button></div>
    <div class="joyWrap"><small>REGARDER</small><div class="joystick" id="lookJoy"><div class="knob" id="lookKnob"></div></div></div>
   </div>
 
   <div id="toast" class="toast hidden"></div>
+  <div id="audioHost" class="audioHost" aria-hidden="true"></div>
 
   <div id="mapOverlay" class="mapOverlay hidden">
    <div class="mapOverlayBox">
-    <div class="sheetHead"><div><h2>Grande mini-carte</h2><small id="mapGpsReadout" class="mapGpsReadout">Origine O(0,0) • X +0 • Y +0</small></div><button id="closeMapOverlay" class="roundBtn">✕</button></div>
-    <div class="mapZoomBar">
-     <button id="mapZoomOut" class="roundBtn">−</button>
-     <span id="mapZoomLabel">100%</span>
-     <button id="mapZoomIn" class="roundBtn">+</button>
-    </div>
+    <div class="sheetHead"><div><h2>Carte de la ville</h2><small id="mapGpsReadout" class="mapGpsReadout">Origine O(0,0) • X +0 • Y +0</small></div><button id="closeMapOverlay" class="roundBtn">✕</button></div>
+    <div class="mapZoomBar"><button id="mapZoomOut" class="roundBtn">−</button><span id="mapZoomLabel">100%</span><button id="mapZoomIn" class="roundBtn">+</button></div>
     <canvas id="bigMinimap" width="640" height="640"></canvas>
-    <div class="mapLegend"><span>🟢 Boutique</span><span>🔵 Police</span><span>🟡 Résidence</span><span>⚪ Toi</span></div>
+    <div class="mapLegend"><span>🟢 Commerce</span><span>🔵 Police réelle</span><span>🟡 Logement</span><span>⚪ Toi</span></div>
    </div>
   </div>
-
  </div>
 
- <nav class="bottomNav">
-  <button data-panel="world" class="nav active">🌍<small>Monde</small></button>
+ <nav class="bottomNav v17Bottom">
+  <button id="navMap" class="nav">🗺️<small>Carte</small></button>
   <button data-panel="bag" class="nav">🎒<small>Sac</small></button>
-  <button data-panel="home" class="nav">🏠<small>Base</small></button>
-  <button data-panel="quests" class="nav">📜<small>Quêtes</small></button>
-  <button data-panel="districts" class="nav">🏙️<small>Quartiers</small></button>
-  <button data-panel="settings" class="nav">⚙️<small>Réglages</small></button>
+  <button data-panel="agenda" class="nav">📅<small>Agenda</small></button>
+  <button data-panel="social" class="nav">👥<small>Social</small></button>
  </nav>
 
  <div id="sheet" class="sheet hidden">
@@ -232,5 +219,6 @@
   addEventListener('pageshow',()=>sessionStorage.removeItem('sq-reloading'));
 })();
 </script>
+
 </body>
 </html>
