@@ -25,7 +25,7 @@ const roomName=city=>`city:${safeText(city,20)||'paris'}`;
 app.get('/',(_,res)=>res.json({name:'StreetQuest Multiplayer',status:'online',players:players.size}));
 app.get('/health',(_,res)=>res.status(200).send('ok'));
 app.get('/debug',(_,res)=>res.json({
- version:'16.1',
+ version:'16.2',
  sockets:io.engine.clientsCount,
  joinedPlayers:players.size,
  players:[...players.values()].map(p=>({name:p.name,city:p.city,x:p.x,z:p.z,avatar:p.avatar}))

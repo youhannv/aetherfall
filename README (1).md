@@ -650,3 +650,29 @@ Elles permettent de dire précisément à un autre joueur où se retrouver sans 
   - Y positif vers le haut de la carte
 - exemple : X -27 • Y +68
 - les axes X=0 et Y=0 apparaissent sur la carte lorsque l'origine est visible
+
+
+# V16.2 — Correctif écran noir
+
+Cause réelle identifiée :
+Lors de l'ajout du créateur de skins V16, quatre fonctions multijoueur ont été supprimées accidentellement :
+- `removeRemoteAvatar`
+- `updateRemotePlayers`
+- `addChatLine`
+- `setMpStatus`
+
+La boucle `animate()` appelait toujours `updateRemotePlayers()` via `multiplayerTick()` AVANT
+`renderer.render(scene,camera)`. Cela provoquait une `ReferenceError` à chaque frame et empêchait
+Three.js d'afficher la moindre image 3D. Le HUD HTML et la mini-carte continuaient à fonctionner,
+d'où l'écran noir observé.
+
+V16.2 :
+- restaure les quatre fonctions
+- rend maintenant la scène 3D AVANT le traitement réseau
+- encapsule la frame multijoueur dans un try/catch
+- une panne multijoueur ne peut donc plus produire un écran noir
+- ajoute un diagnostic rouge uniquement si WebGL lui-même ne démarre pas
+- conserve les coordonnées cartésiennes X/Y autour de O(0,0)
+- conserve les skins synchronisés
+- conserve NeoStyle
+- conserve l'anti-chevauchement V16.1

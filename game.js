@@ -321,6 +321,39 @@ function refreshRemoteAvatar(p){
  const pos=old.group.position.clone(),rot=old.group.rotation.y;scene.remove(old.group);remotePlayers.delete(p.id);
  createRemoteAvatar({...p,x:pos.x,z:pos.z,yaw:rot});
 }
+
+function removeRemoteAvatar(id){
+ const r=remotePlayers.get(id);
+ if(r?.group?.parent)scene.remove(r.group);
+ remotePlayers.delete(id)
+}
+function updateRemotePlayers(dt){
+ for(const r of remotePlayers.values()){
+   if(!r?.group)continue;
+   r.group.position.x+=(r.targetX-r.group.position.x)*Math.min(1,dt*10);
+   r.group.position.z+=(r.targetZ-r.group.position.z)*Math.min(1,dt*10);
+   let dy=((r.targetYaw-r.group.rotation.y+Math.PI*3)%(Math.PI*2))-Math.PI;
+   r.group.rotation.y+=dy*Math.min(1,dt*10);
+   r.group.visible=!state.interior
+ }
+}
+function addChatLine(name,msg,system=false){
+ const box=$('#chatMessages');if(!box)return;
+ const p=document.createElement('p');p.className=system?'system':'';
+ p.innerHTML=system?String(msg):`<b>${String(name).replace(/[<>]/g,'')}</b> : ${String(msg).replace(/[<>]/g,'')}`;
+ box.appendChild(p);
+ while(box.children.length>30)box.removeChild(box.firstChild);
+ box.scrollTop=box.scrollHeight
+}
+function setMpStatus(ok,count=0,message=''){
+ const b=$('#onlineBtn');if(b)b.classList.toggle('connected',ok);
+ const c=$('#onlineCount');if(c)c.textContent=ok?count:0;
+ mpRoomCount=ok?count:0;
+ mpStatusMessage=message||(ok?'Connecté':'Hors ligne');
+ const s=$('#mpLiveStatus');if(s)s.textContent=mpStatusMessage;
+ const rc=$('#mpRoomCount');if(rc)rc.textContent=String(mpRoomCount)
+}
+
 function disconnectMultiplayer(){if(mpSocket){mpSocket.disconnect();mpSocket=null}for(const id of [...remotePlayers.keys()])removeRemoteAvatar(id);setMpStatus(false,0);addChatLine('', 'Mode solo.',true)}
 function connectMultiplayer(_url=mpServerUrl(),name=mpNickname()){
  const url='https://streetquest-multiplayer.onrender.com';
@@ -375,7 +408,16 @@ function connectMultiplayer(_url=mpServerUrl(),name=mpNickname()){
    console.warn('StreetQuest multiplayer',err?.message||err)
  })
 }
-function multiplayerTick(t,dt){updateRemotePlayers(dt);if(!mpSocket?.connected||state.interior)return;if(t-mpLastSend<100)return;const moved=Math.hypot(state.pos.x-mpLastX,state.pos.z-mpLastZ)>.03||Math.abs(state.yaw-mpLastYaw)>.02;if(moved){mpLastSend=t;mpLastX=state.pos.x;mpLastZ=state.pos.z;mpLastYaw=state.yaw;mpSocket.emit('player:move',{city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw})}}
+function multiplayerTick(t,dt){
+ updateRemotePlayers(dt);
+ if(!mpSocket?.connected||state.interior)return;
+ if(t-mpLastSend<100)return;
+ const moved=Math.hypot(state.pos.x-mpLastX,state.pos.z-mpLastZ)>.03||Math.abs(state.yaw-mpLastYaw)>.02;
+ if(moved){
+   mpLastSend=t;mpLastX=state.pos.x;mpLastZ=state.pos.z;mpLastYaw=state.yaw;
+   mpSocket.emit('player:move',{city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw})
+ }
+}
 function multiplayerSettingsHTML(){
  const connected=!!mpSocket?.connected;
  return `<div class="card">
@@ -401,6 +443,18 @@ function multiplayerSettingsHTML(){
  </div>`
 }
 
+
+function show3DFatal(message){
+ console.error('StreetQuest 3D fatal:',message);
+ let d=$('#renderFatal');
+ if(!d){
+   d=document.createElement('div');d.id='renderFatal';
+   d.style.cssText='position:absolute;z-index:90;left:10px;right:10px;top:240px;padding:12px;border-radius:12px;background:#541c25;color:white;border:1px solid #ff7187;font:700 12px system-ui;white-space:pre-wrap';
+   $('#viewport')?.appendChild(d)
+ }
+ d.textContent='ERREUR 3D : '+String(message)
+}
+
 async function init(){
  try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
  // Extra recovery guard for older saves or interrupted updates.
@@ -410,7 +464,7 @@ async function init(){
  }
  const host=$('#threeHost');scene=new THREE.Scene();scene.background=new THREE.Color(0x5f7898);scene.fog=new THREE.Fog(0x5f7898,68,230);
  camera=new THREE.PerspectiveCamera(72,host.clientWidth/host.clientHeight,.06,260);
- renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+ try{renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'})}catch(err){show3DFatal(err?.message||err);return}
  renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(host.clientWidth,host.clientHeight);
  renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.08;
  host.appendChild(renderer.domElement);clock=new THREE.Clock();raycaster=new THREE.Raycaster();
@@ -1535,7 +1589,7 @@ function animate(){
  const moveSpeed=4.8*needsSpeedMultiplier();movePlayer((fx*forward+rx*strafe)*moveSpeed*dt,(fz*forward+rz*strafe)*moveSpeed*dt);updatePlayerTrail();
  state.yaw+=lookStick.x*1.8*dt;
  state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)
- updateNeeds(dt);updateWorkMission();updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();multiplayerTick(t,dt);renderer.render(scene,camera)
+ updateNeeds(dt);updateWorkMission();updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();renderer.render(scene,camera);try{multiplayerTick(t,dt)}catch(err){console.error('Multiplayer frame error',err)}
 }
 
 
@@ -2346,7 +2400,7 @@ function districtHTML(){
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
 function settingsHTML(){
- return `<div class="card"><h3>StreetQuest V16.1</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>${multiplayerSettingsHTML()}
+ return `<div class="card"><h3>StreetQuest V16.2</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>${multiplayerSettingsHTML()}
  <div class="card"><h3>Identité</h3><p class="sub">Crée le skin visible par les autres joueurs.</p><button class="menuBtn primary" id="openAvatar" style="width:100%">🎨 Modifier mon personnage</button></div>
  <div class="card"><h3>Économie</h3><p class="sub">École → diplôme → emploi → missions → salaire → impôts → logement.</p><button class="menuBtn" id="openWork" style="width:100%">💼 Voir mon travail</button></div>
  <div class="card"><h3>Immobilier</h3><p class="sub">Pour louer : emploi obligatoire et salaire brut au moins égal à trois fois le loyer.</p></div>
