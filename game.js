@@ -228,7 +228,7 @@ let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interi
 let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,lastChunkTick=0,lastMapTick=0,lastWeatherTick=0,selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0;
 
 
-function mpServerUrl(){return (localStorage.getItem('sq-mp-url')||window.STREETQUEST_DEFAULT_SERVER||'').trim().replace(/\/$/,'')}
+function mpServerUrl(){return (localStorage.getItem('sq-mp-url')||window.STREETQUEST_DEFAULT_SERVER||'https://streetquest-multiplayer.onrender.com').trim().replace(/\/$/,'')}
 function mpNickname(){return (localStorage.getItem('sq-mp-name')||'Joueur'+Math.floor(100+Math.random()*900)).slice(0,18)}
 function makeRemoteName(text){const c=document.createElement('canvas');c.width=256;c.height=64;const q=c.getContext('2d');q.fillStyle='rgba(5,16,25,.8)';q.fillRect(8,8,240,48);q.fillStyle='#dff7ff';q.font='700 24px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(text,128,32);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true,depthWrite:false}));s.scale.set(2.8,.7,1);s.position.y=2.45;return s}
 function createRemoteAvatar(p){if(!scene||remotePlayers.has(p.id))return;const g=new THREE.Group();const mat=new THREE.MeshStandardMaterial({color:p.color||0x5fa7d8,roughness:.78});const skin=new THREE.MeshStandardMaterial({color:0xc89570,roughness:.9});const body=new THREE.Mesh(new THREE.CapsuleGeometry(.28,.75,5,8),mat);body.position.y=1.04;g.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.25,12,10),skin);head.position.y=1.76;g.add(head);for(const sx of [-.34,.34]){const a=new THREE.Mesh(new THREE.BoxGeometry(.13,.58,.13),skin);a.position.set(sx,1.02,0);g.add(a)}for(const sx of [-.13,.13]){const l=new THREE.Mesh(new THREE.BoxGeometry(.15,.67,.17),new THREE.MeshStandardMaterial({color:0x202a34}));l.position.set(sx,.38,0);g.add(l)}g.add(makeRemoteName(p.name||'Joueur'));g.position.set(p.x||0,0,p.z||0);scene.add(g);remotePlayers.set(p.id,{group:g,targetX:p.x||0,targetZ:p.z||0,targetYaw:p.yaw||0,name:p.name})}
@@ -248,10 +248,35 @@ function connectMultiplayer(url=mpServerUrl(),name=mpNickname()){
  mpSocket.on('chat:message',m=>addChatLine(m.name,m.message));
  mpSocket.on('player:emote',m=>{const r=remotePlayers.get(m.id);if(r){toast(`${m.name} ${m.emote}`)}});
  mpSocket.on('world:count',n=>setMpStatus(true,n));
- mpSocket.on('disconnect',()=>setMpStatus(false,0));mpSocket.on('connect_error',()=>{setMpStatus(false,0);addChatLine('', 'Serveur multijoueur inaccessible.',true)})
+ mpSocket.on('disconnect',()=>setMpStatus(false,0));mpSocket.on('connect_error',err=>{setMpStatus(false,0);addChatLine('', 'Serveur en cours de réveil ou temporairement inaccessible. Réessaie dans quelques secondes.',true);console.warn('StreetQuest multiplayer',err?.message||err)})
 }
 function multiplayerTick(t,dt){updateRemotePlayers(dt);if(!mpSocket?.connected||state.interior)return;if(t-mpLastSend<100)return;const moved=Math.hypot(state.pos.x-mpLastX,state.pos.z-mpLastZ)>.03||Math.abs(state.yaw-mpLastYaw)>.02;if(moved){mpLastSend=t;mpLastX=state.pos.x;mpLastZ=state.pos.z;mpLastYaw=state.yaw;mpSocket.emit('player:move',{city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw})}}
-function multiplayerSettingsHTML(){return `<div class="card"><h3>🌐 Multijoueur Alpha</h3><p class="sub">GitHub Pages garde le jeu. Le serveur temps réel doit être déployé séparément.</p><label class="sub">Pseudo</label><input class="lifeInput" id="mpName" value="${mpNickname()}" style="width:100%"><label class="sub">URL serveur</label><input class="lifeInput" id="mpUrl" value="${mpServerUrl()}" placeholder="https://ton-serveur.onrender.com" style="width:100%"><div class="grid2" style="margin-top:8px"><button class="menuBtn primary" id="mpConnect">Connecter</button><button class="menuBtn red" id="mpDisconnect">Déconnecter</button></div></div>`}
+
+function bindMpNamePersistence(){
+ const i=$('#mpName');
+ if(!i)return;
+ i.addEventListener('input',()=>localStorage.setItem('sq-mp-name',(i.value.trim()||'Joueur').slice(0,18)));
+}
+
+function multiplayerSettingsHTML(){
+ const connected=!!mpSocket?.connected;
+ return `<div class="card">
+   <h3>🌐 Multijoueur Alpha</h3>
+   <p class="sub">Le serveur StreetQuest est déjà configuré. Sur iPhone, tu n’as plus besoin de saisir ni copier-coller l’adresse.</p>
+   <div class="item">
+     <div class="itemIcon">🛰️</div>
+     <div class="itemMain"><b>Serveur StreetQuest</b><small>streetquest-multiplayer.onrender.com</small></div>
+     <span class="propertyTag">${connected?'🟢 Connecté':'⚪ Hors ligne'}</span>
+   </div>
+   <label class="sub" for="mpName">Ton pseudo</label>
+   <input class="lifeInput mpNameInput" id="mpName" value="${mpNickname()}" maxlength="18" autocomplete="nickname" autocapitalize="words" spellcheck="false" placeholder="Ex : Youhann">
+   <div class="grid2" style="margin-top:8px">
+     <button class="menuBtn primary" id="mpConnect">🌐 CONNECTER</button>
+     <button class="menuBtn red" id="mpDisconnect">Déconnecter</button>
+   </div>
+   <p class="sub" style="margin-top:8px">La connexion est également tentée automatiquement au lancement du jeu.</p>
+ </div>`
+}
 
 async function init(){
  try{THREE=await import(THREE_URL)}catch{return toast('Connexion requise au premier lancement du moteur 3D')}
@@ -271,7 +296,7 @@ async function init(){
  const fill=new THREE.DirectionalLight(0x8dc8ff,.32);fill.position.set(-35,30,-25);scene.add(fill);
  textures=createTextures();weaponRig=createWeaponRig();camera.add(weaponRig);scene.add(camera);
  createAtmosphere();setupWorldTap();setupDesktopControls();setupMapUI();
- ensureChunks(true);ensureOutdoorPositionClear();updateHUD();animate();setTimeout(()=>{if(mpServerUrl())connectMultiplayer()},700);
+ ensureChunks(true);ensureOutdoorPositionClear();updateHUD();animate();setTimeout(()=>{if(mpServerUrl()){addChatLine('', 'Connexion au serveur StreetQuest…', true);connectMultiplayer(mpServerUrl(),mpNickname())}},900);
  addEventListener('resize',()=>{camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight)});
  if(window.visualViewport){
    const syncViewport=()=>{const h=Math.round(window.visualViewport.height);if(Math.abs(h-lastViewportHeight)>12){lastViewportHeight=h;camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight);lookStick.x=0;lookStick.y=0}}
@@ -2059,7 +2084,7 @@ function districtHTML(){
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
 function settingsHTML(){
- return `<div class="card"><h3>StreetQuest V15</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>${multiplayerSettingsHTML()}
+ return `<div class="card"><h3>StreetQuest V15.2</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>${multiplayerSettingsHTML()}
  <div class="card"><h3>Économie</h3><p class="sub">École → diplôme → emploi → missions → salaire → impôts → logement.</p><button class="menuBtn" id="openWork" style="width:100%">💼 Voir mon travail</button></div>
  <div class="card"><h3>Immobilier</h3><p class="sub">Pour louer : emploi obligatoire et salaire brut au moins égal à trois fois le loyer.</p></div>
  <div class="card"><h3>Réinitialisation</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`
@@ -2081,7 +2106,7 @@ function bindSheet(panel){
  if(panel==='districts'){const x=$('#secureDistrict');if(x)x.onclick=secureDistrict}
  if(panel==='settings'){
    const u=$('#forceUpdate');if(u)u.onclick=()=>window.streetQuestUpdate?.();
-   const mc=$('#mpConnect');if(mc)mc.onclick=()=>connectMultiplayer($('#mpUrl').value,$('#mpName').value.trim()||'Joueur');
+   bindMpNamePersistence();const mc=$('#mpConnect');if(mc)mc.onclick=()=>connectMultiplayer(mpServerUrl(),$('#mpName').value.trim()||'Joueur');
    const md=$('#mpDisconnect');if(md)md.onclick=disconnectMultiplayer;
    const ow=$('#openWork');if(ow)ow.onclick=()=>openSheet('work');
    $('#resetGame').onclick=()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v15');location.reload()}}

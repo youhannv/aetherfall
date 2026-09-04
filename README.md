@@ -572,3 +572,17 @@ Fonctions :
 
 - suppression de l'ancien terrain fixe de l'ancien système immobilier ; le logement passe maintenant par les vrais biens de la ville.
 - missions professionnelles prioritaires devant la porte de l'employeur.
+
+
+# V15.2 — Multiplayer iPhone Fix
+
+- serveur Render officiel intégré directement au jeu
+- plus besoin de saisir/coller l’URL sur iPhone
+- connexion automatique au démarrage
+- réglages multijoueur simplifiés : uniquement le pseudo
+- champ pseudo agrandi pour éviter les soucis de clavier/zoom iOS
+- sauvegarde automatique du pseudo
+- message plus clair lorsque le serveur Render gratuit est en train de se réveiller
+
+Serveur préconfiguré :
+https://streetquest-multiplayer.onrender.com

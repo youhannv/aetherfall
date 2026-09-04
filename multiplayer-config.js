@@ -1,2 +1,2 @@
-// Laisse vide au départ. Le jeu permet aussi de renseigner l'URL dans Réglages.
-window.STREETQUEST_DEFAULT_SERVER = '';
+// StreetQuest V15.2 — serveur officiel préconfiguré.
+window.STREETQUEST_DEFAULT_SERVER = 'https://streetquest-multiplayer.onrender.com';
