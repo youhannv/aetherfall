@@ -631,3 +631,22 @@ Le HUD affiche des coordonnées partagées par tous les joueurs :
 `SQ N0042 E0187`
 Elles correspondent au monde virtuel, pas au GPS réel du téléphone.
 Elles permettent de dire précisément à un autre joueur où se retrouver sans permission de géolocalisation.
+
+
+# V16.1 — Correctif carte et repérage
+
+- générateur urbain stable de V15.3 restauré
+- rendu 3D démarré avant le chargement des quartiers
+- une erreur locale de chunk ne peut plus arrêter toute la boucle d'affichage
+- anti-chevauchement léger et conservateur ajouté sans remplacer le moteur de ville
+- commerces posés en priorité pour que les immeubles respectent leur parcelle
+- skins multijoueur V16 conservés
+- NeoStyle conservé
+- nouveau repérage cartésien :
+  - origine O(0,0)
+  - X = abscisse
+  - Y = ordonnée
+  - valeurs positives et négatives
+  - Y positif vers le haut de la carte
+- exemple : X -27 • Y +68
+- les axes X=0 et Y=0 apparaissent sur la carte lorsque l'origine est visible

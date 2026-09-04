@@ -419,7 +419,11 @@ async function init(){
  const fill=new THREE.DirectionalLight(0x8dc8ff,.32);fill.position.set(-35,30,-25);scene.add(fill);
  textures=createTextures();weaponRig=createWeaponRig();camera.add(weaponRig);scene.add(camera);
  createAtmosphere();setupWorldTap();setupDesktopControls();setupMapUI();
- localStorage.setItem('sq-mp-url','https://streetquest-multiplayer.onrender.com');ensureChunks(true);ensureOutdoorPositionClear();updateHUD();animate();setTimeout(()=>connectMultiplayer(mpServerUrl(),mpNickname()),1600);setTimeout(()=>{if(!state.avatarCreated)openSheet('avatar')},2300);
+ localStorage.setItem('sq-mp-url','https://streetquest-multiplayer.onrender.com');
+ updateCamera();updateHUD();animate();
+ try{ensureChunks(true);ensureOutdoorPositionClear()}
+ catch(err){console.error('StreetQuest world startup',err);toast('⚠️ Rechargement de la ville…');setTimeout(()=>{try{ensureChunks(true)}catch(e){console.error(e)}},450)}
+ setTimeout(()=>connectMultiplayer(mpServerUrl(),mpNickname()),1600);setTimeout(()=>{if(!state.avatarCreated)openSheet('avatar')},2300);
  addEventListener('resize',()=>{camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight)});
  if(window.visualViewport){
    const syncViewport=()=>{const h=Math.round(window.visualViewport.height);if(Math.abs(h-lastViewportHeight)>12){lastViewportHeight=h;camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();renderer.setSize(host.clientWidth,host.clientHeight);lookStick.x=0;lookStick.y=0}}
@@ -665,7 +669,7 @@ function createChunk(cx,cz){
  }
  lots.forEach((p,i)=>{
    if(plannedShop&&i===shopIndex)return;
-   if(d.style==='green'&&r()<.13){if(!footprintHitsProtected(key,footprintRect(p.x,p.z,8,8)))addPocketGarden(g,key,p.x,p.z,r);return}
+   if(d.style==='green'&&r()<.13){addPocketGarden(g,key,p.x,p.z,r);return}
    addDenseBuilding(g,key,p.x,p.z,d,r,i,p.variant)
  });
 
@@ -746,37 +750,36 @@ function addAlleyNetwork(g,key,x0,z0,d,r){
 }
 
 
-function rectOverlap(a,b,margin=0){
- return a.maxX+margin>b.minX&&a.minX-margin<b.maxX&&a.maxZ+margin>b.minZ&&a.minZ-margin<b.maxZ
+
+function structureRect(x,z,w,d,margin=.55){
+ return{minX:x-w/2-margin,maxX:x+w/2+margin,minZ:z-d/2-margin,maxZ:z+d/2+margin}
 }
-function footprintRect(x,z,w,d){return{minX:x-w/2,maxX:x+w/2,minZ:z-d/2,maxZ:z+d/2}}
-function footprintHitsProtected(key,rect){
- const cx=Math.floor((rect.minX+rect.maxX)/2/CHUNK),cz=Math.floor((rect.minZ+rect.maxZ)/2/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
- // Keep a hard construction setback from roads and outside chunk edges.
- if(rect.minX<x0+15.4||rect.minZ<z0+15.4||rect.maxX>x0+CHUNK-5.0||rect.maxZ>z0+CHUNK-5.0)return true;
- // Central alleys are reserved pedestrian corridors.
- const alleyV={minX:x0+39.3,maxX:x0+46.7,minZ:z0+15.0,maxZ:z0+71.0};
- const alleyH={minX:x0+15.0,maxX:x0+71.0,minZ:z0+39.3,maxZ:z0+46.7};
- if(rectOverlap(rect,alleyV,.45)||rectOverlap(rect,alleyH,.45))return true;
- // Never overlap another actual structure in the same chunk.
- return colliders.some(c=>c.key===key&&['building','house','shop','playerHome','fence'].includes(c.type)&&rectOverlap(rect,c,.75))
+function rectsTouch(a,b){
+ return a.maxX>b.minX&&a.minX<b.maxX&&a.maxZ>b.minZ&&a.minZ<b.maxZ
 }
-function findSafeFootprint(key,x,z,w,d,r){
- const cx=Math.floor(x/CHUNK),cz=Math.floor(z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK;
- const left=x<x0+43,top=z<z0+43;
- const qMinX=left?x0+16.2:x0+47.0,qMaxX=left?x0+38.7:x0+70.2;
- const qMinZ=top?z0+16.2:z0+47.0,qMaxZ=top?z0+38.7:z0+70.2;
- const minCX=qMinX+w/2,maxCX=qMaxX-w/2,minCZ=qMinZ+d/2,maxCZ=qMaxZ-d/2;
- if(minCX>maxCX||minCZ>maxCZ)return null;
- const candidates=[];
- candidates.push([clamp(x,minCX,maxCX),clamp(z,minCZ,maxCZ)]);
- for(let i=0;i<28;i++){
-   const t=i/27,angle=i*2.3999632297,rad=.5+7.5*t;
-   candidates.push([clamp(x+Math.cos(angle)*rad,minCX,maxCX),clamp(z+Math.sin(angle)*rad,minCZ,maxCZ)])
+function buildingSpotFree(key,x,z,w,d,bx0,bz0){
+ const rect=structureRect(x,z,w,d,.60);
+ if(rect.minX<bx0+14.8||rect.maxX>bx0+CHUNK-4.2||rect.minZ<bz0+14.8||rect.maxZ>bz0+CHUNK-4.2)return false;
+ const alleyX=bx0+43,alleyZ=bz0+43;
+ if(rect.minX<alleyX+3.0&&rect.maxX>alleyX-3.0)return false;
+ if(rect.minZ<alleyZ+3.0&&rect.maxZ>alleyZ-3.0)return false;
+ for(const c of colliders){
+   if(c.key!==key||!['building','house','shop'].includes(c.type))continue;
+   if(rectsTouch(rect,c))return false
  }
- for(const [px,pz] of candidates){
-   const rect=footprintRect(px,pz,w,d);
-   if(!footprintHitsProtected(key,rect))return{x:px,z:pz,rect}
+ return true
+}
+function resolveBuildingSpot(key,x,z,w,d,bx0,bz0){
+ const minX=bx0+15.2+w/2,maxX=bx0+CHUNK-4.8-w/2;
+ const minZ=bz0+15.2+d/2,maxZ=bz0+CHUNK-4.8-d/2;
+ const offsets=[
+  [0,0],[2.2,0],[-2.2,0],[0,2.2],[0,-2.2],
+  [3.8,2.4],[-3.8,2.4],[3.8,-2.4],[-3.8,-2.4],
+  [5.2,0],[-5.2,0],[0,5.2],[0,-5.2]
+ ];
+ for(const [dx,dz] of offsets){
+   const px=clamp(x+dx,minX,maxX),pz=clamp(z+dz,minZ,maxZ);
+   if(buildingSpotFree(key,px,pz,w,d,bx0,bz0))return{x:px,z:pz}
  }
  return null
 }
@@ -816,9 +819,16 @@ function addDenseBuilding(g,key,x,z,d,r,i,variant=0){
  const w=(isHouse?(lux?8.8:6.3)+r()*(lux?4.8:2.6):(poor?5.8:6.7)+r()*(poor?2.4:3.8))*scale;
  const dep=(isHouse?(lux?8.5:6.2)+r()*(lux?5.0:2.7):(poor?6.2:7.0)+r()*3.2)*(variant===2?.86:1);
  const h=isHouse?(lux?5.4+r()*4.6:4.0+r()*3.3):(central?14+r()*34:lux?16+r()*30:poor?8+r()*14:9+r()*20);
- x+=(r()-.5)*(lux?3.4:2.0);z+=(r()-.5)*(lux?3.4:2.0);
- const safe=findSafeFootprint(key,x,z,w,dep,r);if(!safe)return;
- x=safe.x;z=safe.z;
+ x+=(r()-.5)*(lux?3.9:2.4);z+=(r()-.5)*(lux?3.9:2.4);
+ const bx0=Math.floor(x/CHUNK)*CHUNK,bz0=Math.floor(z/CHUNK)*CHUNK;
+ const minX=bx0+15.2+w/2,maxX=bx0+CHUNK-4.8-w/2,minZ=bz0+15.2+dep/2,maxZ=bz0+CHUNK-4.8-dep/2;
+ x=clamp(x,minX,maxX);z=clamp(z,minZ,maxZ);
+ const alleyX=bx0+43,alleyZ=bz0+43;
+ if(Math.abs(x-alleyX)<w/2+3.1)x+=(x<alleyX?-1:1)*(w/2+3.4-Math.abs(x-alleyX));
+ if(Math.abs(z-alleyZ)<dep/2+3.1)z+=(z<alleyZ?-1:1)*(dep/2+3.4-Math.abs(z-alleyZ));
+ x=clamp(x,minX,maxX);z=clamp(z,minZ,maxZ);
+ const resolved=resolveBuildingSpot(key,x,z,w,dep,bx0,bz0);if(!resolved)return;
+ x=resolved.x;z=resolved.z;
  const texChoice=poor?choice([textures.brick,textures.residential,textures.panel]):lux?choice([textures.neonGlass,textures.stone,textures.modern]):central?choice([textures.neonGlass,textures.modern,textures.panel]):d.style==='industrial'?choice([textures.panel,textures.stone,textures.modern]):choice([textures.residential,textures.brick,textures.modern]);
  const isGlass=texChoice===textures.neonGlass||texChoice===textures.modern;
  const bodyMat=new THREE.MeshStandardMaterial({map:texChoice,roughness:isGlass?.32:.82,metalness:isGlass?.22:.05,emissive:isGlass?0x0f2236:0x000000,emissiveIntensity:isGlass?.22:0});
@@ -967,7 +977,6 @@ function makeFacadeSign(text,color='#9fe9ff'){
 
 function addShop(g,key,x,z,r,forcedType=null){
  const pool=Object.keys(SHOPS),type=forcedType||choice(pool),shop=SHOPS[type],group=new THREE.Group();
- const safe=findSafeFootprint(key,x,z,10.4,9.4,r);if(!safe){console.warn('No safe shop footprint',key,type);return false}x=safe.x;z=safe.z;
  const shopColor={corner:0x1e5f56,gear:0x46576d,rare:0x56408b,pawn:0x1d6072,home:0x5a4d76,housing:0x5b6947}[type]||0x3e5567;
  const body=new THREE.Mesh(new THREE.BoxGeometry(10,5.4,9),new THREE.MeshStandardMaterial({color:shopColor,roughness:.42,metalness:.18}));body.position.y=2.7;group.add(body);
  const trim=new THREE.Mesh(new THREE.BoxGeometry(10.25,.22,9.25),new THREE.MeshStandardMaterial({color:0x8fe4ff,emissive:0x23495f,emissiveIntensity:.45,roughness:.35}));trim.position.set(0,5.05,0);group.add(trim);
@@ -980,7 +989,7 @@ function addShop(g,key,x,z,r,forcedType=null){
  colliders.push({key,minX:x-5.2,maxX:x+5.2,minZ:z-4.7,maxZ:z+4.7,type:'shop'});
  shops.push({key,x,z,type,group,door:{x,z:z-5.05}});
  const sid=`${state.cityId}:${Math.round(x)}:${Math.round(z)}:${type}`;
- if(!state.discoveredShops.some(s=>s.id===sid))state.discoveredShops.push({id:sid,cityId:state.cityId,x,z,type});return true
+ if(!state.discoveredShops.some(s=>s.id===sid))state.discoveredShops.push({id:sid,cityId:state.cityId,x,z,type})
 }
 
 function addApartmentDoor(g,key,x,z,dep){/* V12: replaced by physical property entrances */}
@@ -1526,7 +1535,7 @@ function animate(){
  const moveSpeed=4.8*needsSpeedMultiplier();movePlayer((fx*forward+rx*strafe)*moveSpeed*dt,(fz*forward+rz*strafe)*moveSpeed*dt);updatePlayerTrail();
  state.yaw+=lookStick.x*1.8*dt;
  state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)
- updateNeeds(dt);updateWorkMission();updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){ensureChunks();lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();multiplayerTick(t,dt);renderer.render(scene,camera)
+ updateNeeds(dt);updateWorkMission();updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateWorldLight(dt);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>100){drawMap();lastMapTick=t}updateHUD();multiplayerTick(t,dt);renderer.render(scene,camera)
 }
 
 
@@ -2137,6 +2146,15 @@ function renderMapTo(canvas,zoom=2.0){
    q.fillStyle=districtMapColor(d);q.fillRect(x,y,CHUNK*S,CHUNK*S);
    if(detail&&zoom>.45){q.fillStyle='rgba(210,228,241,.78)';q.font='11px system-ui';q.fillText(d.name,x+5,y+15)}
  }
+ const axisScreenX=(0-state.pos.x)*S,axisScreenZ=(0-state.pos.z)*S;
+ q.save();q.strokeStyle='rgba(240,211,92,.48)';q.lineWidth=detail?2:1;
+ if(Math.abs(axisScreenX)<W/2){q.beginPath();q.moveTo(axisScreenX,-H/2);q.lineTo(axisScreenX,H/2);q.stroke()}
+ if(Math.abs(axisScreenZ)<H/2){q.beginPath();q.moveTo(-W/2,axisScreenZ);q.lineTo(W/2,axisScreenZ);q.stroke()}
+ if(Math.abs(axisScreenX)<W/2&&Math.abs(axisScreenZ)<H/2){
+   q.fillStyle='#ffd45c';q.beginPath();q.arc(axisScreenX,axisScreenZ,detail?5:3,0,Math.PI*2);q.fill();
+   if(detail){q.font='bold 12px system-ui';q.fillText('O(0,0)',axisScreenX+8,axisScreenZ-8)}
+ }
+ q.restore();
  q.strokeStyle='rgba(89,118,146,.62)';q.lineWidth=Math.max(1.5,8*(zoom/2));
  for(let cx=minCx;cx<=maxCx;cx++){const x=(cx*CHUNK-state.pos.x)*S;q.beginPath();q.moveTo(x,-H);q.lineTo(x,H);q.stroke()}
  for(let cz=minCz;cz<=maxCz;cz++){const y=(cz*CHUNK-state.pos.z)*S;q.beginPath();q.moveTo(-W,y);q.lineTo(W,y);q.stroke()}
@@ -2155,10 +2173,11 @@ function renderMapTo(canvas,zoom=2.0){
 
 function drawMap(){renderMapTo($('#minimap'),1.02);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),bigMapZoom);const z=$('#mapZoomLabel');if(z)z.textContent=`${Math.round(bigMapZoom/.42*100)}%`}
 
-function sqCoordValue(v){return String(Math.round(Math.abs(v))).padStart(4,'0')}
-function streetGPS(){
- const ns=state.pos.z>=0?'N':'S',ew=state.pos.x>=0?'E':'W';
- return `SQ ${ns}${sqCoordValue(state.pos.z)} ${ew}${sqCoordValue(state.pos.x)}`
+function signedCoord(v){
+ const n=Math.round(v);return `${n>=0?'+':''}${n}`
+}
+function streetCoords(){
+ return `X ${signedCoord(state.pos.x)} • Y ${signedCoord(-state.pos.z)}`
 }
 
 function emergencyExit(){
@@ -2170,7 +2189,7 @@ function updateHUD(){
  $('#hungerVal').textContent=Math.round(state.hunger);$('#thirstVal').textContent=Math.round(state.thirst);$('#hygieneVal').textContent=Math.round(state.hygiene);
  $('#hungerBar').style.width=`${state.hunger}%`;$('#thirstBar').style.width=`${state.thirst}%`;$('#hygieneBar').style.width=`${state.hygiene}%`;
  $('#district').textContent=state.interior?'INTÉRIEUR':`${city().name.toUpperCase()} • ${d.name.toUpperCase()} • M${state.gameMonth} J${state.gameDay}`;$('#missionTitle').textContent=aq.title;$('#missionText').textContent=aq.id==='free'?aq.text:`${aq.text} (${prog}/${aq.target})`;
- $('#gpsChip').textContent=`📍 ${streetGPS()}`;const mg=$('#mapGpsReadout');if(mg)mg.textContent=`📍 ${streetGPS()} • ${d.name}`;
+ $('#gpsChip').textContent=`⌖ ${streetCoords()}`;const mg=$('#mapGpsReadout');if(mg)mg.textContent=`Origine O(0,0) • ${streetCoords()} • ${d.name}`;
  const icon=state.weather==='clear'?'☀️':state.weather==='cloudy'?'☁️':'🌧️',period=state.timeOfDay<6||state.timeOfDay>20?'NUIT':state.timeOfDay<9?'MATIN':state.timeOfDay>17?'SOIR':'JOUR';$('#weatherChip').textContent=`${icon} ${period}`;
  maybeCompleteNpcMission();updateTargetHUD();updateFollowerCard()
 }
@@ -2327,7 +2346,7 @@ function districtHTML(){
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
 function settingsHTML(){
- return `<div class="card"><h3>StreetQuest V16</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>${multiplayerSettingsHTML()}
+ return `<div class="card"><h3>StreetQuest V16.1</h3><button class="menuBtn primary" id="forceUpdate" style="width:100%">↻ Vérifier la mise à jour</button></div>${multiplayerSettingsHTML()}
  <div class="card"><h3>Identité</h3><p class="sub">Crée le skin visible par les autres joueurs.</p><button class="menuBtn primary" id="openAvatar" style="width:100%">🎨 Modifier mon personnage</button></div>
  <div class="card"><h3>Économie</h3><p class="sub">École → diplôme → emploi → missions → salaire → impôts → logement.</p><button class="menuBtn" id="openWork" style="width:100%">💼 Voir mon travail</button></div>
  <div class="card"><h3>Immobilier</h3><p class="sub">Pour louer : emploi obligatoire et salaire brut au moins égal à trois fois le loyer.</p></div>
