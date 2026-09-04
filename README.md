@@ -530,3 +530,45 @@ Les anciens achats logement sont transformés en avoir immobilier afin de ne pas
 - correction du bug principal qui empêchait l'affichage du monde à partir des versions 13/14
 - restauration des helpers de décor (lampadaires, arbres, buissons, bancs) utilisés pendant la génération des chunks
 - ajout d'un garde-fou pour éviter qu'une erreur de génération vide tout le monde
+
+
+# V15 — Life Online
+
+## Multijoueur Alpha
+Le frontend reste compatible GitHub Pages. Le dossier `server/` contient un serveur Node.js + Socket.IO.
+Fonctions :
+- joueurs visibles en temps réel
+- interpolation des déplacements
+- pseudo au-dessus du joueur
+- compteur de joueurs
+- chat de proximité
+- émotes
+- salles séparées par ville
+- mode solo automatique si le serveur est indisponible
+
+## École / emplois / économie
+- Campus Municipal physique
+- Maison de l’Emploi physique
+- Hôpital Horizon physique
+- formations payantes avec journées de présence
+- métiers privés et fonction publique
+- salaire mensuel
+- impôt progressif
+- trésor public
+- trésorerie des entreprises privées
+- missions de travail qui rapportent de l’argent à l’employeur
+- loyers refusés sans emploi / salaire suffisant
+- PNJ avec profession et employeur
+
+## Immobilier V15
+- les biens ne sont plus tous affichés sur la carte
+- petits écriteaux physiques À LOUER / À VENDRE
+- les transactions se font via Agence Habitat
+- correction du placement des bâtiments pour éviter les trottoirs et la ruelle centrale
+
+## Intérieurs
+- vraie porte de sortie 3D dans magasins, appartements et maisons
+- seuil de sortie adapté automatiquement à la taille réelle de l’intérieur
+
+- suppression de l'ancien terrain fixe de l'ancien système immobilier ; le logement passe maintenant par les vrais biens de la ville.
+- missions professionnelles prioritaires devant la porte de l'employeur.
