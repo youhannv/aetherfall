@@ -3,6 +3,57 @@ let THREE=null;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),choice=a=>a[Math.floor(Math.random()*a.length)];
 const CHUNK=72,LOAD=1,UNLOAD=2,RADIUS=.34;
+const BUS_FARE=2;
+function busRoadPoint(cx,cz){return{x:cx*CHUNK+5.5,z:cz*CHUNK+5.5}}
+const BUS_STOPS=[
+ {id:'campus_est',name:'Campus Municipal',cx:2,cz:0,x:2*CHUNK+36,z:12.5,side:'south',lines:['B1']},
+ {id:'arts',name:'Place des Arts',cx:1,cz:0,x:1*CHUNK+36,z:12.5,side:'south',lines:['B1']},
+ {id:'centre',name:'Centre — Halles',cx:0,cz:0,x:12.5,z:12.5,side:'east',lines:['B1','B3','B4','B5']},
+ {id:'opera',name:'Opéra Nord',cx:0,cz:-1,x:12.5,z:-36,side:'east',lines:['B1','B5']},
+ {id:'ateliers',name:'Ateliers',cx:0,cz:-2,x:12.5,z:-108,side:'east',lines:['B1']},
+ {id:'faubourg',name:'Faubourg des Ateliers',cx:-2,cz:-2,x:-108,z:-2*CHUNK+12.5,side:'south',lines:['B1']},
+
+ {id:'jardin_ouest',name:'Jardin Ouest',cx:-3,cz:1,x:-3*CHUNK+36,z:1*CHUNK+12.5,side:'south',lines:['B2']},
+ {id:'marche',name:'Marché Populaire',cx:-1,cz:1,x:-1*CHUNK+36,z:1*CHUNK+12.5,side:'south',lines:['B2']},
+ {id:'hopital',name:'Hôpital Horizon',cx:2,cz:1,x:2*CHUNK+36,z:1*CHUNK+12.5,side:'south',lines:['B2']},
+ {id:'rives_sud',name:'Rives Sud',cx:3,cz:2,x:3*CHUNK+12.5,z:2*CHUNK+36,side:'east',lines:['B2']},
+ {id:'gare_sud',name:'Gare Sud',cx:3,cz:3,x:3*CHUNK+12.5,z:3*CHUNK+12.5,side:'east',lines:['B2']},
+ {id:'belvedere',name:'Belvédère',cx:3,cz:3,x:3*CHUNK+36,z:3*CHUNK+12.5,side:'south',lines:['B2']},
+
+ {id:'nord_ouest',name:'Porte Nord-Ouest',cx:-3,cz:-3,x:-3*CHUNK+12.5,z:-3*CHUNK+36,side:'east',lines:['B3']},
+ {id:'atelier_ouest',name:'Ateliers Ouest',cx:-3,cz:-1,x:-3*CHUNK+12.5,z:-1*CHUNK+36,side:'east',lines:['B3']},
+ {id:'agence_ouest',name:'Agence Habitat Ouest',cx:-3,cz:0,x:-3*CHUNK+36,z:12.5,side:'south',lines:['B3']},
+ {id:'republique_sud',name:'République Sud',cx:0,cz:2,x:12.5,z:2*CHUNK+36,side:'east',lines:['B3']},
+ {id:'parc_sud',name:'Parc Sud',cx:0,cz:3,x:12.5,z:3*CHUNK+36,side:'east',lines:['B3']},
+
+ {id:'agence_centre',name:'Agence Habitat Centre',cx:1,cz:-1,x:1*CHUNK+36,z:-1*CHUNK+12.5,side:'south',lines:['B4']},
+ {id:'mairie_rives',name:'Mairie des Rives',cx:0,cz:1,x:36,z:1*CHUNK+12.5,side:'south',lines:['B4']},
+ {id:'emploi',name:'Maison de l’Emploi',cx:-2,cz:0,x:-2*CHUNK+36,z:12.5,side:'south',lines:['B4','B5']},
+
+ {id:'ecole_rives',name:'École des Rives',cx:-3,cz:2,x:-3*CHUNK+36,z:2*CHUNK+12.5,side:'south',lines:['B5']},
+ {id:'docks',name:'Docks',cx:-2,cz:2,x:-2*CHUNK+12.5,z:2*CHUNK+12.5,side:'east',lines:['B5']},
+ {id:'nord_est',name:'Campus Nord-Est',cx:2,cz:-2,x:2*CHUNK+36,z:-2*CHUNK+12.5,side:'south',lines:['B5']},
+ {id:'porte_est',name:'Porte Est',cx:3,cz:-4,x:3*CHUNK+12.5,z:-4*CHUNK+36,side:'east',lines:['B5']}
+];
+const BUS_STOP_BY_ID=new Map(BUS_STOPS.map(s=>[s.id,s]));
+const BUS_LINES=[
+ {id:'B1',name:'Campus ↔ Faubourg',color:'#e75b6f',nodes:[[3,0],[0,0],[0,-2],[-2,-2]],stops:['campus_est','arts','centre','opera','ateliers','faubourg']},
+ {id:'B2',name:'Jardins ↔ Belvédère',color:'#46a6e8',nodes:[[-3,1],[3,1],[3,3],[4,3]],stops:['jardin_ouest','marche','hopital','rives_sud','gare_sud','belvedere']},
+ {id:'B3',name:'Nord-Ouest ↔ Parc Sud',color:'#54b979',nodes:[[-3,-3],[-3,0],[0,0],[0,4]],stops:['nord_ouest','atelier_ouest','agence_ouest','centre','republique_sud','parc_sud']},
+ {id:'B4',name:'Circulaire Centre',color:'#f1a33a',nodes:[[-1,-1],[2,-1],[2,1],[0,1],[0,0],[-2,0],[-2,-1],[-1,-1]],stops:['agence_centre','mairie_rives','centre','emploi'],loop:true},
+ {id:'B5',name:'Transversale des Rives',color:'#a67be8',nodes:[[-4,2],[-2,2],[-2,0],[0,0],[0,-2],[3,-2],[3,-4]],stops:['ecole_rives','docks','emploi','centre','opera','nord_est','porte_est']}
+];
+const BUS_LINE_BY_ID=new Map(BUS_LINES.map(l=>[l.id,l]));
+const CIVIC_POIS=[
+ {type:'housing',name:'Agence Habitat Centre',cx:1,cz:-1,x:1*CHUNK+43,z:-1*CHUNK+13},
+ {type:'housing',name:'Agence Habitat Ouest',cx:-3,cz:0,x:-3*CHUNK+43,z:13},
+ {type:'housing',name:'Agence Habitat Rives',cx:3,cz:2,x:3*CHUNK+43,z:2*CHUNK+13},
+ {type:'school',name:'Campus Municipal',cx:2,cz:0,x:2*CHUNK+43,z:13},
+ {type:'school',name:'École des Rives',cx:-3,cz:2,x:-3*CHUNK+43,z:2*CHUNK+13},
+ {type:'school',name:'Campus Nord-Est',cx:2,cz:-2,x:2*CHUNK+43,z:-2*CHUNK+13},
+ {type:'jobcenter',name:'Maison de l’Emploi',cx:-2,cz:0,x:-2*CHUNK+43,z:13},
+ {type:'clinic',name:'Hôpital Horizon',cx:2,cz:1,x:2*CHUNK+43,z:1*CHUNK+13}
+];
 
 const DISTRICTS=[
  {id:'docks',name:'Les Docks',tier:'poor',style:'poor',bonus:'Loyers très bas • délinquance élevée',wealth:.42,rentMult:.52,buyMult:.50,policeRate:.04,crimeRate:.20,density:1.56,cashMult:.58,itemMult:.78,propertyDemand:.68},
@@ -263,13 +314,13 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:214,
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:215,
  gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
 function loadState(){
  try{
-   let raw=JSON.parse(localStorage.getItem('sq3d-v21.4')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v21.3')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v20.1')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v20')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v19')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v18')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v17')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v16')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v15')||'null');
+   let raw=JSON.parse(localStorage.getItem('sq3d-v21.5')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v21.4')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v21.3')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v20.1')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v20')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v19')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v18')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v17')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v16')||'null');if(!raw)raw=JSON.parse(localStorage.getItem('sq3d-v15')||'null');
    let migrated=false;
    if(!raw){raw=JSON.parse(localStorage.getItem('sq3d-v12')||'null');migrated=!!raw}
    if(!raw){raw=JSON.parse(localStorage.getItem('sq3d-v11')||'{}');migrated=!!Object.keys(raw).length}
@@ -282,11 +333,11 @@ function loadState(){
    };
    if(loaded.interior){loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)?{x:raw.returnPos.x,z:raw.returnPos.z}:{...base.pos};loaded.interior=null;loaded.returnPos=null}
    if(migrated&&raw.housingStage){loaded.propertyCredit=(loaded.propertyCredit||0)+(raw.housingStage===1?180:raw.housingStage===2?1030:raw.housingStage>=3?2830:0);loaded.housingStage=0;loaded.landOwned=false}
-   if((raw.worldLayoutVersion||0)!==214){
-     // V21.4 rebuilds only world-derived catalogs; progression, money and inventory are preserved.
+   if((raw.worldLayoutVersion||0)!==215){
+     // V21.5 rebuilds world-derived catalogs so the new schools/agencies are guaranteed; progression, money and inventory are preserved.
      loaded.propertyCatalog=[];
      loaded.discoveredShops=[];
-     loaded.worldLayoutVersion=214;
+     loaded.worldLayoutVersion=215;
    }
    return loaded
  }catch{return structuredClone(base)}
@@ -294,7 +345,7 @@ function loadState(){
 function save(){
  const snapshot={...state};
  if(state.interior){snapshot.pos=state.returnPos?{...state.returnPos}:{...base.pos};snapshot.interior=null;snapshot.returnPos=null}
- localStorage.setItem('sq3d-v21.4',JSON.stringify(snapshot));localStorage.setItem('sq3d-v21.3',JSON.stringify(snapshot));localStorage.setItem('sq3d-v20.1',JSON.stringify(snapshot));localStorage.setItem('sq3d-v20',JSON.stringify(snapshot))
+ localStorage.setItem('sq3d-v21.5',JSON.stringify(snapshot));localStorage.setItem('sq3d-v21.4',JSON.stringify(snapshot));localStorage.setItem('sq3d-v21.3',JSON.stringify(snapshot));localStorage.setItem('sq3d-v20.1',JSON.stringify(snapshot));localStorage.setItem('sq3d-v20',JSON.stringify(snapshot))
 }
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
@@ -332,8 +383,8 @@ function checkQuests(){
  }
 }
 
-let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],properties=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],entranceZones=[],pedNetworks=new Map(),clouds=[],starSystem=null,ambientGlowSystem=null,streetLamps=[],lampLightPool=[],lastLampLightTick=0;
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
+let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],properties=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],entranceZones=[],pedNetworks=new Map(),clouds=[],starSystem=null,ambientGlowSystem=null,streetLamps=[],lampLightPool=[],lastLampLightTick=0,busStops=[],busVehicles=[];
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,mapBusMode=false,currentBusStopId=null,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
 
 
 function mpServerUrl(){return (window.STREETQUEST_DEFAULT_SERVER||localStorage.getItem('sq-mp-url')||'https://streetquest-multiplayer.onrender.com').replace(/\/$/,'')}
@@ -626,7 +677,7 @@ async function init(){
  const sun=new THREE.DirectionalLight(0xffedcf,1.8);sun.name='sun';sun.position.set(45,75,28);sun.castShadow=true;sun.shadow.mapSize.set(512,512);sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=45;sun.shadow.camera.bottom=-45;sun.shadow.camera.near=4;sun.shadow.camera.far=125;sun.shadow.normalBias=.025;scene.add(sun);
  const fill=new THREE.DirectionalLight(0x7fa8e8,.42);fill.name='nightFill';fill.position.set(-35,32,-25);scene.add(fill);for(let i=0;i<4;i++){const l=new THREE.PointLight(0xffc66f,0,10,2);l.visible=false;scene.add(l);lampLightPool.push(l)}
  textures=createTextures();weaponRig=createWeaponRig();camera.add(weaponRig);scene.add(camera);
- createAtmosphere();setupWorldTap();setupDesktopControls();setupMapUI();
+ createAtmosphere();initBusFleet();setupWorldTap();setupDesktopControls();setupMapUI();
  if(!localStorage.getItem('sq-mp-url'))localStorage.setItem('sq-mp-url',window.STREETQUEST_DEFAULT_SERVER||'https://streetquest-multiplayer.onrender.com');
  updateCamera();updateHUD();animate();
  try{ensureChunks(true);ensureOutdoorPositionClear()}
@@ -819,6 +870,10 @@ function plannedShopType(cx,cz){
   '1,-1':'housing',
   '-1,-1':'pawn',
   '2,0':'school',
+  '-3,2':'school',
+  '2,-2':'school',
+  '-3,0':'housing',
+  '3,2':'housing',
   '-2,0':'jobcenter',
   '2,1':'clinic',
   '-2,1':'clothes',
@@ -1033,7 +1088,7 @@ function createChunk(cx,cz){
  const x0=cx*CHUNK,z0=cz*CHUNK,d=districtFor(cx,cz);
  try{
    const grass=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));grass.rotation.x=-Math.PI/2;grass.position.set(x0+CHUNK/2,-.04,z0+CHUNK/2);g.add(grass);
-   makeRoad(g,x0,z0);addAlleyNetwork(g,key,x0,z0,d,r);pedNetworks.set(key,buildPedNetwork(x0,z0));
+   makeRoad(g,x0,z0);addBusStopsForChunk(g,key,cx,cz);addAlleyNetwork(g,key,x0,z0,d,r);pedNetworks.set(key,buildPedNetwork(x0,z0));
    const id=districtId(cx,cz);if(!state.seenDistricts.includes(id))state.seenDistricts.push(id);
    const startChunk=cx===0&&cz===0,plannedShop=plannedShopType(cx,cz);
    let plan=null,shopIndex=-1;
@@ -1401,6 +1456,83 @@ function addHomePlot(g,key,x,z){
  plot.position.set(x,0,z);g.add(plot);
  homePlots.push({key,x,z:state.landOwned?doorZ:z-7.55,centerX:x,centerZ:z,price:HOME_PLOT_PRICE})
 }
+
+function addBusStopsForChunk(g,key,cx,cz){
+ for(const stop of BUS_STOPS){if(stop.cx===cx&&stop.cz===cz)addBusStop(g,key,stop)}
+}
+function addBusStop(g,key,stop){
+ const group=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x17202a,metalness:.35,roughness:.56});
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.065,2.35,8),metal);pole.position.y=1.175;group.add(pole);
+ const board=new THREE.Mesh(new THREE.BoxGeometry(.68,.88,.09),new THREE.MeshStandardMaterial({color:0xe8edf2,roughness:.48,metalness:.06}));board.position.set(0,2.02,0);group.add(board);
+ const cap=new THREE.Mesh(new THREE.BoxGeometry(.72,.20,.11),new THREE.MeshBasicMaterial({color:0x356ca8}));cap.position.set(0,2.38,0);group.add(cap);
+ const lineText=stop.lines.join(' • '),sign=makeSign(`BUS ${lineText}`,'#dff4ff');sign.scale.set(1.45,.36,1);sign.position.set(0,2.75,0);group.add(sign);
+ group.position.set(stop.x,0,stop.z);g.add(group);busStops.push({...stop,key,group})
+}
+function createBusVisual(line){
+ const g=new THREE.Group(),bodyM=new THREE.MeshStandardMaterial({color:new THREE.Color(line.color),metalness:.10,roughness:.48}),dark=new THREE.MeshStandardMaterial({color:0x182531,roughness:.35,metalness:.18});
+ const body=new THREE.Mesh(new THREE.BoxGeometry(2.25,1.25,5.6),bodyM);body.position.y=1.0;g.add(body);
+ const windows=new THREE.Mesh(new THREE.BoxGeometry(2.08,.72,4.35),dark);windows.position.set(0,1.72,-.05);g.add(windows);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(2.10,.16,5.15),new THREE.MeshStandardMaterial({color:0xd8dee2,roughness:.72}));roof.position.y=2.13;g.add(roof);
+ const wheelM=new THREE.MeshStandardMaterial({color:0x121619,roughness:1}),wheelGeo=new THREE.CylinderGeometry(.34,.34,2.42,10);
+ for(const z of [-1.72,1.72]){const w=new THREE.Mesh(wheelGeo,wheelM);w.rotation.z=Math.PI/2;w.position.set(0,.46,z);g.add(w)}
+ const badge=makeSign(line.id,'#ffffff');badge.scale.set(.70,.28,1);badge.position.set(0,2.48,-2.82);g.add(badge);return g
+}
+function busPathForLine(line){return line.nodes.map(n=>busRoadPoint(n[0],n[1]))}
+function initBusFleet(){
+ busVehicles=[];
+ BUS_LINES.forEach((line,i)=>{
+   const path=busPathForLine(line);if(path.length<2)return;
+   const group=createBusVisual(line);scene.add(group);
+   const start=Math.min(path.length-2,i%Math.max(1,path.length-1)),p=path[start];group.position.set(p.x,0,p.z);
+   busVehicles.push({line,group,path,index:start,next:start+1,dir:1,speed:6.4+(i%3)*.35})
+ })
+}
+function updateBusVehicles(dt){
+ for(const b of busVehicles){
+   if(state.interior){b.group.visible=false;continue}
+   const near=Math.hypot(state.pos.x-b.group.position.x,state.pos.z-b.group.position.z)<135;b.group.visible=near;
+   let target=b.path[b.next];if(!target)continue;
+   let dx=target.x-b.group.position.x,dz=target.z-b.group.position.z,dist=Math.hypot(dx,dz);
+   if(dist<.45){
+     b.index=b.next;
+     if(b.line.loop){b.next=(b.next+1)%b.path.length}
+     else{if(b.next===b.path.length-1)b.dir=-1;else if(b.next===0)b.dir=1;b.next+=b.dir}
+     target=b.path[b.next];dx=target.x-b.group.position.x;dz=target.z-b.group.position.z;dist=Math.hypot(dx,dz)
+   }
+   if(dist>.001){const step=Math.min(dist,b.speed*dt);b.group.position.x+=dx/dist*step;b.group.position.z+=dz/dist*step;b.group.rotation.y=Math.atan2(-dx,-dz)}
+ }
+}
+function busStopById(id){return BUS_STOP_BY_ID.get(id)||null}
+function busLineById(id){return BUS_LINE_BY_ID.get(id)||null}
+function busArrivalPoint(stop){return{x:stop.x+(stop.side==='east'?1.35:stop.side==='west'?-1.35:0),z:stop.z+(stop.side==='south'?1.35:stop.side==='north'?-1.35:0)}}
+function advanceGameMinutes(minutes){
+ const total=state.timeOfDay+minutes/60,days=Math.floor(total/24);state.timeOfDay=((total%24)+24)%24;if(days>0)advanceDay(days)
+}
+function busStopHTML(stopId){
+ const stop=busStopById(stopId);if(!stop)return '<div class="card"><p>Arrêt indisponible.</p></div>';
+ const groups=stop.lines.map(id=>{
+   const line=busLineById(id);if(!line)return'';
+   const dest=line.stops.filter(x=>x!==stop.id).map(id=>{const d=busStopById(id);if(!d)return'';return `<button class="menuBtn takeBus" data-line="${line.id}" data-stop="${d.id}"><span class="busBadge" style="--line:${line.color}">${line.id}</span>${d.name}<small>${BUS_FARE} crédits • trajet rapide</small></button>`}).join('');
+   return `<div class="card busLineCard"><div class="busLineHead"><span class="busBadge" style="--line:${line.color}">${line.id}</span><div><b>${line.name}</b><small>${line.stops.length} arrêts</small></div></div>${dest}</div>`
+ }).join('');
+ return `<div class="card"><div class="sectionKicker">ARRÊT DE BUS</div><h3>🚏 ${stop.name}</h3><p class="sub">Choisis une destination desservie par une ligne qui passe ici. Le trajet coûte ${BUS_FARE} crédits.</p><button id="openBusNetworkMap" class="menuBtn full">🗺️ Voir le plan complet du réseau</button></div>${groups}`
+}
+function openBusStop(stop){currentBusStopId=stop.id;openSheet('bus')}
+function takeBus(lineId,stopId){
+ const line=busLineById(lineId),from=busStopById(currentBusStopId),to=busStopById(stopId);if(!line||!from||!to||!line.stops.includes(from.id)||!line.stops.includes(to.id))return;
+ if(state.coins<BUS_FARE)return toast(`Il faut ${BUS_FARE} crédits pour prendre le bus.`);
+ const a=line.stops.indexOf(from.id),b=line.stops.indexOf(to.id);let hops=Math.max(1,Math.abs(a-b));if(line.loop)hops=Math.max(1,Math.min(hops,line.stops.length-hops));const minutes=4+hops*3;
+ state.coins-=BUS_FARE;advanceGameMinutes(minutes);const p=busArrivalPoint(to);state.pos={x:p.x,z:p.z};state.yaw=0;closeSheet();ensureChunks(true);ensureOutdoorPositionClear();save();toast(`🚌 ${line.id} • ${to.name} • ${minutes} min`)
+}
+function busNetworkBounds(){
+ let minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;for(const l of BUS_LINES)for(const n of l.nodes){const p=busRoadPoint(n[0],n[1]);minX=Math.min(minX,p.x);maxX=Math.max(maxX,p.x);minZ=Math.min(minZ,p.z);maxZ=Math.max(maxZ,p.z)}return{minX,maxX,minZ,maxZ}
+}
+function showFullBusMap(){
+ const b=busNetworkBounds();mapBusMode=true;mapFocusPropertyId=null;mapCenterOverride={x:(b.minX+b.maxX)/2,z:(b.minZ+b.maxZ)/2};
+ const span=Math.max(b.maxX-b.minX,b.maxZ-b.minZ)+110;bigMapZoom=clamp(640/(span*1.10),.34,1.18);$('#mapOverlay').classList.remove('hidden');drawMap()
+}
+function showLocalMap(){mapBusMode=false;mapCenterOverride=null;mapFocusPropertyId=null;bigMapZoom=.58;drawMap()}
+
 function makeSign(text,color='#ffdb77'){const c=document.createElement('canvas');c.width=512;c.height=128;const q=c.getContext('2d');q.fillStyle='#10222a';q.fillRect(0,0,512,128);q.fillStyle=color;q.font='bold 44px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(text,256,64);const t=new THREE.CanvasTexture(c),s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.scale.set(5.2,1.3,1);return s}
 
 
@@ -1563,7 +1695,7 @@ function unload(key){
  const g=chunks.get(key);if(!g)return;
  if(selectedNPC?.key===key)clearTarget();
  scene.remove(g);chunks.delete(key);
- colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);properties=properties.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key);homePlots=homePlots.filter(x=>x.key!==key);trafficLights=trafficLights.filter(x=>x.group.parent!==g);streetLamps=streetLamps.filter(x=>x.key!==key);alleys=alleys.filter(x=>x.key!==key);entranceZones=entranceZones.filter(x=>x.key!==key);pedNetworks.delete(key)
+ colliders=colliders.filter(x=>x.key!==key);pickups=pickups.filter(x=>x.userData.key!==key);shops=shops.filter(x=>x.key!==key);apartments=apartments.filter(x=>x.key!==key);properties=properties.filter(x=>x.key!==key);containers=containers.filter(x=>x.userData.key!==key);npcs=npcs.filter(x=>x.key!==key);enemies=enemies.filter(x=>x.key!==key);police=police.filter(x=>x.key!==key);cars=cars.filter(x=>x.key!==key);hidingZones=hidingZones.filter(x=>x.key!==key);homePlots=homePlots.filter(x=>x.key!==key);trafficLights=trafficLights.filter(x=>x.group.parent!==g);streetLamps=streetLamps.filter(x=>x.key!==key);busStops=busStops.filter(x=>x.key!==key);alleys=alleys.filter(x=>x.key!==key);entranceZones=entranceZones.filter(x=>x.key!==key);pedNetworks.delete(key)
 }
 function updateChunkShadowCasters(cx,cz){
  const k=ck(cx,cz);if(k===lastShadowChunkKey)return;lastShadowChunkKey=k;
@@ -2043,7 +2175,7 @@ function animate(){
  const moveSpeed=4.8*needsSpeedMultiplier();movePlayer((fx*forward+rx*strafe)*moveSpeed*dt,(fz*forward+rz*strafe)*moveSpeed*dt);updatePlayerTrail();
  state.yaw+=lookStick.x*1.8*dt;
  state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)
- updateNeeds(dt);updateWorkMission();updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateWorldLight(dt);updateParisLampLights(t);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>180){drawMap();lastMapTick=t}if(t-lastHudTick>100){updateHUD();lastHudTick=t}renderer.render(scene,camera);try{multiplayerTick(t,dt)}catch(err){console.error('Multiplayer frame error',err)}
+ updateNeeds(dt);updateWorkMission();updateCamera(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);updateBusVehicles(dt);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateWorldLight(dt);updateParisLampLights(t);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>180){drawMap();lastMapTick=t}if(t-lastHudTick>100){updateHUD();lastHudTick=t}renderer.render(scene,camera);try{multiplayerTick(t,dt)}catch(err){console.error('Multiplayer frame error',err)}
 }
 
 
@@ -2110,6 +2242,7 @@ function checkInteraction(){
  const hp=nearest(homePlots,2.35);if(hp)return setPrompt(state.landOwned?'Ton terrain':'Terrain à vendre',state.landOwned?'Entrer dans ta base pour stocker tes gains et aménager ton chez-toi.':`Acheter ce terrain pour ${HOME_PLOT_PRICE} crédits.` ,state.landOwned?'ENTRER':'ACHETER',()=>state.landOwned?enterInterior('home',hp):buyLand());
  const p=nearest(pickups.filter(x=>x.parent),1.6);if(p)return setPrompt(pickupName(p.userData.type),'Objet trouvé dans la rue.','RAMASSER',()=>collectPickup(p));
  const c=nearest(containers.filter(x=>x.parent),1.7);if(c)return setPrompt(c.userData.type==='bin'?'Poubelle':'Coffre',c.userData.type==='bin'?'Fouiller du matériel.':'Ouvrir le coffre.','FOUILLER',()=>openContainer(c));
+ const bs=nearest(busStops,2.4);if(bs)return setPrompt(`🚏 ${bs.name}`,`${bs.lines.join(' • ')} • réseau de bus`,'BUS',()=>openBusStop(bs));
  const workShop=nearestWorkShop();
  if(workShop)return setPrompt('💼 Mission professionnelle',state.workMission.text,'TRAVAILLER',completeWorkMission);
  const s=shops.reduce((b,x)=>{const d=Math.hypot(state.pos.x-x.door.x,state.pos.z-x.door.z);return !b||d<b.d?{x,d}:b},null);if(s&&s.d<1.8)return setPrompt(SHOPS[s.x.type].name,'Entrer dans le bâtiment.','ENTRER',()=>enterInterior('shop',s.x));
@@ -2321,7 +2454,7 @@ function visitPropertyFromAgency(p){
 }
 function openPropertyOnMap(p){
  if(!p)return;
- selectedProperty=p;mapFocusPropertyId=p.id;mapCenterOverride={x:p.x,z:p.z};
+ selectedProperty=p;mapBusMode=false;mapFocusPropertyId=p.id;mapCenterOverride={x:p.x,z:p.z};
  closeSheet();$('#mapOverlay').classList.remove('hidden');drawMap()
 }
 
@@ -2692,10 +2825,10 @@ function mapShopStyle(type){
  return{
   corner:{code:'F',color:'#59d38c',label:'Nourriture'},
   pawn:{code:'R',color:'#ffad5c',label:'Revente'},
-  housing:{code:'I',color:'#66d9ff',label:'Immobilier'},
+  housing:{code:'⌂',color:'#66d9ff',label:'Agence immobilière'},
   clothes:{code:'V',color:'#c68cff',label:'Vêtements'},
   clinic:{code:'+',color:'#ff6f7d',label:'Santé'},
-  school:{code:'E',color:'#77aaff',label:'École'},
+  school:{code:'🎓',color:'#77aaff',label:'École'},
   jobcenter:{code:'J',color:'#ffd15c',label:'Emploi'},
   gear:{code:'A',color:'#9db5c8',label:'Atelier'},
   home:{code:'M',color:'#d6a86f',label:'Maison'},
@@ -2706,6 +2839,31 @@ function drawMapMarker(q,x,y,code,color,detail=false){
  q.save();q.fillStyle='rgba(5,12,20,.92)';q.strokeStyle=color;q.lineWidth=detail?2.4:1.7;
  const r=detail?8:5.5;q.beginPath();q.arc(x,y,r,0,Math.PI*2);q.fill();q.stroke();
  q.fillStyle=color;q.font=`800 ${detail?10:8}px system-ui`;q.textAlign='center';q.textBaseline='middle';q.fillText(code,x,y+.5);q.restore()
+}
+
+
+function drawBusNetworkOnMap(q,center,S,detail){
+ q.save();q.lineCap='round';q.lineJoin='round';
+ for(const line of BUS_LINES){
+   const pts=busPathForLine(line);if(pts.length<2)continue;
+   q.beginPath();pts.forEach((p,i)=>{const x=(p.x-center.x)*S,y=(p.z-center.z)*S;i?q.lineTo(x,y):q.moveTo(x,y)});
+   q.strokeStyle='rgba(2,7,12,.88)';q.lineWidth=detail?9:4.2;q.stroke();q.strokeStyle=line.color;q.lineWidth=detail?5.5:2.4;q.stroke();
+   if(detail&&mapBusMode){for(const p of [pts[0],pts[pts.length-1]]){const x=(p.x-center.x)*S,y=(p.z-center.z)*S;q.fillStyle=line.color;q.beginPath();q.arc(x,y,11,0,Math.PI*2);q.fill();q.fillStyle='#fff';q.font='800 9px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(line.id,x,y+.5)}}
+ }
+ for(let i=0;i<BUS_STOPS.length;i++){
+   const stop=BUS_STOPS[i],x=(stop.x-center.x)*S,y=(stop.z-center.z)*S;if(Math.abs(x)>330||Math.abs(y)>330)continue;
+   const line=busLineById(stop.lines[0]),c=line?.color||'#8cc8ff';q.fillStyle='#f8fbff';q.strokeStyle=c;q.lineWidth=detail?3:1.6;q.beginPath();q.arc(x,y,detail?5.2:3.2,0,Math.PI*2);q.fill();q.stroke();
+   if(detail&&mapBusMode&&bigMapZoom>.55){const side=i%2?1:-1;q.fillStyle='rgba(5,12,20,.82)';q.font='700 9px system-ui';q.textAlign=side>0?'left':'right';q.textBaseline='middle';q.fillText(stop.name,x+side*8,y+(i%3-1)*9)}
+ }
+ q.restore()
+}
+function drawCivicPois(q,center,S,detail){
+ const discovered=state.discoveredShops.filter(s=>s.cityId===state.cityId);
+ for(const poi of CIVIC_POIS){
+   const exact=discovered.find(s=>s.type===poi.type&&Math.floor(s.x/CHUNK)===poi.cx&&Math.floor(s.z/CHUNK)===poi.cz),p=exact||poi;
+   const dx=(p.x-center.x)*S,dz=(p.z-center.z)*S;if(Math.abs(dx)>325||Math.abs(dz)>325)continue;const st=mapShopStyle(poi.type);drawMapMarker(q,dx,dz,st.code,st.color,detail);
+   if(detail&&mapBusMode){q.fillStyle='#dceaf4';q.font='700 9px system-ui';q.textAlign='left';q.textBaseline='middle';q.fillText(poi.name,dx+11,dz-10)}
+ }
 }
 
 function districtMapColor(d){
@@ -2741,6 +2899,7 @@ function renderMapTo(canvas,zoom=2.0){
  q.strokeStyle='rgba(89,118,146,.52)';q.lineWidth=Math.max(1.2,6*(zoom/2));
  for(let cx=minCx;cx<=maxCx;cx++){const x=(cx*CHUNK-center.x)*S;q.beginPath();q.moveTo(x,-H);q.lineTo(x,H);q.stroke()}
  for(let cz=minCz;cz<=maxCz;cz++){const y=(cz*CHUNK-center.z)*S;q.beginPath();q.moveTo(-W,y);q.lineTo(W,y);q.stroke()}
+ if(detail||mapBusMode)drawBusNetworkOnMap(q,center,S,detail);
  q.fillStyle='rgba(119,137,152,.88)';
  for(const b of colliders){
    if(!['building','house','shop','playerHome'].includes(b.type))continue;
@@ -2757,7 +2916,9 @@ function renderMapTo(canvas,zoom=2.0){
    }
  }
 
+ drawCivicPois(q,center,S,detail);
  for(const s of state.discoveredShops.filter(s=>s.cityId===state.cityId)){
+   if(CIVIC_POIS.some(p=>p.type===s.type&&Math.floor(s.x/CHUNK)===p.cx&&Math.floor(s.z/CHUNK)===p.cz))continue;
    const dx=(s.x-center.x)*S,dz=(s.z-center.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){const st=mapShopStyle(s.type);drawMapMarker(q,dx,dz,st.code,st.color,detail)}
  }
  const res=state.residenceId?propertyFromCatalog(state.residenceId):null;
@@ -2779,7 +2940,7 @@ function renderMapTo(canvas,zoom=2.0){
  q.save();q.translate(px,pz);q.rotate(state.yaw);q.fillStyle='#ffffff';q.beginPath();q.moveTo(0,-8*(zoom/2));q.lineTo(5*(zoom/2),6*(zoom/2));q.lineTo(0,3*(zoom/2));q.lineTo(-5*(zoom/2),6*(zoom/2));q.closePath();q.fill();q.restore();
  q.restore()
 }
-function drawMap(){renderMapTo($('#minimap'),1.02);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),bigMapZoom);const z=$('#mapZoomLabel');if(z)z.textContent=`${Math.round(bigMapZoom/.42*100)}%`}
+function drawMap(){renderMapTo($('#minimap'),1.02);if(!$('#mapOverlay').classList.contains('hidden'))renderMapTo($('#bigMinimap'),bigMapZoom);const z=$('#mapZoomLabel');if(z)z.textContent=mapBusMode?'RÉSEAU':`${Math.round(bigMapZoom/.42*100)}%`;$('#mapBusMode')?.classList.toggle('active',mapBusMode);$('#mapLocalMode')?.classList.toggle('active',!mapBusMode)}
 
 function signedCoord(v){
  const n=Math.round(v);return `${n>=0?'+':''}${n}`
@@ -2829,10 +2990,10 @@ function updateHUD(){
 }
 
 function setupMapUI(){
- const open=()=>{mapCenterOverride=null;mapFocusPropertyId=null;$('#mapOverlay').classList.remove('hidden');drawMap()},close=()=>{mapCenterOverride=null;mapFocusPropertyId=null;$('#mapOverlay').classList.add('hidden')};
+ const open=()=>{mapBusMode=false;mapCenterOverride=null;mapFocusPropertyId=null;$('#mapOverlay').classList.remove('hidden');drawMap()},close=()=>{mapCenterOverride=null;mapFocusPropertyId=null;$('#mapOverlay').classList.add('hidden')};
  $('#mapExpandBtn').onclick=open;$('#minimap').onclick=open;$('#closeMapOverlay').onclick=close;$('#mapOverlay').onclick=e=>e.target===$('#mapOverlay')&&close();
  const change=f=>{bigMapZoom=clamp(bigMapZoom*f,.18,2.2);drawMap()};
- $('#mapZoomIn').onclick=()=>change(1.25);$('#mapZoomOut').onclick=()=>change(.8);
+ $('#mapZoomIn').onclick=()=>change(1.25);$('#mapZoomOut').onclick=()=>change(.8);$('#mapBusMode').onclick=showFullBusMap;$('#mapLocalMode').onclick=showLocalMap;
  const map=$('#bigMinimap');map.addEventListener('wheel',e=>{e.preventDefault();change(e.deltaY<0?1.12:.89)},{passive:false});
  let pinchDist=0;
  map.addEventListener('touchstart',e=>{if(e.touches.length===2)pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)},{passive:true});
@@ -2918,9 +3079,10 @@ function openSheet(panel){
  if(panel==='physicalShop'){t.textContent=SHOPS[state.interior?.shopType]?.name||'Commerce';b.innerHTML=physicalShopHTML()}
  if(panel==='work'){t.textContent='Travail';b.innerHTML=workHTML()}
  if(panel==='property'){t.textContent='Dossier immobilier';b.innerHTML=propertySheetHTML(selectedProperty)}
+ if(panel==='bus'){t.textContent='Réseau de bus';b.innerHTML=busStopHTML(currentBusStopId)}
  bindSheet(panel)
 }
-function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V21.4</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V21.5</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
  <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>✈️</span><b>Voyager</b><small>Changer de ville</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
 function socialHTML(){
  const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
@@ -2943,7 +3105,7 @@ function districtHTML(){
  <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V21.4</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V21.5</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
@@ -2963,11 +3125,12 @@ function bindSheet(panel){
   $('#mpConnect')?.addEventListener('click',()=>connectMultiplayer(mpServerUrl(),($('#mpName')?.value||mpNickname()).trim()||'Joueur'));
   $('#mpDisconnect')?.addEventListener('click',disconnectMultiplayer);
   $('#toggleSound')?.addEventListener('click',()=>{state.soundEnabled=!state.soundEnabled;save();if(state.soundEnabled)playUiTone('confirm');openSheet('settings')});
-  $('#resetGame')?.addEventListener('click',()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v21.4');localStorage.removeItem('sq3d-v21.3');localStorage.removeItem('sq3d-v20.1');localStorage.removeItem('sq3d-v20');localStorage.removeItem('sq3d-v19');localStorage.removeItem('sq3d-v18');localStorage.removeItem('sq3d-v17');localStorage.removeItem('sq3d-v16');localStorage.removeItem('sq3d-v15');location.reload()}})
+  $('#resetGame')?.addEventListener('click',()=>{if(confirm('Effacer toute la partie ?')){localStorage.removeItem('sq3d-v21.5');localStorage.removeItem('sq3d-v21.4');localStorage.removeItem('sq3d-v21.3');localStorage.removeItem('sq3d-v20.1');localStorage.removeItem('sq3d-v20');localStorage.removeItem('sq3d-v19');localStorage.removeItem('sq3d-v18');localStorage.removeItem('sq3d-v17');localStorage.removeItem('sq3d-v16');localStorage.removeItem('sq3d-v15');location.reload()}})
  }
  if(panel==='npc'){}
  if(panel==='physicalShop')bindShop();
  if(panel==='work'){const sw=$('.startWork');if(sw)sw.onclick=startWorkMission}
+ if(panel==='bus'){$$('.takeBus').forEach(b=>b.onclick=()=>takeBus(b.dataset.line,b.dataset.stop));$('#openBusNetworkMap')?.addEventListener('click',()=>{closeSheet();showFullBusMap()})}
  if(panel==='property'){
   $$('.rentProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)rentProperty(p)});
   $$('.buyProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)buyProperty(p)});
@@ -3058,7 +3221,7 @@ $$('.emoteRow button').forEach(b=>b.onclick=()=>{if(mpSocket?.connected)mpSocket
 $('#emergencyExitBtn').onclick=emergencyExit;
 $('#clearTarget').onclick=()=>clearTarget();$('#dismissFollower').onclick=dismissFollower;$('#attackBtn').onclick=attack;$('#fleeBtn').onclick=flee;
 $('#menuBtn').onclick=()=>openSheet('menu');$('#closeSheet').onclick=closeSheet;$('#sheet').onclick=e=>e.target===$('#sheet')&&closeSheet();
-$('#navMap').onclick=()=>{mapCenterOverride=null;mapFocusPropertyId=null;$('#mapOverlay').classList.remove('hidden');drawMap()};$$('.nav[data-panel]').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
+$('#navMap').onclick=showFullBusMap;$$('.nav[data-panel]').forEach(b=>b.onclick=()=>openSheet(b.dataset.panel));
 document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});document.addEventListener('wheel',e=>{if(e.ctrlKey)e.preventDefault()},{passive:false});document.addEventListener('touchstart',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
 addEventListener('pagehide',save);document.addEventListener('visibilitychange',()=>document.hidden&&save());
 init();

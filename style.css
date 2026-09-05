@@ -225,3 +225,16 @@ body{background:radial-gradient(circle at top,#10263c 0%,#07111a 45%,#040910 100
 .v17Prompt{z-index:48!important;background:rgba(5,10,16,.91)!important;border:1px solid rgba(255,255,255,.15)!important;backdrop-filter:blur(16px)!important}.v17Prompt .promptBtn{background:#f0f3f4!important;color:#0a1117!important}
 .sheetBox{background:linear-gradient(180deg,#0b1117,#070b10)!important}.card,.menuTile{background:rgba(17,24,30,.90)!important;border-color:rgba(255,255,255,.075)!important}.menuBtn.primary{background:#f2f4f5!important;color:#080d12!important}.toast{border-radius:999px!important;padding:8px 13px!important;font-weight:800!important}
 @media(max-width:390px){.v17MapWrap{width:104px!important}.v17MapWrap #minimap{width:104px!important;height:104px!important}.v17MapWrap .gpsChip{max-width:104px!important}.v17Controls .joystick{width:90px!important;height:90px!important}.v17Controls .knob{width:38px!important;height:38px!important;left:25px!important;top:25px!important}.timeCluster{min-width:92px;padding:5px 8px!important}.timeCluster b{font-size:17px!important}}
+
+
+/* V21.5 — Bus network */
+.mapModeBar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 6px}
+.mapModeBtn{border:1px solid rgba(126,208,255,.22);background:rgba(8,19,30,.78);color:#bdd4e5;border-radius:12px;padding:9px 10px;font-size:11px;font-weight:850;letter-spacing:.02em}
+.mapModeBtn.active{background:rgba(41,103,145,.42);border-color:rgba(126,208,255,.62);color:#effaff;box-shadow:0 0 15px rgba(82,177,235,.15)}
+.busLegendLines{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;justify-content:center}
+.busLegendLines span{--line:#6fcfff;display:inline-flex;align-items:center;gap:5px;background:rgba(7,16,25,.76);border:1px solid color-mix(in srgb,var(--line) 48%,transparent);border-radius:999px;padding:5px 8px;color:#c7d8e5;font-size:9px;font-weight:720}
+.busLegendLines b,.busBadge{display:inline-flex;align-items:center;justify-content:center;min-width:29px;height:22px;padding:0 7px;border-radius:999px;background:var(--line,#4f9bd2);color:#fff;font-size:10px;font-weight:950;box-shadow:0 0 10px color-mix(in srgb,var(--line) 28%,transparent)}
+.busLineCard>.menuBtn{width:100%;margin-top:7px;text-align:left;display:grid;grid-template-columns:auto 1fr;column-gap:9px;align-items:center}
+.busLineCard>.menuBtn small{grid-column:2;color:#8fa7b8}
+.busLineHead{display:flex;align-items:center;gap:10px;margin-bottom:8px}.busLineHead>div{display:flex;flex-direction:column}.busLineHead small{color:#8fa7b8;margin-top:2px}
+@supports not (color:color-mix(in srgb,#fff 50%,transparent)){.busLegendLines span{border-color:rgba(126,208,255,.25)}.busLegendLines b,.busBadge{box-shadow:none}}

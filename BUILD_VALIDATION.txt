@@ -1,29 +1,16 @@
-StreetQuest V21.4 — validation 2026-09-05
+StreetQuest V21.5 — validation
 
-Validation statique effectuée :
-- game.js : node --check OK
-- sw.js : node --check OK
-- multiplayer-config.js : node --check OK
-- server/server.js : node --check OK
-- manifest.json : JSON OK
-- version.json : JSON OK
-- server/package.json : JSON OK
+Version: 21.5.0
+Cache PWA: streetquest3d-v21.5-bus1
 
-Contrôles V21.4 :
-- façades Paris : matériaux couleur pleine alternés par îlot
-- fausses fenêtres résidentielles retirées ; portes conservées
-- voitures garées : aucun appel dans createChunk
-- circulation : collision radiale inter-voies supprimée + anti-stall
-- voitures : 6 meshes standard / 7 taxi (au lieu d'environ 20)
-- marquages routiers : 1 InstancedMesh/chunk (au lieu de 46 meshes)
-- lampadaires : 3 meshes chacun (au lieu de 6)
-- feux tricolores : 5 meshes chacun (au lieu d'environ 10)
-- détails de façade : 2 lignes de balcon max + toit/cheminée
-- LOD PNJ : 58-64 m hors interactions importantes
-- ombres : shadow map 512 + casters uniquement dans le chunk joueur
-- renderer pixel ratio : 1.25 max
-- HUD : 10 Hz ; mini-carte : ~5.5 Hz
+Contrôles effectués :
+- syntaxe game.js / sw.js / server.js : OK
+- version.json / manifest.json / server/package.json : JSON valides
+- réseau : 5 lignes, 24 arrêts, 8 POI civiques
+- références ligne ↔ arrêt cohérentes : OK
+- chaque tracé est composé de segments routiers horizontaux/verticaux : OK
+- chaque arrêt est situé à proximité de son tracé : OK
+- 3 agences immobilières + 3 écoles garanties : OK
+- migration de sauvegarde depuis V21.4/V21.3/V20.1 : présente
 
-Cache PWA: streetquest3d-v21.4-solid1
-Version: 21.4.0
-World layout: 214
+Note : le conteneur de validation ne fournit pas de contexte WebGL iOS/Safari ; le rendu GPU final doit donc être vérifié sur l’iPhone après déploiement.
