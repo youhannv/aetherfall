@@ -1,4 +1,4 @@
-# StreetQuest V21 — checklist
+# StreetQuest V21.1 — checklist
 
 - [ ] Ouvrir Paris Centre sur iPhone et vérifier 3 chunks dans chaque direction.
 - [ ] Les immeubles du centre forment des fronts de rue denses, avec 5–7 niveaux, balcons, corniches et toits sombres.
@@ -10,5 +10,5 @@
 - [ ] Les quêtes se valident et créditent la récompense.
 - [ ] Un loyer impayable ne retire pas partiellement l’argent.
 - [ ] Menu > Réglages > Vérifier les mises à jour fonctionne.
-- [ ] Cache PWA : `streetquest3d-v21`.
+- [ ] Cache PWA : `streetquest3d-v21.1-fix1.1-fix1`.
 - [ ] Sauvegarde principale : `sq3d-v21`, avec migration depuis V20.1 et versions antérieures.

@@ -2899,7 +2899,7 @@ function openSheet(panel){
  if(panel==='property'){t.textContent='Dossier immobilier';b.innerHTML=propertySheetHTML(selectedProperty)}
  bindSheet(panel)
 }
-function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V21</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V21.1</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
  <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>✈️</span><b>Voyager</b><small>Changer de ville</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
 function socialHTML(){
  const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
@@ -2922,7 +2922,7 @@ function districtHTML(){
  <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V21</h3><button class="menuBtn full updateBtn" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V21.1</h3><button class="menuBtn full updateBtn" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
@@ -3052,7 +3052,7 @@ CITY_BLOCK_TEMPLATES.haussmann={parcels:[
  {x:62.0,z:51.0,w:9.0,d:6.4,face:'east',v:0,houseBias:0}
 ],feature:{type:'plaza',x:43,z:43,size:13.2}};
 
-function cityTemplateNames(d,startChunk=false){
+function cityTemplateNamesV21(d,startChunk=false){
  if(state.cityId==='paris'&&(startChunk||d.style==='central'||d.style==='old'))return ['haussmann'];
  if(d.style==='green')return ['garden','courtyard'];
  if(d.tier==='luxury')return ['garden','courtyard','towers'];
@@ -3062,7 +3062,7 @@ function cityTemplateNames(d,startChunk=false){
  return ['haussmann','courtyard','avenue']
 }
 
-function addAlleyNetwork(g,key,x0,z0,d,r){
+function addAlleyNetworkV21(g,key,x0,z0,d,r){
  const alleyM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:1});
  if(state.cityId==='paris'&&(d.style==='central'||d.style==='old')){
    const v=new THREE.Mesh(new THREE.PlaneGeometry(3.2,52),alleyM);v.rotation.x=-Math.PI/2;v.position.set(x0+43,.055,z0+43);v.receiveShadow=true;g.add(v);
@@ -3076,7 +3076,7 @@ function addAlleyNetwork(g,key,x0,z0,d,r){
  alleys.push({key,axis:'z',x:x0+43,min:z0+17,max:z0+69,width:3.0});alleys.push({key,axis:'x',z:z0+43,min:x0+17,max:x0+69,width:3.0})
 }
 
-function buildPedNetwork(x0,z0){
+function buildPedNetworkV21(x0,z0){
  const outer=[
   {x:x0+12.5,z:z0+19},{x:x0+12.5,z:z0+43},{x:x0+12.5,z:z0+67},
   {x:x0+20,z:z0+70.5},{x:x0+43,z:z0+70.5},{x:x0+66,z:z0+70.5},
@@ -3090,7 +3090,7 @@ function buildPedNetwork(x0,z0){
  return{outer,inner}
 }
 
-function buildingSpotFree(key,x,z,w,d,bx0,bz0){
+function buildingSpotFreeV21(key,x,z,w,d,bx0,bz0){
  const rect=structureRect(x,z,w,d,.18);
  if(rect.minX<bx0+14.72||rect.maxX>bx0+CHUNK-4.45||rect.minZ<bz0+14.72||rect.maxZ>bz0+CHUNK-4.45)return false;
  for(const a of alleys){
@@ -3176,7 +3176,7 @@ function v21AddStorefront(g,x,z,w,d,h,r,face,type){
  g.add(fg)
 }
 
-function addDenseBuilding(g,key,x,z,d,r,i,variant=0,planned=false,parcel=null){
+function addDenseBuildingV21(g,key,x,z,d,r,i,variant=0,planned=false,parcel=null){
  const central=d.style==='central',old=d.style==='old',green=d.style==='green',lux=d.tier==='luxury',poor=d.tier==='poor';
  const parisClassic=state.cityId==='paris'&&(central||old||d.tier==='mid'||d.tier==='rich');
  const houseChance=parcel?.houseBias??(green?.55:lux?.34:poor?.05:.07),isHouse=r()<houseChance;
@@ -3198,7 +3198,7 @@ function addDenseBuilding(g,key,x,z,d,r,i,variant=0,planned=false,parcel=null){
  colliders.push({key,minX:x-w/2-.22,maxX:x+w/2+.22,minZ:z-dep/2-.22,maxZ:z+dep/2+.22,type:isHouse?'house':'building'});addPropertyEntrance(g,key,x,z,w,dep,isHouse,d,r,i,entrance);return true
 }
 
-function addShop(g,key,x,z,r,forcedType=null,parcel=null){
+function addShopV21(g,key,x,z,r,forcedType=null,parcel=null){
  const type=forcedType||choice(Object.keys(SHOPS)),shop=SHOPS[type],bx0=Math.floor(x/CHUNK)*CHUNK,bz0=Math.floor(z/CHUNK)*CHUNK;
  let w=parcel?Math.max(7.2,parcel.w-.34):10.2,dep=parcel?Math.max(7.0,parcel.d-.34):10.0;
  const resolved=resolveBuildingSpot(key,x,z,w,dep,bx0,bz0);if(!resolved)return false;x=resolved.x;z=resolved.z;
@@ -3213,14 +3213,14 @@ function addShop(g,key,x,z,r,forcedType=null,parcel=null){
  const sid=`${state.cityId}:${Math.round(x)}:${Math.round(z)}:${type}`;if(!state.discoveredShops.some(s=>s.id===sid))state.discoveredShops.push({id:sid,cityId:state.cityId,x:entrance.outX,z:entrance.outZ,type});return true
 }
 
-function addExtraInfillBuildings(g,key,x0,z0,d,r){
+function addExtraInfillBuildingsV21(g,key,x0,z0,d,r){
  // Haussmann blocks are already deliberately dense. Extra random boxes were the main source of visual clutter and blocked entrances.
  if(state.cityId==='paris'&&(d.style==='central'||d.style==='old'))return;
  const candidates=[{x:29,z:34,w:7.0,d:9.5,face:'west',v:0},{x:57,z:34,w:7.0,d:9.5,face:'east',v:1},{x:29,z:52,w:7.0,d:9.5,face:'west',v:1},{x:57,z:52,w:7.0,d:9.5,face:'east',v:0}];
  let added=0;for(const c of candidates){if(added>=2||r()>.58)continue;if(addDenseBuilding(g,key,x0+c.x,z0+c.z,d,r,90+added,c.v,false,c))added++}
 }
 
-function addLamp(g,x,z){
+function addLampV21(g,x,z){
  const post=new THREE.Group(),mats=v21Materials(),metal=mats.rail;
  const base=new THREE.Mesh(new THREE.CylinderGeometry(.17,.22,.22,12),metal);base.position.y=.11;post.add(base);
  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.058,.083,3.10,12),metal);pole.position.y=1.67;post.add(pole);
@@ -3230,14 +3230,14 @@ function addLamp(g,x,z){
  post.position.set(x,0,z);g.add(post);const key=g.userData?.key||'';streetLamps.push({key,group:post,x,z,globeMat});colliders.push({key,minX:x-.21,maxX:x+.21,minZ:z-.21,maxZ:z+.21,type:'lamp'})
 }
 
-function addTree(g,x,z,r){
+function addTreeV21(g,x,z,r){
  const tree=new THREE.Group(),trunk=new THREE.Mesh(new THREE.CylinderGeometry(.18,.27,1.85,8),new THREE.MeshStandardMaterial({color:0x60452f,roughness:1}));trunk.position.y=.93;trunk.castShadow=true;tree.add(trunk);
  const leafMat=new THREE.MeshStandardMaterial({color:choice([0x3e7041,0x4d7d48,0x315f38]),roughness:.98,flatShading:true});
  for(const p of [[0,2.25,0,.90],[.38,2.05,.12,.67],[-.35,2.02,-.15,.64],[.02,2.67,-.04,.56]]){const leaf=new THREE.Mesh(new THREE.DodecahedronGeometry(p[3],0),leafMat);leaf.position.set(p[0],p[1],p[2]);leaf.castShadow=true;tree.add(leaf)}
  tree.position.set(x,0,z);g.add(tree);const key=g.userData?.key||'';colliders.push({key,minX:x-.55,maxX:x+.55,minZ:z-.55,maxZ:z+.55,type:'tree'});hidingZones.push({key,x,z,radius:1.35})
 }
 
-function createCarVisual(color,kind='car'){
+function createCarVisualV21(color,kind='car'){
  const group=new THREE.Group(),dims=kind==='van'?[1.95,.90,4.2]:kind==='compact'?[1.58,.60,3.12]:kind==='taxi'?[1.80,.66,3.66]:[1.84,.66,3.76];
  const bodyMat=new THREE.MeshStandardMaterial({color,metalness:.40,roughness:.34}),glassMat=new THREE.MeshStandardMaterial({color:0x55738a,metalness:.38,roughness:.16,transparent:true,opacity:.84}),trim=new THREE.MeshStandardMaterial({color:0x15191d,metalness:.46,roughness:.48});
  const chassis=new THREE.Mesh(new THREE.BoxGeometry(dims[0],.55,dims[2]),bodyMat);chassis.position.y=.58;chassis.castShadow=true;group.add(chassis);
@@ -3280,7 +3280,7 @@ function updateV21NightLighting(t){
  if(v21Skyline){v21Skyline.position.x=Math.round(state.pos.x/72)*72;v21Skyline.position.z=Math.round(state.pos.z/72)*72}
 }
 
-function updateWorldLight(dt){
+function updateWorldLightV21(dt){
  const prevTime=state.timeOfDay;state.timeOfDay=(state.timeOfDay+dt*.025)%24;if(state.timeOfDay<prevTime)advanceDay(1);
  const sun=scene.getObjectByName('sun'),hemi=scene.children.find(x=>x.isHemisphereLight),fill=scene.getObjectByName('nightFill');const solar=Math.sin((state.timeOfDay-6)/24*Math.PI*2),day=clamp(solar*.72+.34,.025,1),night=1-day,cloudDim=state.weather==='cloudy'?.82:state.weather==='rain'?.64:1;
  if(sun){sun.intensity=(.035+day*1.70)*cloudDim;sun.position.set(state.pos.x+34,56,state.pos.z+24);sun.target.position.set(state.pos.x,0,state.pos.z);sun.target.updateMatrixWorld()}
@@ -3288,6 +3288,20 @@ function updateWorldLight(dt){
  const nightSky=new THREE.Color(0x08172b),duskSky=new THREE.Color(0x31506d),daySky=new THREE.Color(0x90b5cf);let sky=nightSky.clone();if(day<.42)sky.lerp(duskSky,day/.42);else sky=duskSky.clone().lerp(daySky,(day-.42)/.58);sky.multiplyScalar(cloudDim*.22+.78);scene.background.copy(sky);scene.fog.color.copy(sky);renderer.toneMappingExposure=.96+day*.12+night*.08;
  if(performance.now()-lastWeatherTick>42000){lastWeatherTick=performance.now();const rr=Math.random();state.weather=rr<.68?'clear':rr<.86?'cloudy':'rain'}
 }
+
+
+// Activate the V21 implementations without redeclaring module-scope function names.
+cityTemplateNames=cityTemplateNamesV21;
+addExtraInfillBuildings=addExtraInfillBuildingsV21;
+buildPedNetwork=buildPedNetworkV21;
+addAlleyNetwork=addAlleyNetworkV21;
+buildingSpotFree=buildingSpotFreeV21;
+addDenseBuilding=addDenseBuildingV21;
+addLamp=addLampV21;
+addTree=addTreeV21;
+addShop=addShopV21;
+createCarVisual=createCarVisualV21;
+updateWorldLight=updateWorldLightV21;
 
 // Ensure skyline is rebuilt when changing city.
 const _v21RefreshCityLandmark=refreshCityLandmark;

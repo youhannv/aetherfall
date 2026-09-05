@@ -1,6 +1,15 @@
-StreetQuest V21 — validation à exécuter
-Version: 21.0.0
-Cache PWA: streetquest3d-v21
-Sauvegarde: sq3d-v21
-worldLayoutVersion: 210
-Voir V21_CHECKLIST.md.
+StreetQuest 3D V21.1 — Paris Cinematic Fix
+
+Correctif critique:
+- La V21 déclarait plusieurs fonctions une seconde fois dans game.js.
+- game.js est chargé avec <script type="module"> : ces redéclarations provoquaient une SyntaxError avant init(), donc aucun canvas WebGL ni aucune ville ne pouvaient apparaître.
+- Les implémentations V21 sont maintenant nommées explicitement *V21 puis activées sans redéclaration de binding module.
+- Cache Service Worker incrémenté vers streetquest3d-v21.1-fix1 pour forcer l'iPhone/GitHub Pages à récupérer le game.js corrigé.
+
+Validations effectuées:
+- node --check sur game.js en tant que module ES (.mjs) : OK
+- aucune fonction top-level dupliquée : OK
+- sw.js : syntaxe OK
+- multiplayer-config.js : syntaxe OK
+- server/server.js : syntaxe OK
+- manifest.json / version.json / server/package.json : JSON valide
