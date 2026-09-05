@@ -354,7 +354,7 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:222,trainTrips:0,visitedCities:['paris'],
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:223,trainTrips:0,visitedCities:['paris'],
  gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
@@ -370,14 +370,14 @@ function loadState(){
      ...structuredClone(base),...raw,
      pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},
      homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[],artifactBag:raw.artifactBag||[],discoveredShops:raw.discoveredShops||[],
-     propertyCatalog:raw.propertyCatalog||[],propertyPortfolio:raw.propertyPortfolio||[],
+     propertyCatalog:(raw.propertyCatalog||[]).map(p=>({...p,cityId:p.cityId||'paris'})),propertyPortfolio:(raw.propertyPortfolio||[]).map(p=>({...p,cityId:p.cityId||'paris'})),
      education:{current:null,completed:[],...(raw.education||{})},companies:{...freshCompanies(),...(raw.companies||{})},salaryHistory:raw.salaryHistory||[],agendaCustom:raw.agendaCustom||[],knownNpcOccupations:raw.knownNpcOccupations||[],soundEnabled:raw.soundEnabled!==false,avatar:normalizedAvatar(raw.avatar||AVATAR_DEFAULT),avatarCreated:!!raw.avatarCreated,avatarVersion:raw.avatarVersion||1,cosmeticsUnlocked:raw.cosmeticsUnlocked||[]
    };
    if(loaded.interior){loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)?{x:raw.returnPos.x,z:raw.returnPos.z}:{...base.pos};loaded.interior=null;loaded.returnPos=null}
    if(migrated&&raw.housingStage){loaded.propertyCredit=(loaded.propertyCredit||0)+(raw.housingStage===1?180:raw.housingStage===2?1030:raw.housingStage>=3?2830:0);loaded.housingStage=0;loaded.landOwned=false}
    if((raw.worldLayoutVersion||0)<215){loaded.propertyCatalog=[];loaded.discoveredShops=[]}
    if((raw.worldLayoutVersion||0)<220){loaded.pos={...base.pos};loaded.interior=null;loaded.returnPos=null;loaded.discoveredShops=[];loaded.seenDistricts=[]}
-   loaded.worldLayoutVersion=221;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
+   loaded.worldLayoutVersion=223;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
    return loaded
  }catch{return structuredClone(base)}
 }
@@ -1553,27 +1553,63 @@ function addHomePlot(g,key,x,z){
 function addBusStopsForChunk(g,key,cx,cz){
  for(const stop of BUS_STOPS){if(stop.cx===cx&&stop.cz===cz)addBusStop(g,key,stop)}
 }
-function makeTransitStopNameSign(text){
- const cache=makeTransitStopNameSign.cache||(makeTransitStopNameSign.cache=new Map());let tex=cache.get(text);
- if(!tex){const c=document.createElement('canvas');c.width=768;c.height=160;const q=c.getContext('2d');q.fillStyle='#10202b';q.fillRect(0,0,c.width,c.height);q.strokeStyle='#5ca6d8';q.lineWidth=7;q.strokeRect(4,4,c.width-8,c.height-8);let fs=55;q.font=`900 ${fs}px system-ui`;while(fs>28&&q.measureText(text).width>700){fs-=2;q.font=`900 ${fs}px system-ui`}q.fillStyle='#ffffff';q.textAlign='center';q.textBaseline='middle';q.fillText(text,c.width/2,c.height/2);tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;cache.set(text,tex)}
- const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));sp.scale.set(3.4,.72,1);return sp
+
+function transitWrapLines(q,text,maxWidth){
+ const words=String(text||'').split(/\s+/).filter(Boolean),lines=[];let line='';
+ for(const word of words){const test=line?`${line} ${word}`:word;if(q.measureText(test).width<=maxWidth||!line)line=test;else{lines.push(line);line=word}}
+ if(line)lines.push(line);return lines
 }
-function makeBusStopPole(stop,x,z){
+function busStopDirectionRows(stop,reverse=false){
+ return (stop.lines||[]).map(id=>{
+   const line=busLineById(id);if(!line)return null;
+   if(line.loop)return{id,term:line.name||'Circulaire',color:line.color||'#4d8dcc'};
+   let targetId=reverse?line.stops[0]:line.stops[line.stops.length-1];
+   if(targetId===stop.id)targetId=reverse?line.stops[line.stops.length-1]:line.stops[0];
+   return{id,term:busStopById(targetId)?.name||'Terminus',color:line.color||'#4d8dcc'}
+ }).filter(Boolean)
+}
+function makeTransitStopBoardTexture(stop,reverse=false){
+ const cache=makeTransitStopBoardTexture.cache||(makeTransitStopBoardTexture.cache=new Map()),key=`${stop.id}|${reverse?'R':'A'}|${stop.lines.join(',')}`;
+ let tex=cache.get(key);if(tex)return tex;
+ const c=document.createElement('canvas');c.width=512;c.height=640;const q=c.getContext('2d');
+ q.fillStyle='#f5f6f2';q.fillRect(0,0,c.width,c.height);
+ q.strokeStyle='#c7ccd0';q.lineWidth=8;q.strokeRect(5,5,c.width-10,c.height-10);
+ q.fillStyle='#235b91';q.fillRect(0,0,c.width,74);
+ q.fillStyle='#ffffff';q.font='900 30px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText('ARRÊT',c.width/2,37);
+ q.fillStyle='#17212b';q.textAlign='left';q.textBaseline='top';q.font='800 25px system-ui';
+ const nameLines=transitWrapLines(q,stop.name,450).slice(0,3);let y=104;
+ for(const line of nameLines){q.fillText(line,30,y);y+=31}
+ q.strokeStyle='#cdd3d7';q.lineWidth=2;q.beginPath();q.moveTo(28,y+10);q.lineTo(484,y+10);q.stroke();y+=32;
+ q.fillStyle='#596773';q.font='800 17px system-ui';q.fillText('DIRECTION / TERMINUS',30,y);y+=30;
+ for(const row of busStopDirectionRows(stop,reverse)){
+   q.fillStyle=row.color;q.fillRect(28,y,72,42);
+   q.fillStyle='#ffffff';q.font='900 22px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(row.id,64,y+21);
+   q.fillStyle='#111b23';q.font='800 20px system-ui';q.textAlign='left';q.textBaseline='middle';
+   const term=transitWrapLines(q,row.term,350).slice(0,2);q.fillText(`→ ${term[0]||'Terminus'}`,116,y+14);
+   if(term[1]){q.font='700 17px system-ui';q.fillText(term[1],138,y+35)}
+   y+=58
+ }
+ q.fillStyle='#75818a';q.font='700 15px system-ui';q.textAlign='left';q.textBaseline='bottom';q.fillText('StreetQuest Mobilités',30,610);
+ tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;tex.anisotropy=Math.min(4,renderer?.capabilities?.getMaxAnisotropy?.()||1);cache.set(key,tex);return tex
+}
+function makeBusStopPole(stop,x,z,reverse=false){
  const group=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x17202a,metalness:.35,roughness:.56});
  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.065,2.45,8),metal);pole.position.y=1.225;group.add(pole);
- const board=new THREE.Mesh(new THREE.BoxGeometry(.92,1.08,.10),new THREE.MeshStandardMaterial({color:0xf1f4f6,roughness:.44,metalness:.04}));board.position.set(0,2.08,0);group.add(board);
- const cap=new THREE.Mesh(new THREE.BoxGeometry(.96,.20,.12),new THREE.MeshBasicMaterial({color:0x356ca8}));cap.position.set(0,2.62,0);group.add(cap);
+ const board=new THREE.Mesh(new THREE.BoxGeometry(.92,1.12,.10),new THREE.MeshStandardMaterial({color:0xf1f4f6,roughness:.44,metalness:.04}));board.position.set(0,2.08,0);group.add(board);
+ const tex=makeTransitStopBoardTexture(stop,reverse),mat=new THREE.MeshBasicMaterial({map:tex,transparent:false,toneMapped:false});
+ const front=new THREE.Mesh(new THREE.PlaneGeometry(.84,1.02),mat);front.position.set(0,2.08,.056);group.add(front);
+ const back=new THREE.Mesh(new THREE.PlaneGeometry(.84,1.02),mat);back.position.set(0,2.08,-.056);back.rotation.y=Math.PI;group.add(back);
+ const cap=new THREE.Mesh(new THREE.BoxGeometry(.96,.20,.12),new THREE.MeshBasicMaterial({color:0x356ca8}));cap.position.set(0,2.72,0);group.add(cap);
  const mode=busLineById(stop.lines[0])?.mode==='tram'?'TRAM':busLineById(stop.lines[0])?.mode==='navette'?'NAVETTE':'BUS';
- const nameSign=makeTransitStopNameSign(stop.name);nameSign.position.set(0,2.22,.07);group.add(nameSign);
- const lineText=stop.lines.join(' • '),lineSign=makeSign(`${mode} ${lineText}`,'#bfe8ff');lineSign.scale.set(1.55,.36,1);lineSign.position.set(0,2.90,.02);group.add(lineSign);
+ const lineText=stop.lines.join(' • '),lineSign=makeSign(`${mode} ${lineText}`,'#bfe8ff');lineSign.scale.set(.78,.20,1);lineSign.position.set(0,2.93,.02);group.add(lineSign);
  group.position.set(x,0,z);return group
 }
 function addBusStop(g,key,stop){
- const primary=makeBusStopPole(stop,stop.x,stop.z);g.add(primary);busStops.push({...stop,key,group:primary});
+ const primary=makeBusStopPole(stop,stop.x,stop.z,false);g.add(primary);busStops.push({...stop,key,group:primary});
  // Most routes are bidirectional. A second pole across the road makes the return trip easy to board as well.
  const x0=stop.cx*CHUNK,z0=stop.cz*CHUNK,horizontal=stop.side==='south'||stop.side==='north';
  const ax=horizontal?stop.x:(stop.side==='east'?x0-1.5:x0+12.5),az=horizontal?(stop.side==='south'?z0-1.5:z0+12.5):stop.z;
- const secondary=makeBusStopPole(stop,ax,az);secondary.scale.set(.94,.94,.94);g.add(secondary);busStops.push({...stop,key,group:secondary,secondary:true})
+ const secondary=makeBusStopPole(stop,ax,az,true);secondary.scale.set(.94,.94,.94);g.add(secondary);busStops.push({...stop,key,group:secondary,secondary:true})
 }
 function createBusVisual(line){
  const g=new THREE.Group(),bodyM=new THREE.MeshStandardMaterial({color:new THREE.Color(line.color),metalness:.10,roughness:.48}),dark=new THREE.MeshStandardMaterial({color:0x182531,roughness:.35,metalness:.18});
@@ -2992,6 +3028,11 @@ function sellLoot(id){
 function bindShop(){
  $$('.enrollSchool').forEach(b=>b.onclick=()=>enrollSchool(b.dataset.id));const att=$('.attendSchool');if(att)att.onclick=attendSchoolDay;$$('.applyJob').forEach(b=>b.onclick=()=>applyJob(b.dataset.id));const qj=$('.quitJob');if(qj)qj.onclick=quitJob;
  $$('.inspectProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){selectedProperty=p;openSheet('property')}});
+ $$('.agencyMapProperty').forEach(b=>b.onclick=()=>{const rec=portfolioRecord(b.dataset.id);if(rec)openPropertyOnMap(rec)});
+ $$('.agencySetResidence').forEach(b=>b.onclick=()=>setResidence(b.dataset.id,'physicalShop'));
+ $$('.agencyEndRental').forEach(b=>b.onclick=()=>endRental(b.dataset.id,'physicalShop'));
+ $$('.agencyToggleListing').forEach(b=>b.onclick=()=>togglePropertyListing(b.dataset.id,'physicalShop'));
+ $$('.agencyAdjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta),'physicalShop'));
  $$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));
  $$('.sellLoot').forEach(b=>b.onclick=()=>sellLoot(b.dataset.id));
  $$('.sellArtifact').forEach(b=>b.onclick=()=>sellArtifact(b.dataset.id));
@@ -3056,28 +3097,28 @@ function buyProperty(p){
  if(!state.residenceId)state.residenceId=p.id;
  save();toast(`🏠 ${propertyLabel(p)} acheté`);openSheet('home')
 }
-function setResidence(id){
+function setResidence(id,refreshPanel='home'){
  const rec=portfolioRecord(id);if(!rec)return;
  if(rec.tenure==='owned'&&rec.listed){rec.listed=false;rec.tenant=false}
  const old=state.propertyPortfolio.find(x=>x.id===state.residenceId&&x.tenure==='rent'&&x.id!==id);
  if(old)state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==old.id);
- state.residenceId=id;state.missedRent=0;save();toast(`${rec.label} devient ta résidence.`);openSheet('home')
+ state.residenceId=id;state.missedRent=0;save();toast(`${rec.label} devient ta résidence.`);openSheet(refreshPanel)
 }
-function endRental(id){
+function endRental(id,refreshPanel='home'){
  const rec=portfolioRecord(id);if(!rec||rec.tenure!=='rent')return;
  state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==id);
- if(state.residenceId===id)state.residenceId=null;save();toast('Bail résilié.');openSheet('home')
+ if(state.residenceId===id)state.residenceId=null;save();toast('Bail résilié.');openSheet(refreshPanel)
 }
-function adjustAskingRent(id,delta){
+function adjustAskingRent(id,delta,refreshPanel='home'){
  const rec=portfolioRecord(id);if(!rec||rec.tenure!=='owned')return;
- rec.askingRent=Math.max(5,Math.round((rec.askingRent||rec.marketRent)+delta));rec.tenant=false;save();openSheet('home')
+ rec.askingRent=Math.max(5,Math.round((rec.askingRent||rec.marketRent)+delta));rec.tenant=false;save();openSheet(refreshPanel)
 }
-function togglePropertyListing(id){
+function togglePropertyListing(id,refreshPanel='home'){
  const rec=portfolioRecord(id);if(!rec||rec.tenure!=='owned')return;
  if(state.residenceId===id)return toast('Choisis d’abord une autre résidence.');
  rec.listed=!rec.listed;if(rec.listed){rec.askingRent=rec.askingRent||rec.marketRent;rec.tenant=false}
  else rec.tenant=false;
- save();toast(rec.listed?'Bien proposé à la location.':'Annonce retirée.');openSheet('home')
+ save();toast(rec.listed?'Bien proposé à la location.':'Annonce retirée.');openSheet(refreshPanel)
 }
 function propertySheetHTML(p){
  const d=DISTRICTS.find(x=>x.id===p.districtId)||districtFor(p.cx,p.cz),rec=portfolioRecord(p.id),t=PROPERTY_TYPES[p.type];
@@ -3092,7 +3133,17 @@ function propertySheetHTML(p){
 function housingAgencyHTML(){
  const outdoor=state.returnPos||state.pos,{cx,cz}={cx:Math.floor(outdoor.x/CHUNK),cz:Math.floor(outdoor.z/CHUNK)},curD=districtFor(cx,cz);
  const list=state.propertyCatalog.filter(p=>p.cityId===state.cityId&&p.marketed!==false&&!portfolioRecord(p.id)).sort((a,b)=>Math.hypot(a.x-outdoor.x,a.z-outdoor.z)-Math.hypot(b.x-outdoor.x,b.z-outdoor.z)).slice(0,20);
- return `<div class="card"><h3>🔑 Agence Habitat</h3><p class="sub">Sophie peut te faire visiter directement un bien. Chaque annonce affiche aussi les coordonnées exactes de son entrée.</p><p class="sub">Agence : ${curD.name} • revenu mensuel ${currentGrossSalary()} crédits.</p></div>
+ const mine=state.propertyPortfolio.filter(p=>p.cityId===state.cityId);
+ const otherCount=state.propertyPortfolio.length-mine.length;
+ const mineHtml=mine.length?mine.map(rec=>{
+   const residence=state.residenceId===rec.id,status=rec.tenure==='rent'?'Location personnelle':rec.listed?(rec.tenant?'Loué à un locataire':'En recherche de locataire'):'Propriété non louée';
+   const rentControls=rec.tenure==='owned'&&rec.listed?`<div class="agencyRentControls"><button class="tinyBtn agencyAdjustRent" data-id="${rec.id}" data-delta="-5">−5</button><b>${rec.askingRent||rec.marketRent}/mois</b><button class="tinyBtn agencyAdjustRent" data-id="${rec.id}" data-delta="5">+5</button></div>`:'';
+   const ownedActions=rec.tenure==='owned'?`${residence?'<span class="propertyTag">🏠 Résidence</span>':`<button class="menuBtn agencySetResidence" data-id="${rec.id}">Habiter</button>`}${!residence?`<button class="menuBtn ${rec.listed?'red':'green'} agencyToggleListing" data-id="${rec.id}">${rec.listed?'Retirer annonce':'Mettre en location'}</button>`:''}${rentControls}`:`${residence?'<span class="propertyTag">🏠 Résidence</span>':`<button class="menuBtn agencySetResidence" data-id="${rec.id}">Habiter</button>`}<button class="menuBtn red agencyEndRental" data-id="${rec.id}">Résilier bail</button>`;
+   return `<div class="card agencyOwnedProperty"><div class="sectionKicker">${rec.tenure==='owned'?'MA PROPRIÉTÉ':'MA LOCATION'}</div><h3>${PROPERTY_TYPES[rec.type]?.icon||'🏠'} ${rec.label||propertyLabel(rec)}</h3><p class="sub">${rec.districtName||'Quartier'} • ${status}<br>📍 ${streetCoordsAt(rec.x,rec.z)}${rec.tenure==='owned'?` • valeur ${rec.buyPrice}`:''}</p><div class="agencyPropertyActions"><button class="menuBtn agencyMapProperty" data-id="${rec.id}">🗺️ Carte</button>${ownedActions}</div></div>`
+ }).join(''):`<div class="card"><p class="sub">Tu ne possèdes et ne loues encore aucun bien dans ${city().name}.</p></div>`;
+ return `<div class="card"><h3>🔑 Agence Habitat</h3><p class="sub">Ici tu peux chercher un logement <b>et gérer tes biens</b> : résidence principale, mise en location, loyer demandé et annonces.</p><p class="sub">Agence : ${curD.name} • revenu mensuel ${currentGrossSalary()} crédits.</p></div>
+ <div class="card"><div class="sectionKicker">MON PORTEFEUILLE IMMOBILIER</div><h3>🏘️ Mes biens à ${city().name}</h3><p class="sub">${mine.length} bien(s) ici${otherCount?` • ${otherCount} autre(s) bien(s) dans les autres villes`:''}</p></div>${mineHtml}
+ <div class="card"><div class="sectionKicker">MARCHÉ</div><h3>Biens disponibles</h3><p class="sub">Dossiers connus par l’agence et visites disponibles.</p></div>
  ${list.length?list.map(p=>{const d=DISTRICTS.find(x=>x.id===p.districtId)||districtFor(p.cx,p.cz),offer=p.offer==='rent'?`Loyer ${p.rent}/mois`:p.offer==='sale'?`Achat ${p.buyPrice}`:`${p.rent}/mois ou ${p.buyPrice}`;return `<div class="card"><div class="marketRow"><div><b>${PROPERTY_TYPES[p.type].icon} ${propertyLabel(p)}</b><small>${d.name} • ${offer}<br>📍 ${streetCoordsAt(p.x,p.z)}</small></div><button class="menuBtn inspectProperty" data-id="${p.id}">Dossier</button></div></div>`}).join(''):'<div class="card"><p class="sub">Aucune annonce connue pour le moment. Explore davantage la ville.</p></div>'}`
 }
 function housingName(){
@@ -3247,7 +3298,13 @@ function renderWorldMap(canvas){
  q.globalAlpha=.17;for(let i=0;i<60;i++){q.fillStyle=i%3?'#d2bd62':'#6a8f55';q.fillRect((i*97)%W,(i*53)%H,70+(i%5)*18,28+(i%4)*14)}q.globalAlpha=1;
  const pos=id=>CITIES.find(c=>c.id===id)?.map;
  q.lineCap='round';q.lineJoin='round';for(const e of WALK_LINKS){const a=pos(e.a),b=pos(e.b);if(!a||!b)continue;q.setLineDash([8,7]);q.strokeStyle='rgba(233,237,218,.42)';q.lineWidth=3;q.beginPath();q.moveTo(a.x,a.y);q.lineTo(b.x,b.y);q.stroke()}q.setLineDash([]);for(const e of TRAIN_LINKS){const a=pos(e.a),b=pos(e.b);if(!a||!b)continue;q.strokeStyle='rgba(18,25,28,.68)';q.lineWidth=9;q.beginPath();q.moveTo(a.x,a.y);q.lineTo(b.x,b.y);q.stroke();q.strokeStyle=e.line==='IC1'?'#e6d45c':'#78bde8';q.lineWidth=4;q.stroke();const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;q.fillStyle='rgba(6,15,22,.82)';q.fillRect(mx-18,my-9,36,18);q.fillStyle='#fff';q.font='800 10px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(e.line,mx,my)}
- for(const c of CITIES){const p=c.map,active=c.id===state.cityId,seen=state.visitedCities?.includes(c.id);q.fillStyle=active?'#fff4b5':seen?'#e6eef5':'#aab7be';q.strokeStyle=active?'#ffcf52':'#263943';q.lineWidth=active?5:3;q.beginPath();q.arc(p.x,p.y,active?19:15,0,Math.PI*2);q.fill();q.stroke();q.fillStyle='#08131c';q.font='900 12px system-ui';q.fillText('🚆',p.x,p.y+.5);q.fillStyle='#fff';q.font='800 14px system-ui';q.fillText(c.name,p.x,p.y+32);q.fillStyle='rgba(240,248,252,.78)';q.font='600 9px system-ui';q.fillText(c.subtitle,p.x,p.y+46)}
+ for(const c of CITIES){
+  const p=c.map,active=c.id===state.cityId,seen=state.visitedCities?.includes(c.id),owned=state.propertyPortfolio.filter(r=>r.cityId===c.id).length;
+  q.fillStyle=active?'#fff4b5':seen?'#e6eef5':'#aab7be';q.strokeStyle=active?'#ffcf52':'#263943';q.lineWidth=active?5:3;q.beginPath();q.arc(p.x,p.y,active?19:15,0,Math.PI*2);q.fill();q.stroke();
+  q.fillStyle='#08131c';q.font='900 12px system-ui';q.fillText('🚆',p.x,p.y+.5);
+  if(owned){q.fillStyle='#ffd86b';q.beginPath();q.arc(p.x+18,p.y-17,11,0,Math.PI*2);q.fill();q.fillStyle='#13202b';q.font='900 10px system-ui';q.fillText(`⌂${owned}`,p.x+18,p.y-17)}
+  q.fillStyle='#fff';q.font='800 14px system-ui';q.fillText(c.name,p.x,p.y+32);q.fillStyle='rgba(240,248,252,.78)';q.font='600 9px system-ui';q.fillText(c.subtitle,p.x,p.y+46)
+}
  const walker=intercityMapPosition();if(walker){q.fillStyle='#fff3b0';q.strokeStyle='#151d24';q.lineWidth=3;q.beginPath();q.arc(walker.x,walker.y,10,0,Math.PI*2);q.fill();q.stroke();q.fillStyle='#111820';q.font='900 11px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText('🚶',walker.x,walker.y);q.fillStyle='#fff';q.font='800 9px system-ui';q.fillText(walker.road,walker.x,walker.y+17)}
  q.fillStyle='rgba(4,13,20,.78)';q.fillRect(18,H-64,W-36,44);q.fillStyle='#eaf4f8';q.font='700 11px system-ui';q.textAlign='left';q.fillText('🌍 Région StreetQuest  •  trains + routes interurbaines praticables à pied',30,H-44);q.fillStyle='#bcd0da';q.font='600 9px system-ui';q.fillText('Les pointillés clairs indiquent les routes reliant physiquement les villes.',30,H-29)
 }
@@ -3300,9 +3357,18 @@ function renderMapTo(canvas,zoom=2.0){
    if(CIVIC_POIS.some(p=>p.type===s.type&&Math.floor(s.x/CHUNK)===p.cx&&Math.floor(s.z/CHUNK)===p.cz))continue;
    const dx=(s.x-center.x)*S,dz=(s.z-center.z)*S;if(Math.abs(dx)<W/2&&Math.abs(dz)<H/2){const st=mapShopStyle(s.type);drawMapMarker(q,dx,dz,st.code,st.color,detail)}
  }
- const res=state.residenceId?propertyFromCatalog(state.residenceId):null;
- if(res){const dx=(res.x-center.x)*S,dz=(res.z-center.z)*S;q.strokeStyle='#ffd45c';q.lineWidth=detail?3:2;q.beginPath();q.arc(dx,dz,detail?10:7,0,Math.PI*2);q.stroke()}
- const focus=mapFocusPropertyId?propertyFromCatalog(mapFocusPropertyId):null;
+ // V22.3: every property in the player's portfolio is visible on the city map,
+ // not only the current residence. The portfolio record itself contains its coordinates,
+ // so it still works if an old catalog entry is no longer loaded.
+ for(const rec of state.propertyPortfolio.filter(p=>p.cityId===state.cityId)){
+   const dx=(rec.x-center.x)*S,dz=(rec.z-center.z)*S;if(Math.abs(dx)>W/2||Math.abs(dz)>H/2)continue;
+   const residence=state.residenceId===rec.id,color=residence?'#fff19a':rec.tenure==='owned'?(rec.listed?'#ffb75c':'#ffdc6d'):'#77d7ff';
+   drawMapMarker(q,dx,dz,rec.tenure==='owned'?'⌂':'L',color,detail);
+   if(detail&&bigMapZoom>.34){q.fillStyle=color;q.font='700 9px system-ui';q.textAlign='left';q.textBaseline='middle';q.fillText(`${residence?'Résidence • ':rec.tenure==='owned'?'Propriété • ':'Location • '}${rec.label||propertyLabel(rec)}`,dx+11,dz+13)}
+ }
+ const res=state.residenceId?(portfolioRecord(state.residenceId)||propertyFromCatalog(state.residenceId)):null;
+ if(res){const dx=(res.x-center.x)*S,dz=(res.z-center.z)*S;q.strokeStyle='#fff19a';q.lineWidth=detail?3:2;q.beginPath();q.arc(dx,dz,detail?11:8,0,Math.PI*2);q.stroke()}
+ const focus=mapFocusPropertyId?(portfolioRecord(mapFocusPropertyId)||propertyFromCatalog(mapFocusPropertyId)):null;
  if(focus){const dx=(focus.x-center.x)*S,dz=(focus.z-center.z)*S;drawMapMarker(q,dx,dz,'⌂','#ffdc6d',detail);if(detail){q.fillStyle='#ffdc6d';q.font='700 11px system-ui';q.textAlign='left';q.fillText(propertyLabel(focus),dx+12,dz-10)}}
 
  const stp=stationPosition(),stx=(stp.x-center.x)*S,stz=(stp.z-center.z)*S;if(!mapWorldMode&&Math.abs(stx)<W/2&&Math.abs(stz)<H/2){drawMapMarker(q,stx,stz,'T','#f2d35c',detail);if(detail){q.fillStyle='#f7e9a1';q.font='700 9px system-ui';q.textAlign='left';q.fillText(city().station.name,stx+11,stz-10)}}
@@ -3371,14 +3437,36 @@ function updateHUD(){
 }
 
 function setupMapUI(){
+ const playerOutdoor=()=>state.interior?(state.returnPos||state.pos):state.pos;
  const open=()=>{mapBusMode=false;mapWorldMode=false;mapCenterOverride=null;mapFocusPropertyId=null;$('#mapOverlay').classList.remove('hidden');drawMap()},close=()=>{mapCenterOverride=null;mapFocusPropertyId=null;$('#mapOverlay').classList.add('hidden')};
  $('#mapExpandBtn').onclick=open;$('#minimap').onclick=open;$('#closeMapOverlay').onclick=close;$('#mapOverlay').onclick=e=>e.target===$('#mapOverlay')&&close();
- const change=f=>{bigMapZoom=clamp(bigMapZoom*f,.18,2.2);drawMap()};
+ const change=f=>{if(mapWorldMode)return;bigMapZoom=clamp(bigMapZoom*f,.18,2.2);drawMap()};
+ const panBy=(dx,dy)=>{if(mapWorldMode)return;const p=mapCenterOverride||playerOutdoor();mapCenterOverride={x:p.x-dx/Math.max(.18,bigMapZoom),z:p.z-dy/Math.max(.18,bigMapZoom)};mapFocusPropertyId=null;drawMap()};
  $('#mapZoomIn').onclick=()=>change(1.25);$('#mapZoomOut').onclick=()=>change(.8);$('#mapBusMode').onclick=showFullBusMap;$('#mapLocalMode').onclick=showLocalMap;$('#mapWorldMode').onclick=showWorldMap;
- const map=$('#bigMinimap');map.addEventListener('wheel',e=>{e.preventDefault();change(e.deltaY<0?1.12:.89)},{passive:false});
- let pinchDist=0;
- map.addEventListener('touchstart',e=>{if(e.touches.length===2)pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)},{passive:true});
- map.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(pinchDist){change(d/pinchDist);pinchDist=d}}},{passive:false})
+ $('#mapRecenter')?.addEventListener('click',()=>{if(mapWorldMode)return;if(mapBusMode){showFullBusMap();return}mapCenterOverride=null;mapFocusPropertyId=null;drawMap()});
+ const map=$('#bigMinimap');map.addEventListener('wheel',e=>{if(mapWorldMode)return;e.preventDefault();change(e.deltaY<0?1.12:.89)},{passive:false});
+
+ // Desktop / trackpad drag.
+ let dragging=false,lastX=0,lastY=0,dragPointer=null;
+ map.addEventListener('pointerdown',e=>{if(mapWorldMode||e.pointerType==='touch')return;dragging=true;dragPointer=e.pointerId;lastX=e.clientX;lastY=e.clientY;map.setPointerCapture?.(e.pointerId);map.classList.add('dragging')});
+ map.addEventListener('pointermove',e=>{if(!dragging||e.pointerId!==dragPointer)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;panBy(dx,dy)});
+ const endDrag=e=>{if(dragPointer!==null&&e.pointerId!==undefined&&e.pointerId!==dragPointer)return;dragging=false;dragPointer=null;map.classList.remove('dragging')};
+ map.addEventListener('pointerup',endDrag);map.addEventListener('pointercancel',endDrag);map.addEventListener('lostpointercapture',endDrag);
+
+ // iPhone: one finger moves the map; two fingers pinch to zoom.
+ let pinchDist=0,touchPan=null;
+ map.addEventListener('touchstart',e=>{
+   if(mapWorldMode)return;
+   if(e.touches.length===1){touchPan={x:e.touches[0].clientX,y:e.touches[0].clientY};pinchDist=0}
+   else if(e.touches.length===2){touchPan=null;pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)}
+ },{passive:true});
+ map.addEventListener('touchmove',e=>{
+   if(mapWorldMode)return;
+   if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);if(pinchDist>0){change(d/pinchDist);pinchDist=d}touchPan=null;return}
+   if(e.touches.length===1&&touchPan){e.preventDefault();const t=e.touches[0],dx=t.clientX-touchPan.x,dy=t.clientY-touchPan.y;touchPan={x:t.clientX,y:t.clientY};panBy(dx,dy)}
+ },{passive:false});
+ map.addEventListener('touchend',e=>{if(e.touches.length===1)touchPan={x:e.touches[0].clientX,y:e.touches[0].clientY};else touchPan=null;if(e.touches.length<2)pinchDist=0},{passive:true});
+ map.addEventListener('touchcancel',()=>{touchPan=null;pinchDist=0},{passive:true})
 }
 function setupDesktopControls(){
  document.addEventListener('keydown',e=>{
@@ -3464,7 +3552,7 @@ function openSheet(panel){
  if(panel==='train'){t.textContent='Gare & trains';b.innerHTML=trainStationHTML()}
  bindSheet(panel)
 }
-function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.2</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.3</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
  <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>🚆</span><b>Région</b><small>Villes & trains</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
 function socialHTML(){
  const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
@@ -3510,7 +3598,7 @@ function districtHTML(){
  <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.2</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.3</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}

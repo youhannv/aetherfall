@@ -1,52 +1,18 @@
-# StreetQuest V22.2 — Bus code de la route & vue passager
+# StreetQuest V22.3 — Arrêts réalistes, carte mobile & immobilier
 
-Cette version part de V22.1 et corrige spécifiquement la circulation et l'expérience à bord.
+V22.3 part de la V22.2.1 stable et conserve la région continue, les 5 villes, les trains et le système de bus physique.
 
-## Nouveautés V22.2
+## Nouveautés V22.3
 
-- bus calés sur les mêmes voies directionnelles que les voitures ;
-- freinage renforcé derrière voitures et bus ;
-- respect des feux avec distance de freinage dynamique ;
-- virages avec braquage et déplacement dans le cap du véhicule, sans glissement latéral ;
-- nom réel de chaque arrêt affiché sur le panneau physique ;
-- trois vues à bord : **Fenêtre**, **Pare-brise**, **Extérieure** ;
-- bouton `🎥` pendant le trajet pour changer de caméra ;
-- caméra passager corrigée pour suivre le cap réel du bus.
+- Arrêts de transport refaits : le nom de l'arrêt est petit sur le panneau blanc, sans grande pancarte flottante.
+- Chaque poteau indique les lignes et leur direction/terminus pour choisir le bon côté de la route.
+- Carte tactile déplaçable à un doigt sur iPhone et à la souris sur ordinateur.
+- Pinch à deux doigts pour zoomer, molette sur ordinateur, et bouton de recentrage.
+- Toutes les propriétés possédées/louées apparaissent sur la carte locale, avec distinction propriété/location/résidence.
+- La carte régionale indique le nombre de biens détenus dans chaque ville.
+- Migration des anciennes propriétés sans `cityId` vers Paris afin qu'elles ne disparaissent plus des cartes V22.
+- Les agences immobilières ont maintenant une section « Mon portefeuille immobilier » : résidence, mise en location, retrait d'annonce, réglage du loyer et résiliation d'un bail.
 
-## Base V22.1 conservée
+## Déploiement
 
-Cette version part de V22 et ajoute deux changements structurels.
-
-## Aller d’une ville à l’autre à pied
-
-Les cinq villes restent des mondes urbains distincts pour garder de bonnes performances sur iPhone, mais elles sont désormais reliées par de longues routes départementales continues à travers la campagne. Il n’y a plus de mur invisible sur les axes interurbains.
-
-Routes :
-
-- **D7 Route des Cèdres** : Paris ↔ Valmont
-- **D12 Route de Montfleur** : Paris ↔ Montfleur
-- **D18 Route des Étangs** : Valmont ↔ Montfleur
-- **D4 Route des Forges** : Montfleur ↔ Saint-Roch
-- **D21 Route du Littoral** : Saint-Roch ↔ Belle-Rive
-
-Chaque moitié de trajet fait environ 24 chunks ruraux. À pied, un centre-ville à l’autre demande volontairement plusieurs minutes ; le train reste le transport rapide et les futures voitures pourront utiliser ces routes. Les chunks éloignés ne sont pas tous chargés : seuls ceux autour du joueur existent en 3D, ce qui conserve les performances.
-
-## Nouveau système de bus
-
-- Les bus restent **12 secondes aux arrêts** et **15 secondes aux terminus**.
-- Il n’est plus nécessaire de préparer le trajet avant l’arrivée du bus.
-- Quand le véhicule est à quai, approche-toi et touche **MONTER**.
-- Le menu du véhicule affiche directement les arrêts desservis dans le bon sens.
-- Le calculateur avec correspondances reste disponible mais devient optionnel.
-- Deux poteaux sont générés pour les arrêts bidirectionnels afin de mieux servir l’aller et le retour.
-- Les bus utilisent les mêmes voies directionnelles que les voitures.
-- Ils freinent progressivement, respectent les feux rouges, attendent si l’intersection est occupée, gardent leurs distances avec voitures/bus et ne franchissent plus la ligne d’arrêt au rouge.
-- Une collision avec un bus en mouvement a désormais une conséquence physique sur le joueur.
-
-## Carte régionale
-
-La carte régionale affiche les axes ferroviaires et les routes interurbaines praticables à pied.
-
-## Sauvegarde
-
-La sauvegarde V22 est conservée. Le stockage principal reste `sq3d-v22` afin de ne pas perdre la progression lors de la mise à jour.
+Remplacer tout le contenu du dépôt GitHub Pages par ce dossier. Le cache PWA est `streetquest3d-v22.3-map-property1`.

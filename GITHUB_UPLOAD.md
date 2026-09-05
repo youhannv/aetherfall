@@ -1,9 +1,9 @@
-# Déploiement GitHub Pages — V22.2
+# Déploiement GitHub Pages — V22.3
 
-1. Remplacer **tout le contenu** de l’ancienne version par les fichiers de cette archive.
-2. Vérifier que `game.js`, `style.css`, `index.html`, `sw.js`, `manifest.json` et `version.json` sont bien remplacés.
-3. Attendre le déploiement GitHub Pages.
-4. Sur iPhone, fermer/réouvrir la PWA ou recharger la page.
-5. Le nouveau cache est `streetquest3d-v22.2-bus-code1`.
+1. Décompresse le ZIP V22.3.
+2. Remplace tous les fichiers de ton dépôt GitHub Pages par ceux de ce dossier.
+3. Commit / push.
+4. Attends la fin du déploiement GitHub Pages.
+5. Recharge le jeu. Le nouveau cache est `streetquest3d-v22.3-map-property1`.
 
-La sauvegarde V22 est conservée.
+La sauvegarde `sq3d-v22` est conservée.

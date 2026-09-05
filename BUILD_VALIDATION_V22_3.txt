@@ -1,0 +1,11 @@
+StreetQuest V22.3 validation
+
+PASS node --check game.js
+PASS node --check sw.js
+PASS node --check server/server.js
+PASS JSON version/manifest/server package
+PASS duplicate function declaration scan: 0 duplicate
+PASS property legacy city migration
+PASS interactive map pan handlers present
+PASS agency property management handlers present
+PASS transit stop small-board + terminus renderer present
