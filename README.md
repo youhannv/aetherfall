@@ -860,3 +860,57 @@ Elles sont des disques `FrontSide` : on voit rouge/vert uniquement lorsqu'on reg
 la FACE du feu. Le dos est un panneau noir distinct. L'orientation est donc visuellement vérifiable.
 
 `worldLayoutVersion 191` force le recalcul propre du plan.
+
+
+# V19.2 — sens de circulation + densité restaurée
+
+## Sens de circulation
+Correction importante :
+StreetQuest affiche ses coordonnées avec `Y = -Z`.
+
+Donc :
+- `+Z` correspond visuellement au SUD
+- `-Z` correspond visuellement au NORD
+
+V19/V19.1 avaient raisonné comme si `+Z` était le nord, ce qui avait inversé les voies en voulant
+appliquer la conduite à droite.
+
+V19.2 remet la logique correcte qui existait visuellement avant :
+- véhicule vers +Z (sud) : moitié OUEST de la chaussée verticale (`x=3.2`)
+- véhicule vers -Z (nord) : moitié EST (`x=7.8`)
+- véhicule vers +X (est) : moitié SUD de la chaussée horizontale (`z=7.8`)
+- véhicule vers -X (ouest) : moitié NORD (`z=3.2`)
+
+C'est bien de la conduite à droite dans le repère réel du jeu.
+
+Les feux sont repositionnés en conséquence sur le côté droit de CHAQUE approche et orientés
+vers le conducteur correspondant.
+
+## Densité de ville
+V19 avait volontairement limité chaque îlot à quatre bâtiments, ce qui était trop radical.
+
+V19.2 utilise :
+- 6 bâtiments minimum dans la plupart des modèles
+- jusqu'à 8 bâtiments dans les quartiers avenue / populaires
+- davantage d'habitations dans les zones normales et populaires
+- zones vertes encore plus aérées, mais plus du tout vides
+
+## Population
+Objectifs par chunk :
+- quartier central : 7 à 9 PNJ
+- populaire : 6 à 8
+- normal : 5 à 7
+- industriel / luxe : 5 à 7
+
+La séparation physique entre PNJ reste active, mais le rayon de spawn a été légèrement diminué
+pour permettre une ville plus vivante sans recréer les groupes fusionnés.
+
+## Véhicules
+Objectifs :
+- central / populaire : 5 à 7 voitures actives
+- normal / industriel / luxe : 4 à 6
+- voitures garées plus fréquentes
+
+La distance de sécurité, les feux, la phase tout-rouge et le contrôle d'intersection restent actifs.
+
+`worldLayoutVersion 192` force la régénération des îlots.
