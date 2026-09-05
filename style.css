@@ -266,3 +266,6 @@ body{background:radial-gradient(circle at top,#10263c 0%,#07111a 45%,#040910 100
 @keyframes sqTrainFields{from{transform:translateX(0) skewY(-4deg)}to{transform:translateX(120px) skewY(-4deg)}}
 @keyframes sqTrainPoles{from{background-position:0 0}to{background-position:212px 0}}
 @media(max-width:560px){.mapModeBar{gap:5px}.mapModeBtn{font-size:10px;padding:9px 4px}.trainDestination{grid-template-columns:1fr}.trainDestination .menuBtn{width:100%}.trainWindow{height:145px}}
+
+/* V22.1 — simplified bus boarding */
+.busAtStopCard{border-color:rgba(103,207,255,.42)!important;background:linear-gradient(180deg,rgba(18,48,66,.94),rgba(8,24,36,.96))!important}.busAtStopCard .boardBusDestination{margin-top:7px;text-align:left}.busAtStopCard .busBadge{margin-right:7px}

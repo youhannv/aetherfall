@@ -88,12 +88,22 @@ function districtTierLabel(d){if(d.id==='countryside')return'RURAL';return d.tie
 function districtTierClass(d){return d.tier==='poor'?'districtPoor':d.tier==='working'||d.tier==='mid'?'districtMid':d.tier==='rich'?'districtRich':'districtLuxury'}
 
 const CITIES=[
- {id:'paris',name:'Paris',artifact:'Fragment d’Azur',subtitle:'Capitale dense',specificity:'Emplois, administrations, commerce et immobilier cher',transport:'Bus métropolitain',urbanRadius:4,countryRadius:6,spawn:{x:2,z:8},station:{name:'Gare Centrale',cx:0,cz:-3,lx:17,lz:43},map:{x:120,y:150},economy:{rent:1.18,buy:1.22}},
- {id:'valmont',name:'Valmont',artifact:'Émeraude du Lac',subtitle:'Ville verte et résidentielle',specificity:'Villas, lac, calme et hauts revenus',transport:'Bus local',urbanRadius:3,countryRadius:5,spawn:{x:2,z:8},station:{name:'Gare du Lac',cx:0,cz:-1,lx:17,lz:43},map:{x:280,y:82},economy:{rent:1.28,buy:1.38}},
- {id:'montfleur',name:'Montfleur',artifact:'Prisme Académique',subtitle:'Ville universitaire',specificity:'Campus, étudiants, recherche et vie nocturne',transport:'Tram + bus campus',urbanRadius:3,countryRadius:5,spawn:{x:2,z:8},station:{name:'Gare Université',cx:0,cz:-2,lx:17,lz:43},map:{x:330,y:215},economy:{rent:.88,buy:.91}},
- {id:'saint_roch',name:'Saint-Roch',artifact:'Cœur des Forges',subtitle:'Ville industrielle et populaire',specificity:'Usines, garages, entrepôts et logements accessibles',transport:'Tramway des Forges',urbanRadius:3,countryRadius:5,spawn:{x:2,z:8},station:{name:'Gare des Forges',cx:0,cz:-2,lx:17,lz:43},map:{x:475,y:200},economy:{rent:.72,buy:.70}},
- {id:'belle_rive',name:'Belle-Rive',artifact:'Perle du Large',subtitle:'Ville côtière',specificity:'Port, plage, tourisme, hôtels et restauration',transport:'Bus + navettes littorales',urbanRadius:3,countryRadius:5,spawn:{x:2,z:8},station:{name:'Gare du Port',cx:0,cz:-2,lx:17,lz:43},map:{x:520,y:365},economy:{rent:1.08,buy:1.12}}
+ {id:'paris',name:'Paris',artifact:'Fragment d’Azur',subtitle:'Capitale dense',specificity:'Emplois, administrations, commerce et immobilier cher',transport:'Bus métropolitain',urbanRadius:4,countryRadius:7,travelRadius:24,spawn:{x:2,z:8},station:{name:'Gare Centrale',cx:0,cz:-3,lx:17,lz:43},map:{x:120,y:150},economy:{rent:1.18,buy:1.22}},
+ {id:'valmont',name:'Valmont',artifact:'Émeraude du Lac',subtitle:'Ville verte et résidentielle',specificity:'Villas, lac, calme et hauts revenus',transport:'Bus local',urbanRadius:3,countryRadius:6,travelRadius:24,spawn:{x:2,z:8},station:{name:'Gare du Lac',cx:0,cz:-1,lx:17,lz:43},map:{x:280,y:82},economy:{rent:1.28,buy:1.38}},
+ {id:'montfleur',name:'Montfleur',artifact:'Prisme Académique',subtitle:'Ville universitaire',specificity:'Campus, étudiants, recherche et vie nocturne',transport:'Tram + bus campus',urbanRadius:3,countryRadius:6,travelRadius:24,spawn:{x:2,z:8},station:{name:'Gare Université',cx:0,cz:-2,lx:17,lz:43},map:{x:330,y:215},economy:{rent:.88,buy:.91}},
+ {id:'saint_roch',name:'Saint-Roch',artifact:'Cœur des Forges',subtitle:'Ville industrielle et populaire',specificity:'Usines, garages, entrepôts et logements accessibles',transport:'Tramway des Forges',urbanRadius:3,countryRadius:6,travelRadius:24,spawn:{x:2,z:8},station:{name:'Gare des Forges',cx:0,cz:-2,lx:17,lz:43},map:{x:475,y:200},economy:{rent:.72,buy:.70}},
+ {id:'belle_rive',name:'Belle-Rive',artifact:'Perle du Large',subtitle:'Ville côtière',specificity:'Port, plage, tourisme, hôtels et restauration',transport:'Bus + navettes littorales',urbanRadius:3,countryRadius:6,travelRadius:24,spawn:{x:2,z:8},station:{name:'Gare du Port',cx:0,cz:-2,lx:17,lz:43},map:{x:520,y:365},economy:{rent:1.08,buy:1.12}}
 ];
+const WALK_LINKS=[
+ {a:'paris',aSide:'north',b:'valmont',bSide:'south',road:'D7',label:'Route des Cèdres'},
+ {a:'paris',aSide:'east',b:'montfleur',bSide:'west',road:'D12',label:'Route de Montfleur'},
+ {a:'valmont',aSide:'east',b:'montfleur',bSide:'north',road:'D18',label:'Route des Étangs'},
+ {a:'montfleur',aSide:'east',b:'saint_roch',bSide:'west',road:'D4',label:'Route des Forges'},
+ {a:'saint_roch',aSide:'south',b:'belle_rive',bSide:'north',road:'D21',label:'Route du Littoral'}
+];
+function oppositeSide(side){return side==='north'?'south':side==='south'?'north':side==='east'?'west':'east'}
+function walkLinkForExit(cityId,side){for(const e of WALK_LINKS){if(e.a===cityId&&e.aSide===side)return{to:e.b,entry:e.bSide,...e};if(e.b===cityId&&e.bSide===side)return{to:e.a,entry:e.aSide,...e}}return null}
+function cityTravelLimit(c=city()){return (c.travelRadius||c.countryRadius||8)*CHUNK-CHUNK*.45}
 const TRAIN_LINE_NAMES={IC1:'Intercités du Littoral',R2:'Régional des Cèdres'};
 const TRAIN_LINKS=[
  {a:'paris',b:'valmont',minutes:14,fare:4,line:'R2'},
@@ -344,7 +354,7 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:220,trainTrips:0,visitedCities:['paris'],
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:221,trainTrips:0,visitedCities:['paris'],
  gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
@@ -367,7 +377,7 @@ function loadState(){
    if(migrated&&raw.housingStage){loaded.propertyCredit=(loaded.propertyCredit||0)+(raw.housingStage===1?180:raw.housingStage===2?1030:raw.housingStage>=3?2830:0);loaded.housingStage=0;loaded.landOwned=false}
    if((raw.worldLayoutVersion||0)<215){loaded.propertyCatalog=[];loaded.discoveredShops=[]}
    if((raw.worldLayoutVersion||0)<220){loaded.pos={...base.pos};loaded.interior=null;loaded.returnPos=null;loaded.discoveredShops=[];loaded.seenDistricts=[]}
-   loaded.worldLayoutVersion=220;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
+   loaded.worldLayoutVersion=221;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
    return loaded
  }catch{return structuredClone(base)}
 }
@@ -390,7 +400,7 @@ function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt
 function rngFor(s){let a=hashStr(s);return()=>{a+=0x6D2B79F5;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
 function ck(cx,cz){return `${state.cityId}:${cx}:${cz}`}
 function currentChunk(){return{cx:Math.floor(state.pos.x/CHUNK),cz:Math.floor(state.pos.z/CHUNK)}}
-function cityChunkZone(cx,cz){const c=city(),m=Math.max(Math.abs(cx),Math.abs(cz));return m<=c.urbanRadius?'urban':m<=c.countryRadius?'rural':'outside'}
+function cityChunkZone(cx,cz){const c=city(),m=Math.max(Math.abs(cx),Math.abs(cz));return m<=c.urbanRadius?'urban':m<=c.countryRadius?'rural':m<=(c.travelRadius||c.countryRadius)?'ruralFar':'outside'}
 function districtFor(cx,cz){
  if(cityChunkZone(cx,cz)!=='urban')return RURAL_DISTRICT;
  let id='central';
@@ -416,7 +426,7 @@ function checkQuests(){
 }
 
 let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],properties=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],entranceZones=[],pedNetworks=new Map(),clouds=[],starSystem=null,ambientGlowSystem=null,streetLamps=[],lampLightPool=[],lastLampLightTick=0,busStops=[],busVehicles=[],trainStations=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,mapBusMode=false,mapWorldMode=false,currentBusStopId=null,busWaitRequest=null,busRide=null,busJourneyPlan=null,busTicketValidUntil=0,busLastArrivalToast='',busLastUiTick=0,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,mapBusMode=false,mapWorldMode=false,currentBusStopId=null,currentBoardBusId=null,busWaitRequest=null,busRide=null,busJourneyPlan=null,busTicketValidUntil=0,busLastArrivalToast='',busLastUiTick=0,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
 
 
 function mpServerUrl(){return (window.STREETQUEST_DEFAULT_SERVER||localStorage.getItem('sq-mp-url')||'https://streetquest-multiplayer.onrender.com').replace(/\/$/,'')}
@@ -1162,16 +1172,34 @@ function createChunk(cx,cz){
    validateGeneratedChunk(key,g)
  }catch(err){console.error('Chunk creation error',key,err);toast("⚠️ Erreur de chargement d’un quartier")}
 }
+function ruralRoadForChunk(cx,cz){
+ const links=[];
+ if(cz===0){if(cx>0&&walkLinkForExit(state.cityId,'east'))links.push('h');if(cx<0&&walkLinkForExit(state.cityId,'west'))links.push('h')}
+ if(cx===0){if(cz>0&&walkLinkForExit(state.cityId,'south'))links.push('v');if(cz<0&&walkLinkForExit(state.cityId,'north'))links.push('v')}
+ return links[0]||null
+}
+function intercityRoadInfoForChunk(cx,cz){
+ if(cz===0&&cx!==0){const side=cx>0?'east':'west',link=walkLinkForExit(state.cityId,side);if(link)return{side,link,distanceChunks:Math.max(0,(city().travelRadius||24)-Math.abs(cx))}}
+ if(cx===0&&cz!==0){const side=cz>0?'south':'north',link=walkLinkForExit(state.cityId,side);if(link)return{side,link,distanceChunks:Math.max(0,(city().travelRadius||24)-Math.abs(cz))}}
+ return null
+}
 function createCountrysideChunk(g,key,cx,cz,r,zone){
- const x0=cx*CHUNK,z0=cz*CHUNK;
+ const x0=cx*CHUNK,z0=cz*CHUNK,far=zone==='ruralFar';
  const palettes=[0x557442,0x6f8142,0x8a7e45,0x4e7148],baseColor=palettes[hashStr(`${state.cityId}:field:${cx}:${cz}`)%palettes.length];
  const field=new THREE.Mesh(new THREE.PlaneGeometry(CHUNK,CHUNK),new THREE.MeshStandardMaterial({color:baseColor,roughness:1}));field.rotation.x=-Math.PI/2;field.position.set(x0+CHUNK/2,-.03,z0+CHUNK/2);g.add(field);
- // A light rural road/track keeps the fringe explorable without reproducing the city grid.
- if(cx===0||cz===0){const road=new THREE.Mesh(new THREE.PlaneGeometry(cx===0?8:CHUNK,cz===0?8:CHUNK),new THREE.MeshStandardMaterial({color:0x4a4d4d,roughness:1}));road.rotation.x=-Math.PI/2;road.position.set(x0+CHUNK/2,.015,z0+CHUNK/2);g.add(road)}
+ const roadAxis=ruralRoadForChunk(cx,cz);
+ if(roadAxis){
+   const road=new THREE.Mesh(new THREE.PlaneGeometry(roadAxis==='v'?9.5:CHUNK,roadAxis==='v'?CHUNK:9.5),new THREE.MeshStandardMaterial({color:0x454a4d,roughness:1}));road.rotation.x=-Math.PI/2;road.position.set(roadAxis==='v'?x0+5.5:x0+CHUNK/2,.015,roadAxis==='v'?z0+CHUNK/2:z0+5.5);g.add(road);
+   const dashM=new THREE.MeshBasicMaterial({color:0xe7dfb7});
+   for(let k=8;k<CHUNK;k+=12){const dash=new THREE.Mesh(new THREE.PlaneGeometry(roadAxis==='v'?.12:3.0,roadAxis==='v'?3.0:.12),dashM);dash.rotation.x=-Math.PI/2;dash.position.set(roadAxis==='v'?x0+5.5:x0+k,.027,roadAxis==='v'?z0+k:z0+5.5);g.add(dash)}
+ }
  const hedgeMat=new THREE.MeshStandardMaterial({color:0x385d36,roughness:1});
- for(let i=0;i<5;i++){const h=new THREE.Mesh(new THREE.BoxGeometry(4+r()*9,.65,.7),hedgeMat);h.position.set(x0+8+r()*56,.32,z0+8+r()*56);h.rotation.y=r()>.5?0:Math.PI/2;g.add(h)}
- if(zone==='rural'&&r()<.34){for(let i=0;i<3;i++){const bale=new THREE.Mesh(new THREE.CylinderGeometry(.58,.58,1.05,8),new THREE.MeshStandardMaterial({color:0xb5984c,roughness:1}));bale.rotation.z=Math.PI/2;bale.position.set(x0+18+r()*38,.58,z0+18+r()*38);g.add(bale)}}
- if(zone==='outside'){const sign=makeSign('LIMITE DE LA RÉGION','#ffe18a');sign.scale.set(1.7,.42,1);sign.position.set(x0+CHUNK/2,2.6,z0+CHUNK/2);g.add(sign)}
+ const hedgeN=far?2:5;for(let i=0;i<hedgeN;i++){const h=new THREE.Mesh(new THREE.BoxGeometry(4+r()*9,.65,.7),hedgeMat);h.position.set(x0+8+r()*56,.32,z0+8+r()*56);h.rotation.y=r()>.5?0:Math.PI/2;g.add(h)}
+ if(!far&&r()<.34){for(let i=0;i<3;i++){const bale=new THREE.Mesh(new THREE.CylinderGeometry(.58,.58,1.05,8),new THREE.MeshStandardMaterial({color:0xb5984c,roughness:1}));bale.rotation.z=Math.PI/2;bale.position.set(x0+18+r()*38,.58,z0+18+r()*38);g.add(bale)}}
+ if(far&&r()<.12){const treeMat=new THREE.MeshStandardMaterial({color:0x416a3e,roughness:1});for(let i=0;i<2;i++){const crown=new THREE.Mesh(new THREE.ConeGeometry(1.5+r()*.7,3.1+r(),7),treeMat);crown.position.set(x0+10+r()*52,1.6,z0+10+r()*52);g.add(crown)}}
+ const info=intercityRoadInfoForChunk(cx,cz);
+ if(info&&Math.abs((roadAxis==='h'?cx:cz))%6===0){const dest=CITIES.find(c=>c.id===info.link.to),sign=makeSign(`${info.link.road}  ${city().name} ↔ ${dest?.name||info.link.to}`,'#f1f3df');sign.scale.set(1.9,.45,1);sign.position.set(roadAxis==='v'?x0+12.8:x0+CHUNK/2,2.45,roadAxis==='h'?z0+12.8:z0+CHUNK/2);g.add(sign)}
+ if(zone==='outside'){const sign=makeSign('FIN DE ROUTE','#ffe18a');sign.scale.set(1.7,.42,1);sign.position.set(x0+CHUNK/2,2.6,z0+CHUNK/2);g.add(sign)}
 }
 function stationPosition(c=city()){const st=c.station;return{x:st.cx*CHUNK+st.lx,z:st.cz*CHUNK+st.lz}}
 function addTrainStationForChunk(g,key,cx,cz){
@@ -1525,13 +1553,20 @@ function addHomePlot(g,key,x,z){
 function addBusStopsForChunk(g,key,cx,cz){
  for(const stop of BUS_STOPS){if(stop.cx===cx&&stop.cz===cz)addBusStop(g,key,stop)}
 }
-function addBusStop(g,key,stop){
+function makeBusStopPole(stop,x,z){
  const group=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x17202a,metalness:.35,roughness:.56});
  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.065,2.35,8),metal);pole.position.y=1.175;group.add(pole);
  const board=new THREE.Mesh(new THREE.BoxGeometry(.68,.88,.09),new THREE.MeshStandardMaterial({color:0xe8edf2,roughness:.48,metalness:.06}));board.position.set(0,2.02,0);group.add(board);
  const cap=new THREE.Mesh(new THREE.BoxGeometry(.72,.20,.11),new THREE.MeshBasicMaterial({color:0x356ca8}));cap.position.set(0,2.38,0);group.add(cap);
  const lineText=stop.lines.join(' • '),sign=makeSign(`${(busLineById(stop.lines[0])?.mode==='tram'?'TRAM':busLineById(stop.lines[0])?.mode==='navette'?'NAVETTE':'BUS')} ${lineText}`,'#dff4ff');sign.scale.set(1.45,.36,1);sign.position.set(0,2.75,0);group.add(sign);
- group.position.set(stop.x,0,stop.z);g.add(group);busStops.push({...stop,key,group})
+ group.position.set(x,0,z);return group
+}
+function addBusStop(g,key,stop){
+ const primary=makeBusStopPole(stop,stop.x,stop.z);g.add(primary);busStops.push({...stop,key,group:primary});
+ // Most routes are bidirectional. A second pole across the road makes the return trip easy to board as well.
+ const x0=stop.cx*CHUNK,z0=stop.cz*CHUNK,horizontal=stop.side==='south'||stop.side==='north';
+ const ax=horizontal?stop.x:(stop.side==='east'?x0-1.5:x0+12.5),az=horizontal?(stop.side==='south'?z0-1.5:z0+12.5):stop.z;
+ const secondary=makeBusStopPole(stop,ax,az);secondary.scale.set(.94,.94,.94);g.add(secondary);busStops.push({...stop,key,group:secondary,secondary:true})
 }
 function createBusVisual(line){
  const g=new THREE.Group(),bodyM=new THREE.MeshStandardMaterial({color:new THREE.Color(line.color),metalness:.10,roughness:.48}),dark=new THREE.MeshStandardMaterial({color:0x182531,roughness:.35,metalness:.18});
@@ -1588,8 +1623,8 @@ function initBusFleet(){
    const starts=line.loop?[0,Math.floor(route.length/2)]:[0,route.length-1];
    starts.forEach((start,bi)=>{
      const group=createBusVisual(line);scene.add(group);const p=route[start];group.position.set(p.x,0,p.z);
-     const dir=line.loop?1:(bi===0?1:-1),b={id:`${line.id}-${bi+1}`,line,group,route,index:start,next:0,dir,speed:7.0+(li%3)*.30,dwell:bi===0?2.0:0,currentStopId:route[start].stopId||null,lastStopId:null};
-     b.next=busNextIndex(b);busVehicles.push(b)
+     const dir=line.loop?1:(bi===0?1:-1),b={id:`${line.id}-${bi+1}`,line,group,route,index:start,next:0,dir,speed:6.0+(li%3)*.25,currentSpeed:0,dwell:bi===0?4.0:0,currentStopId:route[start].stopId||null,lastStopId:null,stuckFor:0,lastHit:0};
+     group.traverse(o=>{o.userData.busId=b.id});b.next=busNextIndex(b);busVehicles.push(b)
    })
  })
 }
@@ -1602,43 +1637,77 @@ function busCanTakeToDestination(b,fromId,destId){
 function busTerminusLabel(b){
  if(b.line.loop)return'Circulaire';const dir=busDepartureDirection(b),id=dir>0?b.line.stops[b.line.stops.length-1]:b.line.stops[0];return busStopById(id)?.name||'Terminus'
 }
-function busTrafficFactor(b,dx,dz){
- const mode=Math.abs(dx)>Math.abs(dz)?'h':'v',dir=mode==='h'?(dx>=0?1:-1):(dz>=0?1:-1);let best=13;
- for(const c of cars){if(!c?.group?.parent||c.mode!==mode||c.dir!==dir)continue;const laneGap=mode==='h'?Math.abs(c.group.position.z-b.group.position.z):Math.abs(c.group.position.x-b.group.position.x);if(laneGap>.85)continue;const delta=mode==='h'?(c.group.position.x-b.group.position.x)*dir:(c.group.position.z-b.group.position.z)*dir;if(delta>0&&delta<best)best=delta}
- for(const o of busVehicles){if(o===b||!o?.group?.parent)continue;const t=o.route?.[o.next];if(!t)continue;const odx=t.x-o.group.position.x,odz=t.z-o.group.position.z,om=Math.abs(odx)>Math.abs(odz)?'h':'v',od=om==='h'?(odx>=0?1:-1):(odz>=0?1:-1);if(om!==mode||od!==dir)continue;const laneGap=mode==='h'?Math.abs(o.group.position.z-b.group.position.z):Math.abs(o.group.position.x-b.group.position.x);if(laneGap>.9)continue;const delta=mode==='h'?(o.group.position.x-b.group.position.x)*dir:(o.group.position.z-b.group.position.z)*dir;if(delta>0&&delta<best)best=delta}
- return best<5.8?0:best<9?(best-5.8)/3.2:1
+function busSegment(b){
+ const raw=b.route?.[b.next];if(!raw)return null;const prev=b.route?.[b.index]||{x:b.group.position.x,z:b.group.position.z};let rdx=raw.x-prev.x,rdz=raw.z-prev.z;
+ if(Math.abs(rdx)<.05&&Math.abs(rdz)<.05){rdx=raw.x-b.group.position.x;rdz=raw.z-b.group.position.z}
+ const mode=Math.abs(rdx)>=Math.abs(rdz)?'h':'v',dir=mode==='h'?(rdx>=0?1:-1):(rdz>=0?1:-1);let tx=raw.x,tz=raw.z;
+ // Keep every bus on the same legal directional lanes as normal traffic.
+ if(mode==='h'){const roadBase=Math.round((raw.z-5.5)/CHUNK)*CHUNK;tz=roadBase+(dir>0?7.8:3.2)}
+ else{const roadBase=Math.round((raw.x-5.5)/CHUNK)*CHUNK;tx=roadBase+(dir>0?3.2:7.8)}
+ const dx=tx-b.group.position.x,dz=tz-b.group.position.z;return{target:{...raw,x:tx,z:tz},raw,dx,dz,dist:Math.hypot(dx,dz),mode,dir}
+}
+function busTrafficFactor(b,seg){
+ const {mode,dir}=seg;let best=18;
+ for(const c of cars){if(!c?.group?.parent||c.mode!==mode||c.dir!==dir)continue;const laneGap=mode==='h'?Math.abs(c.group.position.z-b.group.position.z):Math.abs(c.group.position.x-b.group.position.x);if(laneGap>1.35)continue;const delta=mode==='h'?(c.group.position.x-b.group.position.x)*dir:(c.group.position.z-b.group.position.z)*dir;if(delta>0&&delta<best)best=delta}
+ for(const o of busVehicles){if(o===b||!o?.group?.parent)continue;const os=busSegment(o);if(!os||os.mode!==mode||os.dir!==dir)continue;const laneGap=mode==='h'?Math.abs(o.group.position.z-b.group.position.z):Math.abs(o.group.position.x-b.group.position.x);if(laneGap>1.45)continue;const delta=mode==='h'?(o.group.position.x-b.group.position.x)*dir:(o.group.position.z-b.group.position.z)*dir;if(delta>0&&delta<best)best=delta}
+ return best<6.4?0:best<12?(best-6.4)/5.6:1
+}
+function busIntersectionState(b,seg,t){
+ const {mode,dir}=seg,cx=Math.floor(b.group.position.x/CHUNK),cz=Math.floor(b.group.position.z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK,lights=trafficSignalState(t);
+ let stopAt,distance,green;
+ if(mode==='v'){stopAt=dir>0?z0+CHUNK-2.9:z0+13.7;distance=dir>0?stopAt-b.group.position.z:b.group.position.z-stopAt;green=lights.vertical}
+ else{stopAt=dir>0?x0+CHUNK-2.9:x0+13.7;distance=dir>0?stopAt-b.group.position.x:b.group.position.x-stopAt;green=lights.horizontal}
+ const approaching=distance>=0&&distance<10.5;
+ let clear=true;if(approaching){const ix=mode==='v'?x0:(dir>0?x0+CHUNK:x0),iz=mode==='h'?z0:(dir>0?z0+CHUNK:z0);for(const c of cars){if(carInsideIntersection(c,ix,iz)&&c.mode!==mode){clear=false;break}}if(clear)for(const o of busVehicles){if(o===b||!o?.group?.parent)continue;const os=busSegment(o);if(!os||os.mode===mode)continue;if(o.group.position.x>ix-1.5&&o.group.position.x<ix+12.5&&o.group.position.z>iz-1.5&&o.group.position.z<iz+12.5){clear=false;break}}}
+ return{mustStop:approaching&&(!green||!clear),distance,green,clear}
 }
 function onBusArriveAtStop(b,stopId){
  b.currentStopId=stopId;b.lastStopId=stopId;
  if(busRide?.vehicleId===b.id){
    const isTarget=stopId===busRide.destinationStopId,requested=busRide.exitRequested&&stopId!==busRide.boardedStopId;
    if(isTarget||requested){alightBus(b,stopId);return}
-   const nm=busStopById(stopId)?.name||'arrêt';toast(`🚏 ${nm} • prochain départ dans ${Math.ceil(b.dwell)} s`)
+   const nm=busStopById(stopId)?.name||'arrêt';toast(`🚏 ${nm} • départ dans ${Math.ceil(b.dwell)} s`)
  }
+ const stop=busStopById(stopId),nearStop=stop&&Math.hypot(state.pos.x-b.group.position.x,state.pos.z-b.group.position.z)<12;
+ if(nearStop&&!busRide){const sig=`${b.id}:${stopId}`;if(busLastArrivalToast!==sig){busLastArrivalToast=sig;toast(`🚌 ${b.line.id} est à quai • approche-toi et clique sur le bus`)}}
  if(busWaitRequest&&busWaitRequest.stopId===stopId&&busWaitRequest.lineId===b.line.id&&busCanTakeToDestination(b,stopId,busWaitRequest.destinationStopId)){
-   const sig=`${b.id}:${stopId}`;if(busLastArrivalToast!==sig){busLastArrivalToast=sig;toast(`🚌 ${b.line.id} est arrivé • appuie sur MONTER`)}
+   const sig=`${b.id}:${stopId}`;if(busLastArrivalToast!==sig){busLastArrivalToast=sig;toast(`🚌 ${b.line.id} est arrivé • clique sur le bus`)}
  }
 }
+function hitByBus(b,seg){
+ const raw=24+Math.floor(Math.random()*9),abs=Math.min(state.armor,Math.floor(raw*.35));state.armor-=abs;state.hp-=raw-abs;
+ const k=3.0;seg.mode==='v'?state.pos.z+=seg.dir*k:state.pos.x+=seg.dir*k;toast(`🚌 Percuté par un bus ! -${raw-abs} PV`);
+ if(state.hp<=0){state.hp=state.maxHp;state.wanted=0;state.pos={x:2,z:8};toast('K.O. après l’accident — retour au refuge')}save()
+}
 function updateBusVehicles(dt){
+ const t=performance.now();
  for(const b of busVehicles){
    if(state.interior){b.group.visible=false;continue}
-   const near=Math.hypot(state.pos.x-b.group.position.x,state.pos.z-b.group.position.z)<150;b.group.visible=near||busRide?.vehicleId===b.id;
-   if(b.dwell>0){b.dwell=Math.max(0,b.dwell-dt);continue}
-   if(b.currentStopId&&busLastArrivalToast.startsWith(b.id+':'))busLastArrivalToast='';b.currentStopId=null;let target=b.route[b.next];if(!target)continue;
-   let dx=target.x-b.group.position.x,dz=target.z-b.group.position.z,dist=Math.hypot(dx,dz);
-   if(dist<.18){
-     b.group.position.set(target.x,0,target.z);b.index=b.next;
-     const arrivedStop=target.stopId||null;b.next=busNextIndex(b);
-     if(arrivedStop){b.dwell=5.0;onBusArriveAtStop(b,arrivedStop);continue}
-     target=b.route[b.next];dx=target.x-b.group.position.x;dz=target.z-b.group.position.z;dist=Math.hypot(dx,dz)
+   const near=Math.hypot(state.pos.x-b.group.position.x,state.pos.z-b.group.position.z)<170;b.group.visible=near||busRide?.vehicleId===b.id;
+   if(b.dwell>0){b.currentSpeed+=(0-b.currentSpeed)*Math.min(1,dt*10);b.dwell=Math.max(0,b.dwell-dt);continue}
+   if(b.currentStopId&&busLastArrivalToast.startsWith(b.id+':'))busLastArrivalToast='';b.currentStopId=null;
+   let seg=busSegment(b);if(!seg)continue;
+   if(seg.dist<.20){
+     b.group.position.set(seg.target.x,0,seg.target.z);b.index=b.next;const arrivedStop=seg.target.stopId||null;b.next=busNextIndex(b);
+     if(arrivedStop){const terminal=!b.line.loop&&(arrivedStop===b.line.stops[0]||arrivedStop===b.line.stops[b.line.stops.length-1]);b.dwell=terminal?15.0:12.0;b.currentSpeed=0;onBusArriveAtStop(b,arrivedStop);continue}
+     seg=busSegment(b);if(!seg)continue
    }
-   if(dist>.001){const flow=busTrafficFactor(b,dx,dz),step=Math.min(dist,b.speed*flow*dt);b.group.position.x+=dx/dist*step;b.group.position.z+=dz/dist*step;b.group.rotation.y=Math.atan2(-dx,-dz)}
+   const flow=busTrafficFactor(b,seg),signal=busIntersectionState(b,seg,t),targetSpeed=signal.mustStop?0:b.speed*flow;
+   b.currentSpeed+=(targetSpeed-b.currentSpeed)*Math.min(1,dt*(targetSpeed<b.currentSpeed?7.0:1.8));
+   if(signal.mustStop&&signal.distance<.45)b.currentSpeed=0;
+   const shouldMove=!signal.mustStop&&flow>.70;b.stuckFor=shouldMove&&b.currentSpeed<.12?(b.stuckFor||0)+dt:0;if(b.stuckFor>3.0){b.currentSpeed=Math.max(b.currentSpeed,b.speed*.35);b.stuckFor=0}
+   if(seg.dist>.001&&b.currentSpeed>.001){let step=Math.min(seg.dist,b.currentSpeed*dt);if(signal.mustStop&&signal.distance>=0)step=Math.min(step,Math.max(0,signal.distance-.28));if(step<=.001)b.currentSpeed=0;else{b.group.position.x+=seg.dx/seg.dist*step;b.group.position.z+=seg.dz/seg.dist*step}const targetYaw=Math.atan2(-seg.dx,-seg.dz),dy=Math.atan2(Math.sin(targetYaw-b.group.rotation.y),Math.cos(targetYaw-b.group.rotation.y));b.group.rotation.y+=dy*Math.min(1,dt*5.5)}
+   if(!state.interior&&!busRide&&b.currentSpeed>1.2&&t-b.lastHit>1400){const dx=Math.abs(state.pos.x-b.group.position.x),dz=Math.abs(state.pos.z-b.group.position.z),hit=seg.mode==='v'?(dx<1.30&&dz<3.1):(dx<3.1&&dz<1.30);if(hit){b.lastHit=t;hitByBus(b,seg)}}
  }
  if(busRide)syncBusRidePosition();const now=performance.now();if(now-busLastUiTick>1000){refreshBusStopRealtimeUI();busLastUiTick=now}
 }
 function busStopById(id){return BUS_STOP_BY_ID.get(id)||null}
 function busLineById(id){return BUS_LINE_BY_ID.get(id)||null}
-function busArrivalPoint(stop){return{x:stop.x+(stop.side==='east'?1.35:stop.side==='west'?-1.35:0),z:stop.z+(stop.side==='south'?1.35:stop.side==='north'?-1.35:0)}}
+function busArrivalPoint(stop,b=null){
+ const x0=stop.cx*CHUNK,z0=stop.cz*CHUNK,horizontal=stop.side==='south'||stop.side==='north';
+ const primary={x:stop.x,z:stop.z},secondary={x:horizontal?stop.x:(stop.side==='east'?x0-1.5:x0+12.5),z:horizontal?(stop.side==='south'?z0-1.5:z0+12.5):stop.z};
+ if(!b)return primary;return Math.hypot(b.group.position.x-primary.x,b.group.position.z-primary.z)<=Math.hypot(b.group.position.x-secondary.x,b.group.position.z-secondary.z)?primary:secondary
+}
 function advanceGameMinutes(minutes){
  const total=state.timeOfDay+minutes/60,days=Math.floor(total/24);state.timeOfDay=((total%24)+24)%24;if(days>0)advanceDay(days)
 }
@@ -1648,7 +1717,7 @@ function busEtaToStop(b,stopId){
  for(let guard=0;guard<n*3+8;guard++){
    const p=b.route[next];if(!p)break;eta+=Math.hypot(p.x-x,p.z-z)/Math.max(1,b.speed);x=p.x;z=p.z;index=next;
    if(p.stopId===stopId)return eta;
-   if(p.stopId)eta+=5;
+   if(p.stopId)eta+=12;
    if(b.line.loop)next=(index+1)%n;else{if(dir>0&&index>=n-1)dir=-1;else if(dir<0&&index<=0)dir=1;next=clamp(index+dir,0,n-1)}
  }
  return Infinity
@@ -1676,21 +1745,35 @@ function startBusJourney(toId){
 function busJourneyLabel(){
  if(!busJourneyPlan)return'';const final=busStopById(busJourneyPlan.finalStopId),leg=busJourneyPlan.legs[busJourneyPlan.legIndex];return `<div class="card busJourneyCard"><div class="sectionKicker">ITINÉRAIRE EN COURS</div><b>🧭 ${final?.name||''}</b><small>Étape ${busJourneyPlan.legIndex+1}/${busJourneyPlan.legs.length} • ${leg?.lineId||''} jusqu’à ${busStopById(leg?.toId)?.name||''}</small></div>`
 }
+function downstreamStopsForBus(b){
+ const here=b?.currentStopId;if(!b||!here)return[];const ids=b.line.stops,i=ids.indexOf(here);if(i<0)return[];
+ if(b.line.loop){const out=[];for(let k=1;k<ids.length;k++)out.push(ids[(i+k)%ids.length]);return out}
+ const dir=busDepartureDirection(b),out=[];if(dir>0){for(let k=i+1;k<ids.length;k++)out.push(ids[k])}else{for(let k=i-1;k>=0;k--)out.push(ids[k])}return out
+}
+function dockedBusesAtStop(stopId){return busVehicles.filter(b=>b.currentStopId===stopId&&b.dwell>.25).sort((a,b)=>b.dwell-a.dwell)}
+function nearestDockedBus(max=4.9){let best=null,bd=max;for(const b of busVehicles){if(!b.currentStopId||b.dwell<=.25||!b.group?.visible)continue;const d=Math.hypot(state.pos.x-b.group.position.x,state.pos.z-b.group.position.z);if(d<bd){best=b;bd=d}}return best}
+function busVehicleBoardHTML(b){
+ if(!b||!b.currentStopId)return'';const stop=busStopById(b.currentStopId),dests=downstreamStopsForBus(b);
+ return `<div class="card busAtStopCard"><div class="sectionKicker">VÉHICULE À QUAI</div><h3><span class="busBadge" style="--line:${b.line.color}">${b.line.id}</span> ${b.line.name}</h3><p class="sub">${stop?.name||''} • départ dans ${Math.max(1,Math.ceil(b.dwell))} s • direction ${busTerminusLabel(b)}</p><p class="sub"><b>Choisis simplement où tu veux descendre :</b></p>${dests.map(id=>{const d=busStopById(id);return d?`<button class="menuBtn primary full boardBusDestination" data-bus="${b.id}" data-stop="${id}">🚌 ${d.name}</button>`:''}).join('')||'<p class="sub">Ce véhicule est au terminus. Attends son prochain départ.</p>'}</div>`
+}
 function busStopHTML(stopId){
  const stop=busStopById(stopId);if(!stop)return '<div class="card"><p>Arrêt indisponible.</p></div>';
- const ticket=busTicketActive()?`<div class="busTicketLive">🎟️ Correspondance gratuite encore ${Math.max(1,Math.ceil((busTicketValidUntil-performance.now())/1000))} s</div>`:'';
- const waiting=busWaitRequest?.stopId===stop.id?`<div class="card busWaitCard"><b>⏳ Tu attends ${busWaitRequest.lineId}</b><small>Destination : ${busStopById(busWaitRequest.destinationStopId)?.name||''}</small><button id="cancelBusWait" class="menuBtn full">Annuler l’attente</button></div>`:'';
- const groups=stop.lines.map(id=>{
-   const line=busLineById(id);if(!line)return'';const realtime=busArrivalSummary(stop,line);
-   const dest=line.stops.filter(x=>x!==stop.id).map(id=>{const d=busStopById(id);if(!d)return'';return `<button class="menuBtn waitBus" data-line="${line.id}" data-stop="${d.id}"><span class="busBadge" style="--line:${line.color}">${line.id}</span><span>${d.name}<small>Attendre le prochain bus dans la bonne direction</small></span></button>`}).join('');
-   return `<div class="card busLineCard"><div class="busLineHead"><span class="busBadge" style="--line:${line.color}">${line.id}</span><div><b>${line.name}</b><small class="busRealtime" data-line="${line.id}">🟢 ${realtime}</small></div></div>${dest}</div>`
- }).join('');
- const opts=BUS_STOPS.filter(x=>x.id!==stop.id).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');const planner=`<div class="card busPlanner"><div class="sectionKicker">CALCULATEUR D’ITINÉRAIRE</div><p class="sub">Choisis n’importe quel arrêt de la ville : le réseau calcule les correspondances automatiquement.</p><select id="busJourneyDestination" class="lifeInput">${opts}</select><button id="startBusJourney" class="menuBtn primary full">🧭 Calculer et attendre</button></div>`;return `<div class="card"><div class="sectionKicker">TRANSPORT LOCAL EN TEMPS RÉEL</div><h3>🚏 ${stop.name}</h3><p class="sub">Choisis ta destination puis attends physiquement le véhicule. Il s’arrête environ 5 s. Tarif : ${BUS_FARE} crédits ; une correspondance planifiée reste incluse dans le même trajet.</p>${ticket}<button id="openBusNetworkMap" class="menuBtn full">🗺️ Voir le plan complet du réseau</button></div>${busJourneyLabel()}${planner}${waiting}${groups}`
+ const atStop=dockedBusesAtStop(stop.id),vehicle=(currentBoardBusId&&atStop.find(b=>b.id===currentBoardBusId))||atStop[0]||null;
+ const ticket=busTicketActive()?`<div class="busTicketLive">🎟️ Ticket encore valide ${Math.max(1,Math.ceil((busTicketValidUntil-performance.now())/1000))} s</div>`:'';
+ const groups=stop.lines.map(id=>{const line=busLineById(id);if(!line)return'';return `<div class="card busLineCard"><div class="busLineHead"><span class="busBadge" style="--line:${line.color}">${line.id}</span><div><b>${line.name}</b><small class="busRealtime" data-line="${line.id}">🟢 ${busArrivalSummary(stop,line)}</small></div></div></div>`}).join('');
+ const opts=BUS_STOPS.filter(x=>x.id!==stop.id).map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+ return `<div class="card"><div class="sectionKicker">ARRÊT EN TEMPS RÉEL</div><h3>🚏 ${stop.name}</h3><p class="sub">C’est plus simple : attends ici. Quand un bus s’arrête, approche-toi du véhicule et touche <b>MONTER</b>. Le bus reste 12 s à l’arrêt (15 s au terminus), puis tu choisis ta destination directement dans le bus.</p>${ticket}<button id="openBusNetworkMap" class="menuBtn full">🗺️ Voir le plan du réseau</button></div>${vehicle?busVehicleBoardHTML(vehicle):''}${groups}<div class="card busPlanner"><div class="sectionKicker">OPTIONNEL — CORRESPONDANCES</div><p class="sub">Pour un trajet avec changement de ligne, choisis ta destination finale. Sinon, tu peux simplement attendre et cliquer sur le bus.</p><select id="busJourneyDestination" class="lifeInput">${opts}</select><button id="startBusJourney" class="menuBtn full">🧭 Planifier avec correspondance</button></div>`
 }
-function openBusStop(stop){currentBusStopId=stop.id;openSheet('bus')}
+function openBusStop(stop){currentBusStopId=stop.id;currentBoardBusId=null;openSheet('bus')}
+function openBusVehicle(b){if(!b?.currentStopId)return;currentBusStopId=b.currentStopId;currentBoardBusId=b.id;openSheet('bus')}
+function boardBusDirect(busId,destId){
+ const b=busVehicles.find(x=>x.id===busId),stop=b&&busStopById(b.currentStopId),dest=busStopById(destId);if(!b||!stop||!dest||b.dwell<=.15)return toast('Le bus est déjà reparti.');
+ if(!downstreamStopsForBus(b).includes(destId))return toast('Cette destination n’est pas desservie dans ce sens.');
+ busJourneyPlan=null;busWaitRequest={lineId:b.line.id,stopId:stop.id,destinationStopId:destId,startedAt:performance.now()};closeSheet();boardBus(b)
+}
 function planBusTrip(lineId,stopId){
  busJourneyPlan=null;const line=busLineById(lineId),from=busStopById(currentBusStopId),to=busStopById(stopId);if(!line||!from||!to||!line.stops.includes(from.id)||!line.stops.includes(to.id))return;
- busWaitRequest={lineId,stopId:from.id,destinationStopId:to.id,startedAt:performance.now()};closeSheet();toast(`⏳ Attente ${line.id} → ${to.name} • reste près de l’arrêt`)
+ busWaitRequest={lineId,stopId:from.id,destinationStopId:to.id,startedAt:performance.now()};closeSheet();toast(`⏳ ${line.id} → ${to.name} • quand il arrive, clique sur le bus`)
 }
 function findBoardableBus(){
  if(!busWaitRequest)return null;const stop=busStopById(busWaitRequest.stopId);if(!stop||Math.hypot(state.pos.x-stop.x,state.pos.z-stop.z)>4.2)return null;
@@ -1706,7 +1789,7 @@ function syncBusRidePosition(){
 }
 function requestBusExit(){if(!busRide)return;busRide.exitRequested=true;toast('🔔 Arrêt demandé • descente au prochain arrêt')}
 function alightBus(b,stopId){
- const stop=busStopById(stopId);if(!stop){busRide=null;busJourneyPlan=null;return}const destName=stop.name,p=busArrivalPoint(stop),plan=busJourneyPlan;busRide=null;state.pos={x:p.x,z:p.z};state.yaw=b.group.rotation.y;ensureChunks(true);ensureOutdoorPositionClear();
+ const stop=busStopById(stopId);if(!stop){busRide=null;busJourneyPlan=null;return}const destName=stop.name,p=busArrivalPoint(stop,b),plan=busJourneyPlan;busRide=null;state.pos={x:p.x,z:p.z};state.yaw=b.group.rotation.y;ensureChunks(true);ensureOutdoorPositionClear();
  if(plan){const leg=plan.legs[plan.legIndex];if(stopId===leg?.toId&&plan.legIndex<plan.legs.length-1){plan.legIndex++;const next=plan.legs[plan.legIndex];busWaitRequest={lineId:next.lineId,stopId:stop.id,destinationStopId:next.toId,startedAt:performance.now()};save();toast(`🔄 Correspondance ${next.lineId} • attends à ${stop.name} • ticket conservé`);return}if(stopId===plan.finalStopId){busJourneyPlan=null;busWaitRequest=null;save();toast(`✅ Destination atteinte : ${destName}`);return}busJourneyPlan=null;busWaitRequest=null}
  save();toast(`🚏 Descente : ${destName}${stop.lines.length>1?' • correspondances '+stop.lines.join(' / '):''}`)
 }
@@ -1945,8 +2028,26 @@ function ensurePersonWalkable(n){
  if(!n?.group?.parent)return;
  if(entityBlocked(n.group.position.x,n.group.position.z,.27))recoverPerson(n)
 }
+function corridorSideForPosition(x,z,lim){
+ if(x>lim)return'east';if(x<-lim)return'west';if(z>lim)return'south';if(z<-lim)return'north';return null
+}
+function onIntercityRoad(side,x,z){const width=8.4,road=5.5;return(side==='east'||side==='west')?Math.abs(z-road)<=width:Math.abs(x-road)<=width}
+function walkingEntryPosition(dest,entry,offset){
+ const lim=cityTravelLimit(dest),road=5.5,off=clamp(offset,-4.0,4.0);
+ if(entry==='west')return{x:-lim+1.4,z:road+off};if(entry==='east')return{x:lim-1.4,z:road+off};if(entry==='north')return{x:road+off,z:-lim+1.4};return{x:road+off,z:lim-1.4}
+}
+function walkCityTransition(link,exitSide,offset=0){
+ const dest=CITIES.find(c=>c.id===link.to);if(!dest)return false;clearTarget(false);busWaitRequest=null;busJourneyPlan=null;busRide=null;currentBoardBusId=null;
+ state.cityId=dest.id;activateCityTransit(dest.id);state.pos=walkingEntryPosition(dest,link.entry,offset);state.yaw=link.entry==='west'?Math.PI/2:link.entry==='east'?-Math.PI/2:link.entry==='north'?Math.PI:0;state.pitch=0;if(!state.visitedCities.includes(dest.id))state.visitedCities.push(dest.id);
+ for(const[k]of[...chunks])unload(k);applyCityAtmosphere();initBusFleet();refreshCityLandmark();ensureChunks(true);save();closeSheet();for(const rid of [...remotePlayers.keys()])removeRemoteAvatar(rid);
+ if(mpSocket?.connected){setMpStatus(true,1,'Entrée dans '+dest.name+'…');mpSocket.emit('player:join',{name:mpNickname(),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,avatar:avatarPayload(),avatarVersion:state.avatarVersion||1})}
+ toast(`🛣️ ${link.road} • tu entres sur le territoire de ${dest.name}`);return true
+}
 function movePlayer(dx,dz){
- const lim=city().countryRadius*CHUNK+CHUNK*.92,nx=clamp(state.pos.x+dx,-lim,lim),nz=clamp(state.pos.z+dz,-lim,lim);
+ let nx=state.pos.x+dx,nz=state.pos.z+dz,lim=cityTravelLimit(),side=corridorSideForPosition(nx,nz,lim);
+ if(side){const link=walkLinkForExit(state.cityId,side);if(link&&onIntercityRoad(side,nx,nz,lim)){const offset=(side==='east'||side==='west'?nz:nx)-5.5;if(walkCityTransition(link,side,offset))return}
+   nx=clamp(nx,-lim,lim);nz=clamp(nz,-lim,lim)
+ }
  if(!collides(nx,state.pos.z)&&!blockedByPerson(nx,state.pos.z))state.pos.x=nx;if(!collides(state.pos.x,nz)&&!blockedByPerson(state.pos.x,nz))state.pos.z=nz;
 }
 function moveEntity(n,dx,dz,pad=.34){
@@ -2417,7 +2518,8 @@ function checkInteraction(){
  }
  if(tailTheft?.active)return hidePrompt();
  if(busRide){const b=busVehicles.find(x=>x.id===busRide.vehicleId),dest=busStopById(busRide.destinationStopId);return setPrompt(`🚌 ${busRide.lineId} • à bord`,`${busRide.exitRequested?'Arrêt demandé':'Destination : '+(dest?.name||'')}${b?.currentStopId?' • '+(busStopById(b.currentStopId)?.name||''):''}`,busRide.exitRequested?'ARRÊT DEMANDÉ':'DESCENDRE',requestBusExit)}
- const boardable=findBoardableBus();if(boardable){const dest=busStopById(busWaitRequest.destinationStopId);return setPrompt(`🚌 ${boardable.line.id} est à quai`,`Vers ${busTerminusLabel(boardable)} • destination ${dest?.name||''} • départ dans ${Math.ceil(boardable.dwell)} s`,'MONTER',()=>boardBus(boardable))}
+ const dockedBus=nearestDockedBus();if(dockedBus){const st=busStopById(dockedBus.currentStopId);return setPrompt(`🚌 ${dockedBus.line.id} • ${dockedBus.line.name}`,`${st?.name||'Arrêt'} • direction ${busTerminusLabel(dockedBus)} • départ dans ${Math.ceil(dockedBus.dwell)} s`,'MONTER',()=>openBusVehicle(dockedBus))}
+ const boardable=findBoardableBus();if(boardable){const dest=busStopById(busWaitRequest.destinationStopId);return setPrompt(`🚌 ${boardable.line.id} est à quai`,`Vers ${busTerminusLabel(boardable)} • destination ${dest?.name||''} • départ dans ${Math.ceil(boardable.dwell)} s`,'MONTER',()=>openBusVehicle(boardable))}
 
  const follower=nearest(npcs.filter(n=>n.following),3.2);
  if(follower&&(isInAlley(state.pos.x,state.pos.z)||isInAlley(follower.group.position.x,follower.group.position.z)))
@@ -2613,8 +2715,10 @@ function setupWorldTap(){
    const moved=Math.hypot(e.clientX-tapStart.x,e.clientY-tapStart.y),elapsed=performance.now()-tapStart.t;tapStart=null;
    if(moved>12||elapsed>350||state.interior)return;
    const r=canvas.getBoundingClientRect(),pt=new THREE.Vector2(((e.clientX-r.left)/r.width)*2-1,-((e.clientY-r.top)/r.height)*2+1);
-   raycaster.setFromCamera(pt,camera);const hits=raycaster.intersectObjects(npcs.map(n=>n.group),true);
-   const n=hits.map(h=>h.object.userData.person).find(Boolean);
+   raycaster.setFromCamera(pt,camera);
+   const busHit=raycaster.intersectObjects(busVehicles.map(b=>b.group).filter(g=>g.visible),true).map(h=>h.object.userData.busId).find(Boolean);
+   if(busHit){const b=busVehicles.find(x=>x.id===busHit);if(!b)return;const d=Math.hypot(state.pos.x-b.group.position.x,state.pos.z-b.group.position.z);if(d>6.0)return toast('Approche-toi du bus.');if(!b.currentStopId||b.dwell<=.2)return toast('Le bus doit être à l’arrêt pour monter.');return openBusVehicle(b)}
+   const hits=raycaster.intersectObjects(npcs.map(n=>n.group),true);const n=hits.map(h=>h.object.userData.person).find(Boolean);
    if(n){
      const d=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
      if(d>4.2)return toast('Approche-toi pour lui parler.');
@@ -3067,14 +3171,20 @@ function districtMapColor(d){
 
 
 
+function intercityMapPosition(){
+ const {cx,cz}=currentChunk(),info=intercityRoadInfoForChunk(cx,cz);if(!info)return null;const other=CITIES.find(c=>c.id===info.link.to);if(!other)return null;
+ const side=info.side,axis=Math.abs((side==='east'||side==='west')?state.pos.x:state.pos.z),start=(city().urbanRadius+.5)*CHUNK,end=cityTravelLimit(),f=clamp((axis-start)/Math.max(1,end-start),0,1)*.5;
+ return{x:city().map.x+(other.map.x-city().map.x)*f,y:city().map.y+(other.map.y-city().map.y)*f,road:info.link.road}
+}
 function renderWorldMap(canvas){
  if(!canvas)return;const q=canvas.getContext('2d'),W=canvas.width,H=canvas.height;q.clearRect(0,0,W,H);const bg=q.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#173346');bg.addColorStop(.58,'#42624d');bg.addColorStop(1,'#826f45');q.fillStyle=bg;q.fillRect(0,0,W,H);
  // countryside texture
  q.globalAlpha=.17;for(let i=0;i<60;i++){q.fillStyle=i%3?'#d2bd62':'#6a8f55';q.fillRect((i*97)%W,(i*53)%H,70+(i%5)*18,28+(i%4)*14)}q.globalAlpha=1;
  const pos=id=>CITIES.find(c=>c.id===id)?.map;
- q.lineCap='round';q.lineJoin='round';for(const e of TRAIN_LINKS){const a=pos(e.a),b=pos(e.b);if(!a||!b)continue;q.strokeStyle='rgba(18,25,28,.68)';q.lineWidth=9;q.beginPath();q.moveTo(a.x,a.y);q.lineTo(b.x,b.y);q.stroke();q.strokeStyle=e.line==='IC1'?'#e6d45c':'#78bde8';q.lineWidth=4;q.stroke();const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;q.fillStyle='rgba(6,15,22,.82)';q.fillRect(mx-18,my-9,36,18);q.fillStyle='#fff';q.font='800 10px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(e.line,mx,my)}
+ q.lineCap='round';q.lineJoin='round';for(const e of WALK_LINKS){const a=pos(e.a),b=pos(e.b);if(!a||!b)continue;q.setLineDash([8,7]);q.strokeStyle='rgba(233,237,218,.42)';q.lineWidth=3;q.beginPath();q.moveTo(a.x,a.y);q.lineTo(b.x,b.y);q.stroke()}q.setLineDash([]);for(const e of TRAIN_LINKS){const a=pos(e.a),b=pos(e.b);if(!a||!b)continue;q.strokeStyle='rgba(18,25,28,.68)';q.lineWidth=9;q.beginPath();q.moveTo(a.x,a.y);q.lineTo(b.x,b.y);q.stroke();q.strokeStyle=e.line==='IC1'?'#e6d45c':'#78bde8';q.lineWidth=4;q.stroke();const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;q.fillStyle='rgba(6,15,22,.82)';q.fillRect(mx-18,my-9,36,18);q.fillStyle='#fff';q.font='800 10px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText(e.line,mx,my)}
  for(const c of CITIES){const p=c.map,active=c.id===state.cityId,seen=state.visitedCities?.includes(c.id);q.fillStyle=active?'#fff4b5':seen?'#e6eef5':'#aab7be';q.strokeStyle=active?'#ffcf52':'#263943';q.lineWidth=active?5:3;q.beginPath();q.arc(p.x,p.y,active?19:15,0,Math.PI*2);q.fill();q.stroke();q.fillStyle='#08131c';q.font='900 12px system-ui';q.fillText('🚆',p.x,p.y+.5);q.fillStyle='#fff';q.font='800 14px system-ui';q.fillText(c.name,p.x,p.y+32);q.fillStyle='rgba(240,248,252,.78)';q.font='600 9px system-ui';q.fillText(c.subtitle,p.x,p.y+46)}
- q.fillStyle='rgba(4,13,20,.78)';q.fillRect(18,H-64,W-36,44);q.fillStyle='#eaf4f8';q.font='700 11px system-ui';q.textAlign='left';q.fillText('🌍 Région StreetQuest  •  IC1 Littoral  •  R2 Cèdres',30,H-44);q.fillStyle='#bcd0da';q.font='600 9px system-ui';q.fillText('Les zones vertes représentent champs, forêts, villages et routes rurales.',30,H-29)
+ const walker=intercityMapPosition();if(walker){q.fillStyle='#fff3b0';q.strokeStyle='#151d24';q.lineWidth=3;q.beginPath();q.arc(walker.x,walker.y,10,0,Math.PI*2);q.fill();q.stroke();q.fillStyle='#111820';q.font='900 11px system-ui';q.textAlign='center';q.textBaseline='middle';q.fillText('🚶',walker.x,walker.y);q.fillStyle='#fff';q.font='800 9px system-ui';q.fillText(walker.road,walker.x,walker.y+17)}
+ q.fillStyle='rgba(4,13,20,.78)';q.fillRect(18,H-64,W-36,44);q.fillStyle='#eaf4f8';q.font='700 11px system-ui';q.textAlign='left';q.fillText('🌍 Région StreetQuest  •  trains + routes interurbaines praticables à pied',30,H-44);q.fillStyle='#bcd0da';q.font='600 9px system-ui';q.fillText('Les pointillés clairs indiquent les routes reliant physiquement les villes.',30,H-29)
 }
 function renderMapTo(canvas,zoom=2.0){
  if(!canvas)return;
@@ -3289,7 +3399,7 @@ function openSheet(panel){
  if(panel==='train'){t.textContent='Gare & trains';b.innerHTML=trainStationHTML()}
  bindSheet(panel)
 }
-function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.1</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
  <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>🚆</span><b>Région</b><small>Villes & trains</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
 function socialHTML(){
  const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
@@ -3299,7 +3409,7 @@ function socialHTML(){
 }
 function worldHTML(){
  return `<div class="card"><div class="sectionKicker">RÉGION STREETQUEST</div><h3>5 villes, un territoire</h3><p class="sub">${city().name} — ${city().subtitle}. ${city().specificity}. Réseau local : ${city().transport}.</p><button class="menuBtn primary full" id="openWorldMap">🌍 Ouvrir la carte régionale</button></div>
- <div class="card"><h3>Voyager entre les villes</h3><p class="sub">Le changement de ville instantané a été supprimé. Rejoins ${city().station.name} et prends un train. Les campagnes autour de chaque ville sont finies et explorables.</p></div>
+ <div class="card"><h3>Voyager entre les villes</h3><p class="sub">Tu peux maintenant rejoindre les villes <b>à pied</b> en suivant les routes départementales à travers les champs. Le trajet est volontairement long ; le train reste beaucoup plus rapide, et les futures voitures rendront ces routes interurbaines essentielles.</p></div>
  ${CITIES.map(c=>`<div class="card cityIdentity ${c.id===state.cityId?'currentCity':''}"><div class="sectionKicker">${c.id===state.cityId?'VILLE ACTUELLE':'DESTINATION'}</div><h3>${c.name}</h3><p class="sub">${c.subtitle} • ${c.transport}<br>${c.specificity}</p></div>`).join('')}`
 }
 function trainNeighbors(id){return TRAIN_LINKS.flatMap(e=>e.a===id?[{to:e.b,...e}]:e.b===id?[{to:e.a,...e}]:[])}
@@ -3318,7 +3428,7 @@ function startTrainJourney(destId){
 }
 function completeTrainJourney(destId){switchCity(destId,true)}
 function switchCity(id,viaTrain=false){
- clearTarget(false);busWaitRequest=null;busJourneyPlan=null;busRide=null;state.cityId=id;activateCityTransit(id);const sp=city().spawn||{x:2,z:8};state.pos={x:sp.x,z:sp.z};state.yaw=0;state.pitch=0;if(!state.visitedCities.includes(id))state.visitedCities.push(id);
+ clearTarget(false);busWaitRequest=null;busJourneyPlan=null;busRide=null;currentBoardBusId=null;state.cityId=id;activateCityTransit(id);const sp=city().spawn||{x:2,z:8};state.pos={x:sp.x,z:sp.z};state.yaw=0;state.pitch=0;if(!state.visitedCities.includes(id))state.visitedCities.push(id);
  for(const[k]of[...chunks])unload(k);applyCityAtmosphere();initBusFleet();refreshCityLandmark();ensureChunks(true);save();closeSheet();for(const rid of [...remotePlayers.keys()])removeRemoteAvatar(rid);if(mpSocket?.connected){setMpStatus(true,1,'Changement de ville…');mpSocket.emit('player:join',{name:mpNickname(),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,avatar:avatarPayload(),avatarVersion:state.avatarVersion||1});if(voiceEnabled)setTimeout(()=>mpSocket?.emit('voice:state',{enabled:true}),80)}toast(`${viaTrain?'🚆 Arrivée à':'Bienvenue à'} ${city().name}`)
 }
 function bagHTML(){
@@ -3335,7 +3445,7 @@ function districtHTML(){
  <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.1</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
@@ -3361,7 +3471,7 @@ function bindSheet(panel){
  if(panel==='physicalShop')bindShop();
  if(panel==='work'){const sw=$('.startWork');if(sw)sw.onclick=startWorkMission}
  if(panel==='train')$$('.takeTrain').forEach(b=>b.onclick=()=>startTrainJourney(b.dataset.city));
- if(panel==='bus'){$$('.waitBus').forEach(b=>b.onclick=()=>planBusTrip(b.dataset.line,b.dataset.stop));$('#startBusJourney')?.addEventListener('click',()=>startBusJourney($('#busJourneyDestination')?.value));$('#cancelBusWait')?.addEventListener('click',()=>{busWaitRequest=null;busJourneyPlan=null;closeSheet();toast('Attente du bus annulée.')});$('#openBusNetworkMap')?.addEventListener('click',()=>{closeSheet();showFullBusMap()})}
+ if(panel==='bus'){$$('.boardBusDestination').forEach(btn=>btn.onclick=()=>boardBusDirect(btn.dataset.bus,btn.dataset.stop));$$('.waitBus').forEach(b=>b.onclick=()=>planBusTrip(b.dataset.line,b.dataset.stop));$('#startBusJourney')?.addEventListener('click',()=>startBusJourney($('#busJourneyDestination')?.value));$('#cancelBusWait')?.addEventListener('click',()=>{busWaitRequest=null;busJourneyPlan=null;closeSheet();toast('Attente du bus annulée.')});$('#openBusNetworkMap')?.addEventListener('click',()=>{closeSheet();showFullBusMap()})}
  if(panel==='property'){
   $$('.rentProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)rentProperty(p)});
   $$('.buyProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p)buyProperty(p)});

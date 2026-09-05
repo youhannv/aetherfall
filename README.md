@@ -1,34 +1,37 @@
-# StreetQuest V22 — 5 villes & réseau ferroviaire
+# StreetQuest V22.1 — Région continue & bus améliorés
 
-V22 remplace le monde procédural sans fin par **5 villes finies et identifiables**, entourées d'une couronne rurale légère :
+Cette version part de V22 et ajoute deux changements structurels.
 
-- **Paris** — capitale dense, emplois, administrations, immobilier cher ; bus métropolitain.
-- **Valmont** — ville verte et résidentielle ; bus local, villas et lac.
-- **Montfleur** — ville universitaire ; tram + bus campus.
-- **Saint-Roch** — ville industrielle et populaire ; tramway des Forges.
-- **Belle-Rive** — ville côtière ; bus et navettes littorales.
+## Aller d’une ville à l’autre à pied
 
-## Région et trains
+Les cinq villes restent des mondes urbains distincts pour garder de bonnes performances sur iPhone, mais elles sont désormais reliées par de longues routes départementales continues à travers la campagne. Il n’y a plus de mur invisible sur les axes interurbains.
 
-Les villes sont reliées par deux axes ferroviaires :
+Routes :
 
-- **IC1** : Paris → Montfleur → Saint-Roch → Belle-Rive
-- **R2** : Paris → Valmont → Montfleur
+- **D7 Route des Cèdres** : Paris ↔ Valmont
+- **D12 Route de Montfleur** : Paris ↔ Montfleur
+- **D18 Route des Étangs** : Valmont ↔ Montfleur
+- **D4 Route des Forges** : Montfleur ↔ Saint-Roch
+- **D21 Route du Littoral** : Saint-Roch ↔ Belle-Rive
 
-Le changement instantané de ville a été supprimé. Il faut rejoindre la gare de la ville, choisir une destination et prendre le train. Le trajet consomme du temps de jeu et des crédits. Une animation de voyage montre la campagne entre les villes.
+Chaque moitié de trajet fait environ 24 chunks ruraux. À pied, un centre-ville à l’autre demande volontairement plusieurs minutes ; le train reste le transport rapide et les futures voitures pourront utiliser ces routes. Les chunks éloignés ne sont pas tous chargés : seuls ceux autour du joueur existent en 3D, ce qui conserve les performances.
 
-## Carte
+## Nouveau système de bus
 
-La carte possède trois niveaux :
+- Les bus restent **12 secondes aux arrêts** et **15 secondes aux terminus**.
+- Il n’est plus nécessaire de préparer le trajet avant l’arrivée du bus.
+- Quand le véhicule est à quai, approche-toi et touche **MONTER**.
+- Le menu du véhicule affiche directement les arrêts desservis dans le bon sens.
+- Le calculateur avec correspondances reste disponible mais devient optionnel.
+- Deux poteaux sont générés pour les arrêts bidirectionnels afin de mieux servir l’aller et le retour.
+- Les bus utilisent les mêmes voies directionnelles que les voitures.
+- Ils freinent progressivement, respectent les feux rouges, attendent si l’intersection est occupée, gardent leurs distances avec voitures/bus et ne franchissent plus la ligne d’arrêt au rouge.
+- Une collision avec un bus en mouvement a désormais une conséquence physique sur le joueur.
 
-1. **Région** — les 5 villes et les axes ferroviaires.
-2. **Transports** — le réseau local de la ville actuelle avec véhicules en temps réel.
-3. **Local** — rues, commerces, écoles, agences immobilières, gare et joueur.
+## Carte régionale
 
-## Monde fini
-
-Chaque ville a une zone urbaine fixe et une couronne de campagne composée de champs, haies, routes rurales et éléments agricoles. Le déplacement à pied est borné à cette région locale : plus de génération infinie.
+La carte régionale affiche les axes ferroviaires et les routes interurbaines praticables à pied.
 
 ## Sauvegarde
 
-La sauvegarde V21.6 est migrée automatiquement vers `sq3d-v22`.
+La sauvegarde V22 est conservée. Le stockage principal reste `sq3d-v22` afin de ne pas perdre la progression lors de la mise à jour.

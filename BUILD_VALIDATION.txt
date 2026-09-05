@@ -1,8 +1,21 @@
-StreetQuest V22 validation — 2026-09-05
-- game.js checked as an ES module (.mjs) with Node: OK
-- duplicate top-level function declarations: none
-- server/server.js syntax: OK
-- JSON files parsed: OK
-- 5-city regional rail graph: connected
-- every local transit line references existing stops: OK
-- HTML required V22 map/train IDs: OK
+StreetQuest V22.1 validation — 2026-09-05
+
+Automated checks completed:
+- game.js JavaScript syntax (Node --check): OK
+- sw.js JavaScript syntax: OK
+- server/server.js JavaScript syntax: OK
+- version.json, manifest.json, server/package.json parsing: OK
+- duplicate named function declarations: none (416 functions scanned)
+- 5-city walking-road graph: connected
+- intercity exits: no duplicate side assigned inside one city
+- walking links: 5 (D7, D12, D18, D4, D21)
+- local transit stops parsed: 39
+- local transit lines parsed: 12
+- every transit line references existing stops: OK
+- direct bus boarding code path present: OK
+- bus traffic-light / spacing code path present: OK
+- bus dwell: 12 s normal stop / 15 s terminus
+- V22 save key retained; world layout version bumped to 221
+
+Runtime note:
+A real iPhone/Safari WebGL session cannot be reproduced in this container. The build has therefore been syntax-checked and structurally validated here, but final rendering/input behavior should still be smoke-tested once after GitHub Pages deployment on the target iPhone.
