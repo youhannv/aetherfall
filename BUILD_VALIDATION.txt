@@ -1,13 +1,6 @@
-StreetQuest V20.1 — validation automatique
-
-OK - game.js : syntaxe JavaScript valide (node --check)
-OK - server/server.js : syntaxe JavaScript valide (node --check)
-OK - version.json : JSON valide
-OK - manifest.json : JSON valide
-OK - cache PWA mis à jour : streetquest3d-v20.1
-OK - persistance mise à jour : sq3d-v20.1 avec reprise sq3d-v20
-OK - worldLayoutVersion : 201
-OK - nouveaux commerces intégrés : bakery, butcher, restaurant, cafe, pharmacy, florist, hairdresser
-OK - nouveaux services intégrés : coiffure, bouquets, petit soin
-OK - densification urbaine augmentée : commerces supplémentaires + infill buildings
-OK - population urbaine augmentée : PNJ et voitures renforcés
+StreetQuest V21 — validation à exécuter
+Version: 21.0.0
+Cache PWA: streetquest3d-v21
+Sauvegarde: sq3d-v21
+worldLayoutVersion: 210
+Voir V21_CHECKLIST.md.

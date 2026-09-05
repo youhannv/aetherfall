@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V20">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V21">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V20</title>
+<title>StreetQuest 3D V21</title>
 </head>
 <body>
 <div id="app">
@@ -155,19 +155,19 @@
 <script>
 (() => {
   let registration = null;
-  const btn = () => document.getElementById('updateBtn');
+  const btn = () => document.getElementById('forceUpdate');
 
   function markUpdateReady(){
     const b=btn(); if(!b)return;
     b.classList.add('updateReady');
-    b.textContent='⬆';
+    b.textContent='⬆ Installer la mise à jour';
     b.title='Nouvelle version disponible';
   }
 
   async function checkUpdate(forceReload=false){
     const b=btn();
     try{
-      if(b){b.classList.add('checking');b.textContent='…'}
+      if(b){b.classList.add('checking');b.textContent='… Vérification'}
       if(!('serviceWorker' in navigator)){ if(forceReload)location.reload(); return; }
       registration = registration || await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
       await registration.update();
@@ -188,10 +188,10 @@
       }else if(forceReload){
         location.reload();
       }else{
-        const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻'}
+        const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻ Vérifier les mises à jour'}
       }
     }catch(e){
-      const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻'}
+      const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻ Vérifier les mises à jour'}
     }
   }
 
