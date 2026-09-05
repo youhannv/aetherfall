@@ -60,12 +60,56 @@ const TRANSIT_NETWORKS={
   {type:'housing',name:'Agence Campus Logement',cx:-1,cz:0,x:-1*CHUNK+43,z:13},{type:'school',name:'Université de Montfleur',cx:0,cz:0,x:43,z:13},{type:'jobcenter',name:'Incubateur des Sciences',cx:2,cz:0,x:2*CHUNK+43,z:13},{type:'clinic',name:'Centre de Santé Étudiant',cx:0,cz:1,x:43,z:1*CHUNK+13}
  ]}
 };
+const SOCIETY_POIS={
+ paris:[
+  {type:'policeStation',name:'Commissariat Paris-Centre',cx:-1,cz:-2,x:-1*CHUNK+43,z:-2*CHUNK+13},
+  {type:'fireStation',name:'Caserne des Sapeurs-Pompiers',cx:3,cz:0,x:3*CHUNK+43,z:13},
+  {type:'townhall',name:'Hôtel de Ville',cx:0,cz:2,x:43,z:2*CHUNK+13},
+  {type:'bank',name:'Banque de Paris',cx:1,cz:2,x:1*CHUNK+43,z:2*CHUNK+13},
+  {type:'postoffice',name:'La Poste — Paris Centre',cx:-2,cz:2,x:-2*CHUNK+43,z:2*CHUNK+13},
+  {type:'library',name:'Médiathèque des Arts',cx:3,cz:-1,x:3*CHUNK+43,z:-1*CHUNK+13}
+ ],
+ belle_rive:[
+  {type:'policeStation',name:'Commissariat de Belle-Rive',cx:-2,cz:-1,x:-2*CHUNK+43,z:-1*CHUNK+13},
+  {type:'fireStation',name:'Centre de Secours du Littoral',cx:2,cz:-1,x:2*CHUNK+43,z:-1*CHUNK+13},
+  {type:'townhall',name:'Mairie de Belle-Rive',cx:0,cz:0,x:43,z:13},
+  {type:'bank',name:'Banque du Littoral',cx:1,cz:1,x:1*CHUNK+43,z:1*CHUNK+13},
+  {type:'postoffice',name:'La Poste — Vieux-Port',cx:-2,cz:1,x:-2*CHUNK+43,z:1*CHUNK+13},
+  {type:'library',name:'Médiathèque Maritime',cx:2,cz:1,x:2*CHUNK+43,z:1*CHUNK+13}
+ ],
+ saint_roch:[
+  {type:'policeStation',name:'Commissariat Saint-Roch',cx:0,cz:-1,x:43,z:-1*CHUNK+13},
+  {type:'fireStation',name:'Caserne des Forges',cx:2,cz:0,x:2*CHUNK+43,z:13},
+  {type:'townhall',name:'Hôtel de Ville de Saint-Roch',cx:0,cz:0,x:43,z:13},
+  {type:'bank',name:'Banque des Forges',cx:1,cz:1,x:1*CHUNK+43,z:1*CHUNK+13},
+  {type:'postoffice',name:'La Poste — Cité Ouvrière',cx:-2,cz:1,x:-2*CHUNK+43,z:1*CHUNK+13},
+  {type:'library',name:'Médiathèque du Canal',cx:2,cz:1,x:2*CHUNK+43,z:1*CHUNK+13}
+ ],
+ valmont:[
+  {type:'policeStation',name:'Brigade de Valmont',cx:-1,cz:-1,x:-1*CHUNK+43,z:-1*CHUNK+13},
+  {type:'fireStation',name:'Centre de Secours de Valmont',cx:2,cz:0,x:2*CHUNK+43,z:13},
+  {type:'townhall',name:'Mairie de Valmont',cx:0,cz:0,x:43,z:13},
+  {type:'bank',name:'Banque des Cèdres',cx:-1,cz:1,x:-1*CHUNK+43,z:1*CHUNK+13},
+  {type:'postoffice',name:'La Poste — Valmont',cx:2,cz:1,x:2*CHUNK+43,z:1*CHUNK+13},
+  {type:'library',name:'Bibliothèque du Lac',cx:0,cz:2,x:43,z:2*CHUNK+13}
+ ],
+ montfleur:[
+  {type:'policeStation',name:'Commissariat de Montfleur',cx:-2,cz:-1,x:-2*CHUNK+43,z:-1*CHUNK+13},
+  {type:'fireStation',name:'Caserne Université',cx:2,cz:-1,x:2*CHUNK+43,z:-1*CHUNK+13},
+  {type:'townhall',name:'Mairie de Montfleur',cx:1,cz:0,x:1*CHUNK+43,z:13},
+  {type:'bank',name:'Banque Campus',cx:-1,cz:1,x:-1*CHUNK+43,z:1*CHUNK+13},
+  {type:'postoffice',name:'La Poste — Campus',cx:1,cz:1,x:1*CHUNK+43,z:1*CHUNK+13},
+  {type:'library',name:'Bibliothèque Universitaire',cx:0,cz:2,x:43,z:2*CHUNK+13}
+ ]
+};
+const CIVIC_SERVICE_TYPES=new Set(['housing','school','jobcenter','clinic','policeStation','fireStation','townhall','bank','postoffice','library']);
 let BUS_STOPS=[],BUS_LINES=[],BUS_STOP_BY_ID=new Map(),BUS_LINE_BY_ID=new Map(),CIVIC_POIS=[];
 function activateCityTransit(cityId){
  const net=TRANSIT_NETWORKS[cityId]||TRANSIT_NETWORKS.paris;
  BUS_STOPS=net.stops.map(x=>({...x,lines:[...x.lines]}));
  BUS_LINES=net.lines.map(x=>({...x,stops:[...x.stops],_route:null}));
- BUS_STOP_BY_ID=new Map(BUS_STOPS.map(x=>[x.id,x]));BUS_LINE_BY_ID=new Map(BUS_LINES.map(x=>[x.id,x]));CIVIC_POIS=net.pois.map(x=>({...x}));
+ BUS_STOP_BY_ID=new Map(BUS_STOPS.map(x=>[x.id,x]));BUS_LINE_BY_ID=new Map(BUS_LINES.map(x=>[x.id,x]));
+ CIVIC_POIS=[...net.pois,...(SOCIETY_POIS[cityId]||[])].map(x=>({...x}));
  const legend=document.querySelector?.('.busLegendLines');if(legend)legend.innerHTML=BUS_LINES.map(l=>`<span style="--line:${l.color}"><b>${l.id}</b> ${l.name}</span>`).join('');
 }
 
@@ -281,46 +325,167 @@ function avatarPayload(){return {...normalizedAvatar(state.avatar),version:state
 
 SHOPS.clothes={name:'NeoStyle',icon:'👕',stock:Object.values(COSMETIC_ITEMS).map(x=>({id:x.id,name:x.name,icon:x.icon,price:x.price,desc:'Apparence multijoueur'}))};
 
-const EDUCATION_PROGRAMS={
- vocational:{id:'vocational',name:'Certificat technique',icon:'🔧',cost:90,days:8,desc:'Nécessaire pour devenir mécanicien.'},
- police:{id:'police',name:'Académie de police',icon:'👮',cost:150,days:12,desc:'Formation pour intégrer la police.'},
- nursing:{id:'nursing',name:'École de soins',icon:'🩺',cost:220,days:16,desc:'Formation pour travailler dans les soins.'},
- university:{id:'university',name:'Diplôme universitaire',icon:'🎓',cost:320,days:22,desc:'Ouvre les emplois qualifiés de l’enseignement.'}
+const INSEE_EMPLOYMENT_REFERENCE={
+ year:2024,
+ pcsShare:{farmer:1.3,businessOwner:6.8,cadre:23.0,intermediate:25.2,employee:24.8,worker:18.0},
+ sectorShare:{agriculture:2.3,industry:12.6,construction:6.6,tertiary:76.6,trade:12.6,transport:5.0},
+ salaryMedianEuro:{cadre:3710,intermediate:2440,employee:1800,worker:1920},
+ salaryMeanEuro:{cadre:4535,intermediate:2584,employee:1895,worker:1989}
 };
+const GAME_EURO_PER_CREDIT=20;
+const salaryCredits=e=>Math.max(1,Math.round(e/GAME_EURO_PER_CREDIT));
+const PCS_LABELS={farmer:'Agriculteur',businessOwner:'Artisan / commerçant',cadre:'Cadre',intermediate:'Profession intermédiaire',employee:'Employé',worker:'Ouvrier'};
+const CITY_LABOR_PROFILES={
+ paris:{unemployment:.069,student:.085,retired:.065,priceIndex:1.08,mult:{office:1.55,finance:1.70,tech:1.35,public:1.28,trade:1.18,health:1.14,education:1.10,transport:1.12,industry:.58,construction:.78,agriculture:.12,hospitality:1.12,emergency:1.10,postal:1.00}},
+ belle_rive:{unemployment:.078,student:.065,retired:.085,priceIndex:1.02,mult:{hospitality:2.10,trade:1.35,transport:1.35,health:1.06,public:.96,construction:.90,industry:.62,agriculture:.62,office:.72,finance:.72,tech:.68,education:.82,emergency:1.05,postal:1.00}},
+ saint_roch:{unemployment:.091,student:.052,retired:.078,priceIndex:.94,mult:{industry:2.10,construction:1.52,transport:1.52,trade:.92,public:.90,health:1.02,office:.62,finance:.48,tech:.78,agriculture:.55,hospitality:.72,education:.78,emergency:1.15,postal:1.00}},
+ valmont:{unemployment:.061,student:.048,retired:.115,priceIndex:.98,mult:{agriculture:3.25,trade:1.20,construction:1.05,hospitality:.92,health:1.02,public:.92,office:.72,finance:.62,tech:.56,industry:.68,transport:.82,education:.90,emergency:1.05,postal:1.10}},
+ montfleur:{unemployment:.067,student:.225,retired:.050,priceIndex:1.00,mult:{education:2.35,tech:2.05,health:1.38,office:1.18,public:1.12,trade:1.08,hospitality:1.25,transport:.88,industry:.68,construction:.72,agriculture:.35,finance:.82,emergency:1.00,postal:1.00}}
+};
+const OCCUPATION_DEFS=[
+ {id:'farmer',title:'Agriculteur',category:'farmer',sectorGroup:'agriculture',weight:1.3,euroNet:2050,workplaceTypes:[],shift:'early'},
+ {id:'shopOwner',title:'Commerçant indépendant',category:'businessOwner',sectorGroup:'trade',weight:3.0,euroNet:2450,workplaceTypes:['corner','bakery','butcher','cafe','clothes'],shift:'retail'},
+ {id:'artisan',title:'Artisan',category:'businessOwner',sectorGroup:'construction',weight:2.0,euroNet:2500,workplaceTypes:['gear'],shift:'day'},
+ {id:'restaurantOwner',title:'Restaurateur',category:'businessOwner',sectorGroup:'hospitality',weight:1.8,euroNet:2600,workplaceTypes:['restaurant','cafe'],shift:'hospitality'},
+ {id:'officeManager',title:'Cadre administratif',category:'cadre',sectorGroup:'office',weight:6.2,euroNet:3800,workplaceTypes:['townhall','bank'],shift:'office'},
+ {id:'financeManager',title:'Cadre banque / finance',category:'cadre',sectorGroup:'finance',weight:3.2,euroNet:4300,workplaceTypes:['bank'],shift:'office'},
+ {id:'softwareEngineer',title:'Ingénieur informatique',category:'cadre',sectorGroup:'tech',weight:3.8,euroNet:3900,workplaceTypes:['library','school'],shift:'office'},
+ {id:'industrialEngineer',title:'Ingénieur industrie',category:'cadre',sectorGroup:'industry',weight:2.6,euroNet:3850,workplaceTypes:['gear'],shift:'day'},
+ {id:'salesManager',title:'Cadre commercial',category:'cadre',sectorGroup:'trade',weight:2.8,euroNet:3700,workplaceTypes:['corner','clothes'],shift:'retail'},
+ {id:'doctor',title:'Médecin',category:'cadre',sectorGroup:'health',weight:1.25,euroNet:6000,workplaceTypes:['clinic'],shift:'hospital'},
+ {id:'researcher',title:'Chercheur / enseignant supérieur',category:'cadre',sectorGroup:'education',weight:1.9,euroNet:3650,workplaceTypes:['school','library'],shift:'office'},
+ {id:'publicExecutive',title:'Cadre de la fonction publique',category:'cadre',sectorGroup:'public',weight:1.25,euroNet:3750,workplaceTypes:['townhall'],shift:'office'},
+ {id:'nurse',title:'Infirmier',category:'intermediate',sectorGroup:'health',weight:4.1,euroNet:2500,workplaceTypes:['clinic'],shift:'hospital'},
+ {id:'teacher',title:'Enseignant',category:'intermediate',sectorGroup:'education',weight:4.0,euroNet:2550,workplaceTypes:['school'],shift:'school'},
+ {id:'technician',title:'Technicien',category:'intermediate',sectorGroup:'industry',weight:3.3,euroNet:2550,workplaceTypes:['gear'],shift:'day'},
+ {id:'police',title:'Policier',category:'intermediate',sectorGroup:'emergency',weight:2.25,euroNet:2400,workplaceTypes:['policeStation'],shift:'essential'},
+ {id:'firefighter',title:'Sapeur-pompier',category:'intermediate',sectorGroup:'emergency',weight:1.15,euroNet:2350,workplaceTypes:['fireStation'],shift:'essential'},
+ {id:'accountant',title:'Comptable / gestionnaire',category:'intermediate',sectorGroup:'office',weight:2.55,euroNet:2550,workplaceTypes:['bank','townhall'],shift:'office'},
+ {id:'socialWorker',title:'Éducateur / travailleur social',category:'intermediate',sectorGroup:'public',weight:2.35,euroNet:2350,workplaceTypes:['townhall','school'],shift:'day'},
+ {id:'labTechnician',title:'Technicien de laboratoire',category:'intermediate',sectorGroup:'tech',weight:2.0,euroNet:2500,workplaceTypes:['school','clinic'],shift:'day'},
+ {id:'logisticsSupervisor',title:'Chef d’équipe logistique',category:'intermediate',sectorGroup:'transport',weight:1.5,euroNet:2450,workplaceTypes:['postoffice'],shift:'transport'},
+ {id:'bankAdvisor',title:'Conseiller bancaire',category:'intermediate',sectorGroup:'finance',weight:2.0,euroNet:2550,workplaceTypes:['bank'],shift:'office'},
+ {id:'retailEmployee',title:'Employé de commerce',category:'employee',sectorGroup:'trade',weight:6.0,euroNet:1800,workplaceTypes:['corner','bakery','butcher','clothes','pharmacy'],shift:'retail',publicFacing:true},
+ {id:'adminEmployee',title:'Employé administratif',category:'employee',sectorGroup:'office',weight:4.0,euroNet:2000,workplaceTypes:['townhall','bank','jobcenter'],shift:'office'},
+ {id:'careAssistant',title:'Aide-soignant',category:'employee',sectorGroup:'health',weight:3.5,euroNet:1950,workplaceTypes:['clinic'],shift:'hospital'},
+ {id:'waiter',title:'Serveur',category:'employee',sectorGroup:'hospitality',weight:3.0,euroNet:1820,workplaceTypes:['restaurant','cafe'],shift:'hospitality',publicFacing:true},
+ {id:'cleaner',title:'Agent d’entretien',category:'employee',sectorGroup:'public',weight:3.0,euroNet:1750,workplaceTypes:['townhall','school','clinic'],shift:'early'},
+ {id:'driver',title:'Conducteur / livreur',category:'employee',sectorGroup:'transport',weight:2.5,euroNet:1950,workplaceTypes:['postoffice'],shift:'transport'},
+ {id:'receptionist',title:'Agent d’accueil',category:'employee',sectorGroup:'public',weight:1.5,euroNet:1850,workplaceTypes:['townhall','clinic','jobcenter'],shift:'day',publicFacing:true},
+ {id:'postalWorker',title:'Agent postal',category:'employee',sectorGroup:'postal',weight:1.3,euroNet:1900,workplaceTypes:['postoffice'],shift:'day',publicFacing:true},
+ {id:'factoryWorker',title:'Ouvrier industriel',category:'worker',sectorGroup:'industry',weight:5.0,euroNet:2050,workplaceTypes:['gear'],shift:'factory'},
+ {id:'constructionWorker',title:'Ouvrier du bâtiment',category:'worker',sectorGroup:'construction',weight:4.0,euroNet:2050,workplaceTypes:['gear'],shift:'day'},
+ {id:'warehouseWorker',title:'Magasinier / préparateur',category:'worker',sectorGroup:'transport',weight:3.5,euroNet:1950,workplaceTypes:['postoffice'],shift:'transport'},
+ {id:'mechanic',title:'Mécanicien',category:'worker',sectorGroup:'industry',weight:2.5,euroNet:2150,workplaceTypes:['gear'],shift:'day'},
+ {id:'foodWorker',title:'Boulanger / métier de bouche',category:'worker',sectorGroup:'trade',weight:1.5,euroNet:1950,workplaceTypes:['bakery','butcher'],shift:'early'},
+ {id:'roadWorker',title:'Agent de voirie',category:'worker',sectorGroup:'public',weight:1.5,euroNet:2000,workplaceTypes:['townhall'],shift:'early'}
+];
+function weightedPick(items,r,weightFn=x=>x.weight||1){let total=items.reduce((a,x)=>a+Math.max(0,weightFn(x)),0),v=r()*total;for(const x of items){v-=Math.max(0,weightFn(x));if(v<=0)return x}return items[items.length-1]}
+function laborProfile(id=state?.cityId||'paris'){return CITY_LABOR_PROFILES[id]||CITY_LABOR_PROFILES.paris}
+function occupationEmployer(def,r){const places=CIVIC_POIS.filter(p=>(def.workplaceTypes||[]).includes(p.type));if(places.length)return places[Math.floor(r()*places.length)].name;const names={agriculture:['Ferme des Rives','Exploitation des Cèdres'],industry:['Ateliers Régionaux','Manufacture Saint-Roch','MécaLab'],construction:['Bâtir & Fils','Chantiers Régionaux'],trade:['Nova Market','Commerce de quartier'],hospitality:['Brasserie du Centre','Hôtel des Voyageurs'],transport:['NeoExpress','Réseau Mobilités'],office:['Services Régionaux','Cabinet Horizon'],finance:['Banque Régionale'],tech:['Technopôle','Laboratoire Montfleur'],health:['Hôpital public'],education:['Éducation nationale'],public:['Ville'],emergency:['Service public'],postal:['La Poste']};const a=names[def.sectorGroup]||['Entreprise locale'];return a[Math.floor(r()*a.length)]}
+function makeNpcSchedule(occ,r){if(occ.status==='student')return{start:8.2+r()*.6,end:16.0+r()*.9,lunchStart:12,lunchEnd:13.2,weekend:false};if(occ.status==='unemployed'||occ.status==='retired')return{start:10,end:18,lunchStart:12,lunchEnd:14,weekend:true};const shift=occ.shift||'day';if(shift==='essential'||shift==='hospital'){const k=r();if(k<.18)return{start:20,end:6,lunchStart:1,lunchEnd:1.5,weekend:true,night:true};if(k<.42)return{start:13,end:21,lunchStart:17,lunchEnd:17.5,weekend:true};return{start:7,end:15,lunchStart:11.5,lunchEnd:12,weekend:true}}if(shift==='hospitality')return{start:11,end:22.5,lunchStart:15,lunchEnd:15.6,weekend:true};if(shift==='retail')return{start:8.5,end:18.5,lunchStart:12.3,lunchEnd:13.2,weekend:true};if(shift==='early')return{start:5.8,end:14,lunchStart:10.5,lunchEnd:11,weekend:false};if(shift==='transport'||shift==='factory'){return r()<.5?{start:6,end:14,lunchStart:10.5,lunchEnd:11,weekend:true}:{start:14,end:22,lunchStart:18,lunchEnd:18.5,weekend:true}}if(shift==='school')return{start:8,end:16.5,lunchStart:12,lunchEnd:13.3,weekend:false};return{start:8+r()*.7,end:16.5+r()*.9,lunchStart:12,lunchEnd:13.1,weekend:false}}
+function pickNpcOccupation(socio,r){const prof=laborProfile(),studentRate=prof.student,unemployment=clamp(prof.unemployment+(1-socio.wealth)*.018,.035,.145),retiredRate=prof.retired,roll=r();if(roll<studentRate){const o={status:'student',title:'Étudiant',employer:state.cityId==='montfleur'?'Université de Montfleur':'Établissement scolaire',boss:false,category:'student',sectorGroup:'education',euroNet:0,shift:'school'};o.schedule=makeNpcSchedule(o,r);return o}if(roll<studentRate+unemployment){const o={status:'unemployed',title:'Sans emploi',employer:null,boss:false,category:'unemployed',sectorGroup:'none',euroNet:0};o.schedule=makeNpcSchedule(o,r);return o}if(roll<studentRate+unemployment+retiredRate){const o={status:'retired',title:'Retraité',employer:null,boss:false,category:'retired',sectorGroup:'none',euroNet:0};o.schedule=makeNpcSchedule(o,r);return o}const def=weightedPick(OCCUPATION_DEFS,r,x=>{let w=x.weight*(prof.mult[x.sectorGroup]||1);if(socio.tier==='luxury'||socio.tier==='rich'){if(x.category==='cadre')w*=1.35;if(x.category==='worker')w*=.72}else if(socio.tier==='poor'||socio.tier==='working'){if(x.category==='worker'||x.category==='employee')w*=1.22;if(x.category==='cadre')w*=.70}return w});const o={...def,status:'employed',employer:occupationEmployer(def,r),boss:def.category==='businessOwner'};o.schedule=makeNpcSchedule(o,r);return o}
+
+function makeNpcLifeAnchors(n,r){
+ const pts=(n.route||[]).filter(q=>Number.isFinite(q.x)&&Number.isFinite(q.z));
+ const pickPt=(ratio,fallback)=>pts.length?{...pts[Math.min(pts.length-1,Math.floor(ratio*pts.length))]}:{...fallback};
+ const home={x:n.home.x,z:n.home.z},work=pickPt(.58,home),lunch=pickPt(.30,home),leisure=pickPt(.82,home);
+ // If this streamed neighbourhood contains the NPC's workplace type, use its real accessible door.
+ const wp=shops.filter(s=>s.key===n.key&&(n.occupation?.workplaceTypes||[]).includes(s.type)).sort((a,b)=>Math.hypot(a.door.x-home.x,a.door.z-home.z)-Math.hypot(b.door.x-home.x,b.door.z-home.z))[0];
+ if(wp){work.x=wp.door.x;work.z=wp.door.z;if(wp.displayName)n.occupation.employer=wp.displayName}
+ return{home,work,lunch,leisure};
+}
+function npcRoutineTarget(n,phase,hour){const a=n.lifeAnchors;if(!a)return null;if(phase==='home')return a.home;if(phase==='work'||phase==='nightWork')return a.work;if(phase==='lunch')return a.lunch;if(phase==='leisure')return a.leisure;if(phase==='commute'){const start=n.occupation?.schedule?.start??8;return hourInRange(hour,(start-1+24)%24,start)?a.work:a.home}return null}
+function updateNpcDailyRoutine(n,dt){
+ const phase=n.lifePhase,target=npcRoutineTarget(n,phase,state.timeOfDay);if(!target)return'patrol';
+ if(phase==='leisure'&&Math.hypot(n.group.position.x-target.x,n.group.position.z-target.z)<1.4)return'patrol';
+ const dx=target.x-n.group.position.x,dz=target.z-n.group.position.z,dist=Math.hypot(dx,dz);
+ if(dist<.58)return'idle';
+ const step=Math.min(n.speed*dt,dist),sx=dx/(dist||1)*step,sz=dz/(dist||1)*step;
+ if(moveEntity(n,sx,sz,.29)){setHeading(n,sx,sz);n.routineStuck=0;return'move'}
+ n.routineStuck=(n.routineStuck||0)+dt;if(n.routineStuck>1.0){n.routineStuck=0;return'patrol'}return'idle'
+}
+const NPC_HABITS=['prendre un café','faire ses courses','se promener au parc','aller à la bibliothèque','voir des proches','faire du sport','passer au marché'];
+
+const EDUCATION_PROGRAMS={
+ vocational:{id:'vocational',name:'Certificat technique',icon:'🔧',cost:90,days:8,desc:'Métiers techniques, maintenance et mécanique.'},
+ police:{id:'police',name:'Académie de police',icon:'👮',cost:150,days:12,desc:'Formation pour intégrer la police.'},
+ fire:{id:'fire',name:'Formation sapeur-pompier',icon:'🚒',cost:165,days:13,desc:'Formation opérationnelle de secours.'},
+ nursing:{id:'nursing',name:'École de soins',icon:'🩺',cost:220,days:16,desc:'Soins infirmiers et aide aux patients.'},
+ university:{id:'university',name:'Diplôme universitaire',icon:'🎓',cost:320,days:22,desc:'Cadres, enseignement, gestion et ingénierie.'},
+ medical:{id:'medical',name:'Études médicales',icon:'⚕️',cost:720,days:48,desc:'Parcours long et exigeant pour devenir médecin.'}
+};
+function makeJob(id,name,icon,sector,company,euroNet,qualification,mission,sectorGroup,category,shift,availability=1,rarity=1){return{id,name,icon,sector,company,euroNet,salary:salaryCredits(euroNet),qualification,mission,sectorGroup,category,shift,availability,rarity}}
 const JOB_DEFS={
- courier:{id:'courier',name:'Coursier',icon:'📦',sector:'private',company:'neoexpress',salary:115,qualification:null,mission:'delivery'},
- retail:{id:'retail',name:'Employé de commerce',icon:'🛒',sector:'private',company:'novamarket',salary:105,qualification:null,mission:'store'},
- mechanic:{id:'mechanic',name:'Mécanicien',icon:'🔧',sector:'private',company:'mecalab',salary:175,qualification:'vocational',mission:'repair'},
- nurse:{id:'nurse',name:'Soignant',icon:'🩺',sector:'public',company:'hospital',salary:205,qualification:'nursing',mission:'clinic'},
- policeOfficer:{id:'policeOfficer',name:'Policier',icon:'👮',sector:'public',company:'city',salary:220,qualification:'police',mission:'patrol'},
- teacher:{id:'teacher',name:'Enseignant',icon:'📚',sector:'public',company:'city',salary:235,qualification:'university',mission:'school'}
+ courier:makeJob('courier','Coursier / livreur','📦','private','logistics',1950,null,'delivery','transport','employee',[7,16],1.35),
+ retail:makeJob('retail','Employé de commerce','🛒','private','retailGroup',1800,null,'store','trade','employee',[9,18],1.55),
+ cleaner:makeJob('cleaner','Agent d’entretien','🧹','private','services',1750,null,'cleaning','public','employee',[6,14],1.25),
+ waiter:makeJob('waiter','Serveur','🍽️','private','hospitality',1820,null,'restaurant','hospitality','employee',[11,22],1.15),
+ warehouse:makeJob('warehouse','Magasinier / préparateur','📦','private','logistics',1950,null,'logistics','transport','worker',[6,14],1.20),
+ constructionWorker:makeJob('constructionWorker','Ouvrier du bâtiment','🦺','private','construction',2050,null,'construction','construction','worker',[7,16],1.05),
+ industrialWorker:makeJob('industrialWorker','Ouvrier industriel','🏭','private','industry',2050,null,'industry','industry','worker',[6,14],1.10),
+ baker:makeJob('baker','Boulanger','🥖','private','retailGroup',1950,null,'bakery','trade','worker',[5,13],.88),
+ postalWorker:makeJob('postalWorker','Agent postal','📮','public','postal',1900,null,'postal','postal','employee',[8,16],.80),
+ adminAssistant:makeJob('adminAssistant','Employé administratif','🗂️','private','services',2000,null,'admin','office','employee',[8,17],1.05),
+ busDriver:makeJob('busDriver','Conducteur de bus','🚌','public','city',2200,null,'transport','transport','intermediate',[6,14],.72),
+ mechanic:makeJob('mechanic','Mécanicien','🔧','private','industry',2150,'vocational','repair','industry','worker',[8,17],.88),
+ technician:makeJob('technician','Technicien de maintenance','🛠️','private','industry',2500,'vocational','repair','industry','intermediate',[8,17],.82),
+ careAssistant:makeJob('careAssistant','Aide-soignant','🩹','public','hospital',1950,'nursing','clinic','health','employee',[7,15],1.05),
+ nurse:makeJob('nurse','Infirmier','🩺','public','hospital',2500,'nursing','clinic','health','intermediate',[7,15],.90),
+ policeOfficer:makeJob('policeOfficer','Policier','👮','public','city',2400,'police','patrol','emergency','intermediate',[6,14],.78),
+ firefighter:makeJob('firefighter','Sapeur-pompier','🚒','public','emergency',2350,'fire','fire','emergency','intermediate',[7,19],.58),
+ teacher:makeJob('teacher','Enseignant','📚','public','education',2550,'university','school','education','intermediate',[8,17],.85),
+ accountant:makeJob('accountant','Comptable / gestionnaire','📊','private','services',2600,'university','admin','office','intermediate',[8,17],.68),
+ bankAdvisor:makeJob('bankAdvisor','Conseiller bancaire','🏦','private','bank',2550,'university','bank','finance','intermediate',[9,17],.52),
+ developer:makeJob('developer','Développeur informatique','💻','private','tech',3700,'university','tech','tech','cadre',[9,18],.48,.72),
+ engineer:makeJob('engineer','Ingénieur','📐','private','tech',3900,'university','tech','tech','cadre',[8,17],.42,.62),
+ doctor:makeJob('doctor','Médecin','⚕️','public','hospital',6000,'medical','clinic','health','cadre',[8,18],.22,.15)
 };
 const COMPANY_TEMPLATES={
+ logistics:{id:'logistics',name:'NeoExpress Logistique',sector:'private',cash:3600,npcWorkers:34,monthlyNpcRevenue:2350},
+ retailGroup:{id:'retailGroup',name:'Commerces Réunis',sector:'private',cash:4200,npcWorkers:58,monthlyNpcRevenue:3300},
+ industry:{id:'industry',name:'Industrie & Maintenance',sector:'private',cash:4600,npcWorkers:46,monthlyNpcRevenue:3900},
+ construction:{id:'construction',name:'Bâtir Région',sector:'private',cash:3900,npcWorkers:31,monthlyNpcRevenue:2900},
+ hospitality:{id:'hospitality',name:'Hôtellerie & Restauration',sector:'private',cash:3400,npcWorkers:42,monthlyNpcRevenue:2800},
+ services:{id:'services',name:'Services & Bureaux',sector:'private',cash:4100,npcWorkers:52,monthlyNpcRevenue:3200},
+ tech:{id:'tech',name:'Technopôle Régional',sector:'private',cash:5200,npcWorkers:29,monthlyNpcRevenue:4300},
+ bank:{id:'bank',name:'Banque Régionale',sector:'private',cash:6200,npcWorkers:24,monthlyNpcRevenue:4800},
+ hospital:{id:'hospital',name:'Santé publique',sector:'public',cash:0,npcWorkers:65,monthlyNpcRevenue:0},
+ education:{id:'education',name:'Éducation',sector:'public',cash:0,npcWorkers:72,monthlyNpcRevenue:0},
+ emergency:{id:'emergency',name:'Secours & Incendie',sector:'public',cash:0,npcWorkers:28,monthlyNpcRevenue:0},
+ postal:{id:'postal',name:'Service postal',sector:'public',cash:0,npcWorkers:27,monthlyNpcRevenue:0},
+ city:{id:'city',name:'Services municipaux',sector:'public',cash:0,npcWorkers:86,monthlyNpcRevenue:0},
+ // Legacy companies kept so old saves and old jobs remain valid after migration.
  neoexpress:{id:'neoexpress',name:'NeoExpress',sector:'private',cash:2200,npcWorkers:12,monthlyNpcRevenue:900},
  novamarket:{id:'novamarket',name:'Nova Market',sector:'private',cash:2600,npcWorkers:16,monthlyNpcRevenue:1150},
- mecalab:{id:'mecalab',name:'MécaLab',sector:'private',cash:3100,npcWorkers:10,monthlyNpcRevenue:1250},
- hospital:{id:'hospital',name:'Hôpital Horizon',sector:'public',cash:0,npcWorkers:24,monthlyNpcRevenue:0},
- city:{id:'city',name:'Ville',sector:'public',cash:0,npcWorkers:46,monthlyNpcRevenue:0}
+ mecalab:{id:'mecalab',name:'MécaLab',sector:'private',cash:3100,npcWorkers:10,monthlyNpcRevenue:1250}
 };
-const NPC_JOB_NAMES=['Livreur','Employé de commerce','Mécanicien','Soignant','Policier','Enseignant','Agent d’entretien','Employé de bureau','Restaurateur','Boulanger','Boucher','Coiffeur','Serveur','Étudiant'];
 function freshCompanies(){return Object.fromEntries(Object.entries(COMPANY_TEMPLATES).map(([k,v])=>[k,{...v}]))}
+function freshCityEconomies(){return Object.fromEntries(Object.keys(CITY_LABOR_PROFILES).map(id=>[id,{unemployment:CITY_LABOR_PROFILES[id].unemployment,priceIndex:CITY_LABOR_PROFILES[id].priceIndex,businessIndex:1,turnover:0,lastMonthTurnover:0,transactions:0,publicBudget:id==='paris'?5200:3900,jobsCreated:0}]))}
+function cityEconomy(id=state.cityId){if(!state.cityEconomies)state.cityEconomies=freshCityEconomies();if(!state.cityEconomies[id])state.cityEconomies[id]={...freshCityEconomies()[id]};return state.cityEconomies[id]}
 function absoluteGameDay(){return ((state.gameMonth||1)-1)*30+(state.gameDay||1)}
 function jobDef(){return state.job?JOB_DEFS[state.job.id]||null:null}
 function hasQualification(id){return !id||(state.education?.completed||[]).includes(id)}
 function currentGrossSalary(){const j=jobDef();return j?j.salary:0}
 function progressiveTax(amount){if(amount<=100)return Math.round(amount*.04);if(amount<=200)return Math.round(amount*.08);return Math.round(amount*.12)}
-function pickNpcOccupation(socio,r){
- const roll=r();
- if(roll<.08)return{title:'Sans emploi',employer:null,boss:false};
- if(roll<.16)return{title:'Étudiant',employer:'École municipale',boss:false};
- const title=choice(NPC_JOB_NAMES.slice(0,-1)),boss=r()<(.035+socio.wealth*.025);
- return{title:boss?`Patron — ${title}`:title,employer:boss?'Entreprise locale':choice(['NeoExpress','Nova Market','MécaLab','Hôpital Horizon','Ville']),boss}
-}
+function localPriceMultiplier(){return clamp(cityEconomy().priceIndex,.88,1.18)}
+function recordBusinessTransaction(amount,type){const eco=cityEconomy();eco.transactions=(eco.transactions||0)+1;eco.turnover=(eco.turnover||0)+Math.max(0,amount);const map={corner:'retailGroup',bakery:'retailGroup',butcher:'retailGroup',clothes:'retailGroup',pharmacy:'retailGroup',florist:'retailGroup',hairdresser:'services',restaurant:'hospitality',cafe:'hospitality',gear:'industry',pawn:'retailGroup',home:'retailGroup',rare:'retailGroup',bank:'bank',postoffice:'postal'};const c=state.companies?.[map[type]];if(c&&c.sector==='private')c.cash+=Math.round(amount*.65)}
+function playerJobIsOnShift(j,h=state.timeOfDay){if(!j?.shift)return true;const[a,b]=j.shift;return a<=b?h>=a&&h<=b:h>=a||h<=b}
+function jobShiftLabel(j){return j?.shift?`${String(Math.floor(j.shift[0])).padStart(2,'0')}:00–${String(Math.floor(j.shift[1])).padStart(2,'0')}:00`:'horaires variables'}
+function cityJobMultiplier(job,cityId=state.cityId){return (CITY_LABOR_PROFILES[cityId]?.mult?.[job.sectorGroup]||1)*job.availability*(job.rarity||1)}
+function jobVacanciesForCity(cityId=state.cityId){const r=rngFor(`vacancies:${cityId}:${state.gameMonth}`),jobs=Object.values(JOB_DEFS),out=[];for(const j of jobs){const m=cityJobMultiplier(j,cityId),chance=clamp(.12+m*.46,.04,.94);if(r()<chance)out.push({...j,positions:1+Math.floor(r()*Math.max(1,Math.min(4,m*2.2)))})}if(out.length<9){for(const j of [...jobs].sort((a,b)=>cityJobMultiplier(b,cityId)-cityJobMultiplier(a,cityId))){if(!out.some(x=>x.id===j.id)){out.push({...j,positions:1});if(out.length>=9)break}}}return out.sort((a,b)=>b.positions-a.positions||b.salary-a.salary).slice(0,14)}
+function formatEuro(v){return new Intl.NumberFormat('fr-FR').format(Math.round(v))+' €'}
+function societyLaborSummary(){const p=INSEE_EMPLOYMENT_REFERENCE.pcsShare;return `Cadres ${p.cadre.toFixed(1)} % • professions intermédiaires ${p.intermediate.toFixed(1)} % • employés ${p.employee.toFixed(1)} % • ouvriers ${p.worker.toFixed(1)} %`}
 
-
-SHOPS.school={name:'Campus Municipal',icon:'🎓',stock:[]};
+SHOPS.school={name:'Établissement scolaire',icon:'🎓',stock:[]};
 SHOPS.jobcenter={name:'Maison de l’Emploi',icon:'💼',stock:[]};
-SHOPS.clinic={name:'Hôpital Horizon',icon:'🏥',stock:[]};
+SHOPS.clinic={name:'Hôpital / Centre de santé',icon:'🏥',stock:[]};
+SHOPS.policeStation={name:'Commissariat',icon:'👮',stock:[]};
+SHOPS.fireStation={name:'Caserne de pompiers',icon:'🚒',stock:[]};
+SHOPS.townhall={name:'Mairie',icon:'🏛️',stock:[]};
+SHOPS.bank={name:'Banque',icon:'🏦',stock:[]};
+SHOPS.postoffice={name:'La Poste',icon:'📮',stock:[]};
+SHOPS.library={name:'Bibliothèque',icon:'📚',stock:[]};
 
 const HOME_ITEMS={
  wallKit:{id:'wallKit',name:'Cloison',icon:'🧱'},
@@ -354,8 +519,8 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:223,trainTrips:0,visitedCities:['paris'],
- gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:224,trainTrips:0,visitedCities:['paris'],
+ gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityEconomies:freshCityEconomies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,studyHours:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
 if(!CITIES.some(c=>c.id===state.cityId))state.cityId='paris';if(!state.visitedCities.includes(state.cityId))state.visitedCities.push(state.cityId);
@@ -371,13 +536,14 @@ function loadState(){
      pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},
      homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[],artifactBag:raw.artifactBag||[],discoveredShops:raw.discoveredShops||[],
      propertyCatalog:(raw.propertyCatalog||[]).map(p=>({...p,cityId:p.cityId||'paris'})),propertyPortfolio:(raw.propertyPortfolio||[]).map(p=>({...p,cityId:p.cityId||'paris'})),
-     education:{current:null,completed:[],...(raw.education||{})},companies:{...freshCompanies(),...(raw.companies||{})},salaryHistory:raw.salaryHistory||[],agendaCustom:raw.agendaCustom||[],knownNpcOccupations:raw.knownNpcOccupations||[],soundEnabled:raw.soundEnabled!==false,avatar:normalizedAvatar(raw.avatar||AVATAR_DEFAULT),avatarCreated:!!raw.avatarCreated,avatarVersion:raw.avatarVersion||1,cosmeticsUnlocked:raw.cosmeticsUnlocked||[]
+     education:{current:null,completed:[],...(raw.education||{})},companies:{...freshCompanies(),...(raw.companies||{})},cityEconomies:Object.fromEntries(Object.entries(freshCityEconomies()).map(([id,v])=>[id,{...v,...(raw.cityEconomies?.[id]||{})}])),salaryHistory:raw.salaryHistory||[],agendaCustom:raw.agendaCustom||[],knownNpcOccupations:raw.knownNpcOccupations||[],soundEnabled:raw.soundEnabled!==false,avatar:normalizedAvatar(raw.avatar||AVATAR_DEFAULT),avatarCreated:!!raw.avatarCreated,avatarVersion:raw.avatarVersion||1,cosmeticsUnlocked:raw.cosmeticsUnlocked||[]
    };
    if(loaded.interior){loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)?{x:raw.returnPos.x,z:raw.returnPos.z}:{...base.pos};loaded.interior=null;loaded.returnPos=null}
    if(migrated&&raw.housingStage){loaded.propertyCredit=(loaded.propertyCredit||0)+(raw.housingStage===1?180:raw.housingStage===2?1030:raw.housingStage>=3?2830:0);loaded.housingStage=0;loaded.landOwned=false}
    if((raw.worldLayoutVersion||0)<215){loaded.propertyCatalog=[];loaded.discoveredShops=[]}
    if((raw.worldLayoutVersion||0)<220){loaded.pos={...base.pos};loaded.interior=null;loaded.returnPos=null;loaded.discoveredShops=[];loaded.seenDistricts=[]}
-   loaded.worldLayoutVersion=223;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
+   if(loaded.job?.id==='police')loaded.job={...loaded.job,id:'policeOfficer'};if(loaded.job&&!JOB_DEFS[loaded.job.id])loaded.job=null;
+   loaded.worldLayoutVersion=224;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
    return loaded
  }catch{return structuredClone(base)}
 }
@@ -901,6 +1067,7 @@ function addTrafficLight(g,x,z,axis,rot=0,approach=''){
  group.position.set(x,0,z);group.rotation.y=rot;g.add(group);trafficLights.push({group,red,yellow,green,axis,approach})
 }
 function plannedShopType(cx,cz){
+ const civic=CIVIC_POIS.find(p=>p.cx===cx&&p.cz===cz);if(civic)return civic.type;
  const fixed={
   '0,0':'corner',
   '1,0':'bakery',
@@ -1915,13 +2082,14 @@ function makeFacadeSign(text,color='#9fe9ff'){
 
 
 function addShop(g,key,x,z,r,forcedType=null,parcel=null){
- const pool=Object.keys(SHOPS),type=forcedType||choice(pool),shop=SHOPS[type];const bx0=Math.floor(x/CHUNK)*CHUNK,bz0=Math.floor(z/CHUNK)*CHUNK;
+ const pool=Object.keys(SHOPS).filter(t=>!CIVIC_SERVICE_TYPES.has(t)),type=forcedType||choice(pool),shop=SHOPS[type];const bx0=Math.floor(x/CHUNK)*CHUNK,bz0=Math.floor(z/CHUNK)*CHUNK;
+ const civicPoi=CIVIC_POIS.find(p=>p.type===type&&p.cx===Math.floor(x/CHUNK)&&p.cz===Math.floor(z/CHUNK)),displayName=civicPoi?.name||shop.name,civic=CIVIC_SERVICE_TYPES.has(type);
  const resolved=resolveBuildingSpot(key,x,z,10.7,10.7,bx0,bz0);if(!resolved){console.warn('No safe shop parcel',key,type);return false}x=resolved.x;z=resolved.z;
  const entrance=chooseAccessibleEntrance(key,x,z,10,9,bx0,bz0,parcel?.face||null);if(!entrance)return false;
  const group=new THREE.Group();
- const paris=state.cityId==='paris',shopColor={corner:0x5f3b32,bakery:0x7b5a3d,butcher:0x6f3936,restaurant:0x6a4034,cafe:0x7a4337,pharmacy:0x436a57,florist:0x4f6a47,hairdresser:0x6c4865,gear:0x3e5061,rare:0x51466b,pawn:0x405d62,home:0x5e5148,housing:0x6d674e,clothes:0x694858,school:0x4d5d74,jobcenter:0x6f6146,clinic:0x4e6c64}[type]||0x53606a;
+ const paris=state.cityId==='paris',shopColor={corner:0x5f3b32,bakery:0x7b5a3d,butcher:0x6f3936,restaurant:0x6a4034,cafe:0x7a4337,pharmacy:0x436a57,florist:0x4f6a47,hairdresser:0x6c4865,gear:0x3e5061,rare:0x51466b,pawn:0x405d62,home:0x5e5148,housing:0x6d674e,clothes:0x694858,school:0x4d5d74,jobcenter:0x6f6146,clinic:0x4e6c64,policeStation:0x344f72,fireStation:0x8a3b32,townhall:0x736a58,bank:0x4a626b,postoffice:0x6d5151,library:0x526078}[type]||0x53606a;
  const bodyMat=paris?makeSolidFacadeMaterial(g,districtFor(Math.floor(x/CHUNK),Math.floor(z/CHUNK))):new THREE.MeshStandardMaterial({color:shopColor,roughness:.66,metalness:.05});
- const shopH=paris?15.2+r()*5.0:7.2;
+ const shopH=civic?(paris?17.0+r()*4.5:10.8+r()*2.2):(paris?15.2+r()*5.0:7.2);
  const body=new THREE.Mesh(new THREE.BoxGeometry(10,shopH,9),bodyMat);body.position.y=shopH/2;body.castShadow=false;body.receiveShadow=true;body.userData.sqShadowCaster=true;group.add(body);
  const roof=new THREE.Mesh(new THREE.BoxGeometry(10.1,.80,9.1),new THREE.MeshStandardMaterial({color:0x343940,roughness:.88}));roof.position.y=shopH+.40;roof.castShadow=false;roof.userData.sqShadowCaster=true;group.add(roof);
  if(paris){for(const yy of [4.15,10.0]){if(yy>=shopH-.8)continue;const band=new THREE.Mesh(new THREE.BoxGeometry(10.16,.12,9.16),new THREE.MeshStandardMaterial({color:0xb5a995,roughness:.92}));band.position.y=yy;group.add(band)}}
@@ -1930,12 +2098,12 @@ function addShop(g,key,x,z,r,forcedType=null,parcel=null){
  const shopDoor=new THREE.Mesh(new THREE.PlaneGeometry(1.12,2.42),new THREE.MeshStandardMaterial({color:0x49362b,roughness:.82,side:THREE.DoubleSide}));shopDoor.position.set(2.42,1.24,-4.685);shopDoor.rotation.y=Math.PI;group.add(shopDoor);
  const awningColor=type==='corner'?0x8f2f2f:type==='bakery'?0x8b5b2d:type==='butcher'?0x8a3030:type==='restaurant'?0x7f3c30:type==='cafe'?0x7c2d2d:type==='pharmacy'?0x2f7355:type==='florist'?0x3b7a44:type==='hairdresser'?0x864c78:type==='gear'?0x3e5d72:type==='housing'?0x7d5e3f:type==='pawn'?0x5b6d62:type==='clothes'?0x8b3d55:0x6a4c38;
  const awning=new THREE.Mesh(new THREE.BoxGeometry(7.1,.20,1.05),new THREE.MeshStandardMaterial({color:awningColor,roughness:.78}));awning.position.set(0,3.55,-4.84);group.add(awning);
- const sign=makeFacadeSign(`${shop.icon} ${shop.name}`,'#fff1cf');sign.position.set(0,4.26,-4.55);group.add(sign);
+ const sign=makeFacadeSign(`${shop.icon} ${displayName}`,'#fff1cf');sign.position.set(0,4.26,-4.55);group.add(sign);
  for(const sx of [-4.25,4.25]){const planter=new THREE.Mesh(new THREE.BoxGeometry(.66,.45,.64),new THREE.MeshStandardMaterial({color:0x4a433b,roughness:.95}));planter.position.set(sx,.23,-4.92);group.add(planter);const plant=new THREE.Mesh(new THREE.SphereGeometry(.40,9,7),new THREE.MeshStandardMaterial({color:0x527649,roughness:.96}));plant.position.set(sx,.72,-4.92);group.add(plant)}
  group.rotation.y=entrance.face==='south'?0:entrance.face==='north'?Math.PI:entrance.face==='west'?Math.PI/2:-Math.PI/2;group.position.set(x,0,z);g.add(group);
  const side=entrance.face==='west'||entrance.face==='east';const worldW=side?9:10,worldD=side?10:9;colliders.push({key,minX:x-worldW/2-.34,maxX:x+worldW/2+.34,minZ:z-worldD/2-.34,maxZ:z+worldD/2+.34,type:'shop'});
- shops.push({key,x,z,type,group,door:{x:entrance.outX,z:entrance.outZ},entranceFace:entrance.face});registerEntranceZone(key,entrance,`${key}:shop:${type}`);
- const sid=`${state.cityId}:${Math.round(x)}:${Math.round(z)}:${type}`;if(!state.discoveredShops.some(s=>s.id===sid))state.discoveredShops.push({id:sid,cityId:state.cityId,x:entrance.outX,z:entrance.outZ,type});return true
+ shops.push({key,x,z,type,displayName,group,door:{x:entrance.outX,z:entrance.outZ},entranceFace:entrance.face});registerEntranceZone(key,entrance,`${key}:shop:${type}`);
+ const sid=`${state.cityId}:${Math.round(x)}:${Math.round(z)}:${type}`;if(!state.discoveredShops.some(s=>s.id===sid))state.discoveredShops.push({id:sid,cityId:state.cityId,x:entrance.outX,z:entrance.outZ,type,name:displayName});return true
 }
 function addApartmentDoor(g,key,x,z,dep){/* V12: replaced by physical property entrances */}
 function addContainer(g,key,id,x,z,type){const mesh=new THREE.Mesh(type==='bin'?new THREE.CylinderGeometry(.42,.48,.9,10):new THREE.BoxGeometry(.9,.55,.65),new THREE.MeshStandardMaterial({color:type==='bin'?0x335d45:0x74572e}));mesh.position.set(x,type==='bin'?.45:.28,z);mesh.userData={key,id,type};g.add(mesh);containers.push(mesh)}
@@ -1992,12 +2160,13 @@ function createPerson(role,key,x,z,r,path=null){
    key,group,role,hostile,isPolice,
    axis:path?.axis||(r()<.5?'x':'z'),pathMin:path?.min??null,pathMax:path?.max??null,
    route:path?.route||null,routeIndex:path?.routeIndex||0,
-   speed:.55+r()*.55,dir:r()<.5?-1:1,home:{x,z},
+   speed:.55+r()*.55,baseSpeed:0,dir:r()<.5?-1:1,home:{x,z},
    money:hasCash?Math.max(1,Math.round((2+r()*42)*socio.cashMult)):0,pocketItems,occupation,
    legs:[l1,l2],arms:[a1,a2],phase:r()*6.2,scheduleRoll:r(),
    name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),
    missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false,following:false,trust:.25+r()*.7,courage:.2+r()*.75,followDoubt:r()*.55,routeStuck:0,followStuck:0,lastSafe:{x,z},talking:false
  };
+ n.baseSpeed=n.speed;n.lifeAnchors=makeNpcLifeAnchors(n,r);n.householdSize=1+Math.floor(r()*4);n.habit=NPC_HABITS[Math.floor(r()*NPC_HABITS.length)];n.commuteMode=r()<.42?'à pied':r()<.76?'en transports':'en véhicule';n.lifePhase=npcLifePhase(n,state.timeOfDay);
  n.npcId=`${state.cityId}:${key}:${Math.round(x*10)}:${Math.round(z*10)}:${n.name}`;
  if(role==='civilian')group.visible=v20CivilianVisible(n,state.timeOfDay);
  group.traverse(o=>{o.userData.person=n});
@@ -2157,26 +2326,29 @@ function moveEntity(n,dx,dz,pad=.34){
 // V22.2.1 HOTFIX — restored helpers accidentally removed during the V22.2 bus-camera refactor.
 function spendFromFunds(amount){amount=Math.max(0,Math.round(amount));if((state.homeBank+state.coins)<amount)return false;const fromBank=Math.min(state.homeBank,amount);state.homeBank-=fromBank;state.coins-=amount-fromBank;return true}
 function processMonthlyFinances(){
- let income=0,expense=0,taxes=0,events=[];
- for(const c of Object.values(state.companies)){if(c.sector==='private'){const revenue=Math.round(c.monthlyNpcRevenue*(.82+Math.random()*.35));const costs=Math.round(c.npcWorkers*24);c.cash=Math.max(0,c.cash+revenue-costs)}}
- const npcTaxes=1600+Math.round(Math.random()*800);state.cityTreasury+=npcTaxes;events.push(`impôts PNJ +${npcTaxes} ville`);
+ let income=0,expense=0,taxes=0,events=[];const eco=cityEconomy(),prof=laborProfile();
+ const consumerBoost=clamp(1+(eco.turnover||0)/1800,.92,1.22);eco.businessIndex=clamp((eco.businessIndex||1)*.70+consumerBoost*.30,.82,1.22);
+ for(const c of Object.values(state.companies)){if(c.sector==='private'){const revenue=Math.round(c.monthlyNpcRevenue*eco.businessIndex*(.88+Math.random()*.25));const costs=Math.round(c.npcWorkers*25);c.cash=Math.max(0,c.cash+revenue-costs)}}
+ eco.lastMonthTurnover=eco.turnover||0;eco.turnover=0;eco.transactions=0;eco.unemployment=clamp((eco.unemployment??prof.unemployment)*.72+prof.unemployment*.28+(1-eco.businessIndex)*.018,.035,.145);
+ eco.priceIndex=clamp((eco.priceIndex||prof.priceIndex)*.82+prof.priceIndex*.18+(eco.businessIndex-1)*.015,.88,1.18);
+ const npcTaxes=Math.round(760+eco.businessIndex*420+(1-eco.unemployment)*310);eco.publicBudget=(eco.publicBudget||3800)+npcTaxes;state.cityTreasury=eco.publicBudget;events.push(`recettes publiques +${npcTaxes}`);
  const rentRec=state.propertyPortfolio.find(p=>p.id===state.residenceId&&p.tenure==='rent');
  if(rentRec){if(spendFromFunds(rentRec.rent)){expense+=rentRec.rent;state.missedRent=0;events.push(`loyer -${rentRec.rent}`)}else{state.missedRent=(state.missedRent||0)+1;events.push('loyer IMPAYÉ');if(state.missedRent>=2){state.propertyPortfolio=state.propertyPortfolio.filter(p=>p.id!==rentRec.id);state.residenceId=null;state.missedRent=0;events.push('expulsion')}}}
  let rentalIncome=0;
  for(const rec of state.propertyPortfolio.filter(p=>p.tenure==='owned'&&p.listed)){
-   const market=rec.marketRent||rec.rent||40,ratio=(rec.askingRent||market)/market;
-   if(!rec.tenant){const chance=clamp((rec.demand||1)*(1.28-ratio)*.78,.08,.90);if(Math.random()<chance){rec.tenant=true;events.push(`locataire trouvé : ${rec.label||'bien'}`)}}
-   if(rec.tenant){if(ratio>1.42&&Math.random()<.30){rec.tenant=false;events.push(`locataire parti : ${rec.label||'bien'}`)}else{const got=rec.askingRent||market;rentalIncome+=got}}
+  const market=rec.marketRent||rec.rent||40,ratio=(rec.askingRent||market)/market;
+  if(!rec.tenant){const chance=clamp((rec.demand||1)*(1.28-ratio)*.78*(1-eco.unemployment*.55),.06,.90);if(Math.random()<chance){rec.tenant=true;events.push(`locataire trouvé : ${rec.label||'bien'}`)}}
+  if(rec.tenant){if(ratio>1.42&&Math.random()<.30){rec.tenant=false;events.push(`locataire parti : ${rec.label||'bien'}`)}else rentalIncome+=rec.askingRent||market}
  }
  if(state.job){
-   const j=JOB_DEFS[state.job.id],gross=j.salary;let paid=0;
-   if(j.sector==='public'){paid=Math.min(gross,state.cityTreasury);state.cityTreasury-=paid;if(paid<gross)events.push('⚠️ salaire public partiellement payé')}
-   else{const c=state.companies[j.company];paid=Math.min(gross,c?.cash||0);if(c)c.cash-=paid;if(paid<gross)events.push(`⚠️ ${c?.name||'employeur'} manque de trésorerie`)}
-   const tax=progressiveTax(paid+rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;state.cityTreasury+=tax;
-   const net=Math.max(0,paid-tax);state.homeBank+=net;income+=net;state.salaryHistory.push({month:state.gameMonth,gross:paid,tax,net,job:j.name});state.salaryHistory=state.salaryHistory.slice(-12);events.push(`salaire net +${net}`)
- }else if(rentalIncome){const tax=progressiveTax(rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;state.cityTreasury+=tax;state.homeBank+=rentalIncome-tax;income+=rentalIncome-tax}
+  const j=JOB_DEFS[state.job.id],gross=j.salary;let paid=0;
+  if(j.sector==='public'){paid=Math.min(gross,eco.publicBudget||0);eco.publicBudget=Math.max(0,(eco.publicBudget||0)-paid);state.cityTreasury=eco.publicBudget;if(paid<gross)events.push('⚠️ salaire public partiellement payé')}
+  else{const c=state.companies[j.company];paid=Math.min(gross,c?.cash||0);if(c)c.cash-=paid;if(paid<gross)events.push(`⚠️ ${c?.name||'employeur'} manque de trésorerie`)}
+  const tax=progressiveTax(paid+rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;eco.publicBudget=(eco.publicBudget||0)+tax;state.cityTreasury=eco.publicBudget;
+  const net=Math.max(0,paid-tax);state.homeBank+=net;income+=net;state.salaryHistory.push({month:state.gameMonth,gross:paid,tax,net,job:j.name,euroReference:j.euroNet});state.salaryHistory=state.salaryHistory.slice(-12);events.push(`salaire net +${net}`)
+ }else if(rentalIncome){const tax=progressiveTax(rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;eco.publicBudget=(eco.publicBudget||0)+tax;state.homeBank+=rentalIncome-tax;income+=rentalIncome-tax}
  if(state.job&&rentalIncome){state.homeBank+=rentalIncome;income+=rentalIncome}
- state.monthlyLedger=`Mois ${state.gameMonth} : +${income} / -${expense} • impôts ${taxes}${events.length?' • '+events.join(' • '):''}`;
+ state.monthlyLedger=`Mois ${state.gameMonth} : +${income} / -${expense} • impôts ${taxes} • chômage local ${(eco.unemployment*100).toFixed(1)} %${events.length?' • '+events.join(' • '):''}`;
  toast(`📅 ${state.monthlyLedger}`);save()
 }
 function advanceDay(days=1){for(let i=0;i<days;i++){state.gameDay=(state.gameDay||1)+1;if(state.gameDay>30){state.gameDay=1;state.gameMonth=(state.gameMonth||1)+1;processMonthlyFinances()}}}
@@ -2459,6 +2631,7 @@ function callNearbyPolice(n,t){
 function updatePeople(dt,t){
  policeSeeing=false;
  for(const n of npcs){
+   n.lifePhase=npcLifePhase(n,state.timeOfDay);const baseSpeed=n.baseSpeed||n.speed;const phaseSpeed=n.lifePhase==='commute'?1.22:n.lifePhase==='leisure'?.82:n.lifePhase==='lunch'?.90:1;n.speed=baseSpeed*phaseSpeed;
    const scheduled=v20CivilianVisible(n,state.timeOfDay);
    const dPlayer=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
    const essential=n.talking||n.following||n.aggroTime>0||selectedNPC===n||tailTheft?.npc===n;
@@ -2472,9 +2645,9 @@ function updatePeople(dt,t){
      if(dist>3.6){endNpcConversation(n);patrolPerson(n,dt)}else{setHeading(n,dx,dz);walking=false}
    }else if(n.aggroTime>0) updateAngryCivilian(n,dt,t);
    else if(n.following) updateFollower(n,dt);
-   else patrolPerson(n,dt);
+   else{const routine=updateNpcDailyRoutine(n,dt);if(routine==='patrol')patrolPerson(n,dt);walking=routine!=='idle'}
    const swing=walking?Math.sin(t*.006*n.speed+n.phase)*.55:0;n.legs[0].rotation.x=swing;n.legs[1].rotation.x=-swing;
-   if(n.arms){n.arms[0].rotation.x=-swing*.7;n.arms[1].rotation.x=swing*.7}
+   if(n.arms){n.arms[0].rotation.x=-swing*.7;n.arms[1].rotation.x=swing*.7}n.speed=baseSpeed;
  }
  for(const n of enemies){
    const dx=state.pos.x-n.group.position.x,dz=state.pos.z-n.group.position.z,dist=Math.hypot(dx,dz);
@@ -2608,7 +2781,7 @@ function checkInteraction(){
    if(state.interior.type==='shop'){
      if(interiorSeller?.group?.parent){
        const d=Math.hypot(state.pos.x-interiorSeller.group.position.x,state.pos.z-interiorSeller.group.position.z);
-       if(d<3.05)return setPrompt(interiorSeller.name,`${interiorSeller.role} • ${SHOPS[state.interior.shopType].name}`,'PARLER',()=>openSheet('physicalShop'))
+       if(d<3.05)return setPrompt(interiorSeller.name,`${interiorSeller.role} • ${state.interior.shopName||SHOPS[state.interior.shopType].name}`,'PARLER',()=>openSheet('physicalShop'))
      }
      return hidePrompt()
    }
@@ -2640,7 +2813,7 @@ function checkInteraction(){
  const bs=nearest(busStops,2.4);if(bs)return setPrompt(`🚏 ${bs.name}`,`${bs.lines.join(' • ')} • ${TRANSIT_NETWORKS[state.cityId]?.label||'transport local'}`,'TRANSPORT',()=>openBusStop(bs));
  const workShop=nearestWorkShop();
  if(workShop)return setPrompt('💼 Mission professionnelle',state.workMission.text,'TRAVAILLER',completeWorkMission);
- const s=shops.reduce((b,x)=>{const d=Math.hypot(state.pos.x-x.door.x,state.pos.z-x.door.z);return !b||d<b.d?{x,d}:b},null);if(s&&s.d<1.8)return setPrompt(SHOPS[s.x.type].name,'Entrer dans le bâtiment.','ENTRER',()=>enterInterior('shop',s.x));
+ const s=shops.reduce((b,x)=>{const d=Math.hypot(state.pos.x-x.door.x,state.pos.z-x.door.z);return !b||d<b.d?{x,d}:b},null);if(s&&s.d<1.8){const nm=s.x.displayName||SHOPS[s.x.type].name;if(!shopIsOpen(s.x.type))return setPrompt(nm,`Fermé • horaires ${shopHoursLabel(s.x.type)}.`,'FERMÉ',()=>toast(`${nm} est fermé.`));return setPrompt(nm,`Ouvert • ${shopHoursLabel(s.x.type)}.`,'ENTRER',()=>enterInterior('shop',s.x))}
 
  const pr=nearest(properties,1.75);
  if(pr){
@@ -2701,8 +2874,8 @@ function talkNPC(n){
 }
 function showNpcChoices(n){
  startNpcConversation(n);$('#dialogue').classList.add('hidden');openSheet('npc');$('#sheetTitle').textContent=n.name;
- const known=npcOccupationKnown(n),occ=n.occupation?.title||'Habitant',employer=n.occupation?.employer;
- $('#sheetBody').innerHTML=`<div class="card npcProfile"><div class="sectionKicker">RENCONTRE</div><h3>${n.name}</h3><p class="sub">${known?`💼 ${occ}${employer?` • ${employer}`:''}`:'💼 Métier : inconnu — demande-lui.'}</p></div><div class="card"><div class="grid2">
+ const known=npcOccupationKnown(n),occ=n.occupation?.title||'Habitant',employer=n.occupation?.employer,phase=npcLifePhase(n,state.timeOfDay),pcs=n.occupation?.category&&PCS_LABELS[n.occupation.category];
+ $('#sheetBody').innerHTML=`<div class="card npcProfile"><div class="sectionKicker">RENCONTRE • ${npcLifePhaseLabel(phase).toUpperCase()}</div><h3>${n.name}</h3><p class="sub">${known?`💼 ${occ}${employer?` • ${employer}`:''}${pcs?`<br>${pcs}`:''}<br>🏠 Foyer de ${n.householdSize||1} pers. • trajet ${n.commuteMode||'à pied'}<br>Habitude : ${n.habit||'se promener'}`:'💼 Métier : inconnu — demande-lui.'}</p></div><div class="card"><div class="grid2">
  <button class="menuBtn" id="talkAgain">💬 Discuter</button>
  <button class="menuBtn" id="askOccupation" ${known?'disabled':''}>💼 ${known?'Métier connu':'Tu fais quoi ?'}</button>
  <button class="menuBtn" id="askFollow" ${n.caught||n.following?'disabled':''}>🚶 Suis-moi</button>
@@ -2710,7 +2883,7 @@ function showNpcChoices(n){
  <button class="menuBtn" id="pickpocket" ${n.pickpocketed||n.caught?'disabled':''}>🫳 Cibler discrètement</button>
  </div></div>`;
  $('#talkAgain').onclick=()=>{closeSheet();startNpcConversation(n);showDialogue(n.name,'Ça fait plaisir de discuter un peu.',hideDialogue)};
- const ao=$('#askOccupation');if(ao)ao.onclick=()=>{learnNpcOccupation(n);closeSheet();startNpcConversation(n);showDialogue(n.name,`Je travaille comme ${occ}${employer?` chez ${employer}`:''}.`,()=>showNpcChoices(n))};
+ const ao=$('#askOccupation');if(ao)ao.onclick=()=>{learnNpcOccupation(n);closeSheet();startNpcConversation(n);showDialogue(n.name,`${n.occupation?.status==='unemployed'?'Je cherche du travail':n.occupation?.status==='retired'?'Je suis à la retraite':n.occupation?.status==='student'?'Je suis étudiant':`Je travaille comme ${occ}${employer?` chez ${employer}`:''}`}. En ce moment : ${npcLifePhaseLabel(npcLifePhase(n,state.timeOfDay)).toLowerCase()}.`,()=>showNpcChoices(n))};
  const af=$('#askFollow');if(af)af.onclick=()=>askFollow(n);
  const am=$('#askMission');if(am)am.onclick=()=>{closeSheet();startNpcConversation(n);if(n.missionGiven)return showDialogue(n.name,'Je n’ai rien d’autre pour le moment.',hideDialogue);n.missionGiven=true;assignNpcMission(n);showDialogue(n.name,`J’ai un petit boulot : ${state.activeNpcMission.text}`,hideDialogue)};
  const pp=$('#pickpocket');if(pp)pp.onclick=()=>{endNpcConversation(n);closeSheet();selectTarget(n);toast('Cible sélectionnée.')}
@@ -2836,10 +3009,11 @@ function hideDialogue(){$('#dialogue').classList.add('hidden');endNpcConversatio
 const SHOP_STAFF={
  corner:{name:'Maya',role:'vendeuse'},gear:{name:'Karim',role:'mécanicien'},rare:{name:'Léo',role:'vendeur'},pawn:{name:'Nora',role:'responsable revente'},
  home:{name:'Clara',role:'conseillère'},housing:{name:'Sophie',role:'conseillère immobilière'},clothes:{name:'Inès',role:'vendeuse'},
- school:{name:'Mme Martin',role:'accueil du campus'},jobcenter:{name:'Yanis',role:'conseiller emploi'},clinic:{name:'Camille',role:'agent d’accueil'}
+ school:{name:'Mme Martin',role:'accueil'},jobcenter:{name:'Yanis',role:'conseiller emploi'},clinic:{name:'Camille',role:'agent d’accueil hospitalier'},
+ policeStation:{name:'Agent Laurent',role:'accueil du commissariat'},fireStation:{name:'Sergent Diallo',role:'sapeur-pompier'},townhall:{name:'Élodie',role:'agent municipal'},bank:{name:'Nicolas',role:'conseiller bancaire'},postoffice:{name:'Amel',role:'chargée de clientèle'},library:{name:'Claire',role:'bibliothécaire'}
 };
 function buildShopSeller(type){
- const s=SHOP_STAFF[type]||{name:'Alex',role:'vendeur'};const palette={housing:'#6d8061',pawn:'#426e7a',corner:'#396c5a',clothes:'#785478',gear:'#586778',clinic:'#52796d',school:'#536e93',jobcenter:'#806f4b'};
+ const s=SHOP_STAFF[type]||{name:'Alex',role:'vendeur'};const palette={housing:'#6d8061',pawn:'#426e7a',corner:'#396c5a',clothes:'#785478',gear:'#586778',clinic:'#52796d',school:'#536e93',jobcenter:'#806f4b',policeStation:'#315477',fireStation:'#8b4037',townhall:'#716856',bank:'#48626d',postoffice:'#745356',library:'#56677d'};
  const avatar={...AVATAR_DEFAULT,top:palette[type]||'#526b7d',pants:'#252d35',hair:'#32251f',hairStyle:type==='clothes'?'long':'short',build:'standard'};
  const g=buildRemoteAvatarMesh({name:s.name,avatar});g.position.set(0,0,-7.25);g.rotation.y=Math.PI; // V20: seller faces +Z, i.e. the counter/customer side.
  interiorGroup.add(g);interiorSeller={group:g,name:s.name,role:s.role,type}
@@ -2865,7 +3039,7 @@ function addInteriorExitDoor(width,depth){
 
 function enterInterior(type,obj,opts={}){
  if(!opts.preserveReturn&&!state.interior)state.returnPos={...state.pos};
- state.interior={type,shopType:obj?.type||null,propertyId:type==='property'?obj?.id:null,returnTo:opts.returnTo||null};
+ state.interior={type,shopType:obj?.type||null,shopName:type==='shop'?(obj?.displayName||obj?.name||SHOPS[obj?.type]?.name||null):null,propertyId:type==='property'?obj?.id:null,returnTo:opts.returnTo||null};
  interiorColliders=[];interiorSeller=null;for(const[,g]of chunks)g.visible=false;
  if(interiorGroup)scene.remove(interiorGroup);interiorGroup=new THREE.Group();scene.add(interiorGroup);
 
@@ -2918,13 +3092,13 @@ function buildPropertyInterior(p){
 }
 
 function buildShopInterior(type){
- const service=['housing','school','jobcenter','clinic'].includes(type);const shelfM=new THREE.MeshStandardMaterial({color:0x574536,roughness:.92});
+ const service=CIVIC_SERVICE_TYPES.has(type);const shelfM=new THREE.MeshStandardMaterial({color:0x574536,roughness:.92});
  const rug=new THREE.Mesh(new THREE.PlaneGeometry(13.8,12.6),new THREE.MeshStandardMaterial({color:service?0x56616a:0x665747,roughness:1}));rug.rotation.x=-Math.PI/2;rug.position.y=.018;interiorGroup.add(rug);
  if(!service){for(let i=-1;i<=1;i++){const s=new THREE.Mesh(new THREE.BoxGeometry(1.65,1.85,4.7),shelfM);s.position.set(i*4.2,1,0);interiorGroup.add(s);interiorColliders.push({minX:i*4.2-.88,maxX:i*4.2+.88,minZ:-2.4,maxZ:2.4})}}
  else{for(const x of [-4,4]){const seat=new THREE.Mesh(new THREE.BoxGeometry(2.0,.55,.75),new THREE.MeshStandardMaterial({color:0x697781,roughness:.9}));seat.position.set(x,.32,1.2);interiorGroup.add(seat);interiorColliders.push({minX:x-1.05,maxX:x+1.05,minZ:.75,maxZ:1.65})}}
  const counter=new THREE.Mesh(new THREE.BoxGeometry(5.4,1.22,1.25),new THREE.MeshStandardMaterial({color:0x3f3228,roughness:.82}));counter.position.set(0,.61,-6);interiorGroup.add(counter);interiorColliders.push({minX:-2.75,maxX:2.75,minZ:-6.68,maxZ:-5.32});
  const top=new THREE.Mesh(new THREE.BoxGeometry(5.7,.10,1.4),new THREE.MeshStandardMaterial({color:0xc5a477,roughness:.56}));top.position.set(0,1.25,-6);interiorGroup.add(top);
- const sign=makeSign(`${SHOPS[type].icon} ${SHOPS[type].name}`,'#ffe3ae');sign.position.set(0,3,-8.5);interiorGroup.add(sign);
+ const sign=makeSign(`${SHOPS[type].icon} ${state.interior?.shopName||SHOPS[type].name}`,'#ffe3ae');sign.position.set(0,3,-8.5);interiorGroup.add(sign);
  const warm=new THREE.PointLight(0xffcc8a,service?5.5:6.2,18,2);warm.position.set(0,4.1,-2.0);interiorGroup.add(warm);
  buildShopSeller(type);
  // V20: visible customers face the counter. Local avatar front is -Z, so yaw 0 from the customer side is correct.
@@ -2985,91 +3159,69 @@ function leaveInterior(){
  syncInteriorPresence(false);if(mpSocket?.connected)mpSocket.emit('player:move',{city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,interior:false});
  save();hidePrompt()
 }
+const SHOP_HOURS={
+ corner:[7,22],bakery:[6,19],butcher:[8,19],restaurant:[11,23.5],cafe:[7,22],pharmacy:[8,20],florist:[9,19],hairdresser:[9,19],gear:[8,18],rare:[10,19],pawn:[10,19],home:[9,19],housing:[9,18],clothes:[10,20],school:[8,18],jobcenter:[8.5,17.5],townhall:[8.5,17],bank:[9,17.5],postoffice:[8.5,18],library:[9,19],clinic:[0,24],policeStation:[0,24],fireStation:[0,24]
+};
+function shopHoursLabel(type){const h=SHOP_HOURS[type]||[8,20];if(h[0]===0&&h[1]===24)return'24 h/24';const f=v=>`${String(Math.floor(v)).padStart(2,'0')}:${v%1?'30':'00'}`;return`${f(h[0])}–${f(h[1])}`}
+function shopIsOpen(type,h=state.timeOfDay){const hrs=SHOP_HOURS[type]||[8,20],day=(absoluteGameDay()-1)%7;if(['clinic','policeStation','fireStation'].includes(type))return true;if(day===6&&['school','jobcenter','townhall','bank','postoffice'].includes(type))return false;return hourInRange(h,hrs[0],hrs[1])}
+function serviceBuildingHTML(type){const name=state.interior?.shopName||SHOPS[type].name,eco=cityEconomy();if(type==='clinic')return`<div class="card"><div class="sectionKicker">SERVICE PUBLIC DE SANTÉ</div><h3>🏥 ${name}</h3><p class="sub">Urgences ouvertes 24 h/24. L’établissement emploie médecins, infirmiers, aides-soignants, agents administratifs et techniques.</p><button class="menuBtn primary hospitalCare" style="width:100%">🩺 Consultation d’urgence • 12 cr.</button></div>`;if(type==='policeStation')return`<div class="card"><div class="sectionKicker">SÉCURITÉ PUBLIQUE</div><h3>👮 ${name}</h3><p class="sub">Accueil 24 h/24 • patrouilles et police-secours. Niveau de recherche actuel : <b>${state.wanted||0}</b>.</p>${state.wanted?`<button class="menuBtn policeSettle" style="width:100%">Se présenter et régler la situation</button>`:'<span class="qualification done">Aucune recherche en cours</span>'}</div>`;if(type==='fireStation')return`<div class="card"><div class="sectionKicker">SECOURS</div><h3>🚒 ${name}</h3><p class="sub">Caserne opérationnelle 24 h/24 : incendie, secours à personne et accidents. Le métier de sapeur-pompier est accessible après la formation dédiée.</p></div>`;if(type==='townhall')return`${societyDashboardHTML()}<div class="card"><h3>🏛️ ${name}</h3><p class="sub">État civil, services municipaux, voirie et administration de la ville.</p></div>`;if(type==='bank')return`<div class="card"><div class="sectionKicker">BANQUE</div><h3>🏦 ${name}</h3><p class="sub">Compte : <b>${state.homeBank}</b> crédits • portefeuille : ${state.coins}.</p><div class="grid2"><button class="menuBtn bankDeposit">Déposer 50</button><button class="menuBtn bankWithdraw">Retirer 50</button></div></div>`;if(type==='postoffice')return`<div class="card"><div class="sectionKicker">SERVICE POSTAL</div><h3>📮 ${name}</h3><p class="sub">Courrier, colis et services de proximité.</p><button class="menuBtn postalParcel" style="width:100%">📦 Envoyer un colis • 5 cr.</button></div>`;if(type==='library')return`<div class="card"><div class="sectionKicker">CULTURE & ÉTUDE</div><h3>📚 ${name}</h3><p class="sub">Bibliothèque publique. Étudier ici fait avancer l’heure sans faire passer une journée entière.</p><button class="menuBtn libraryStudy" style="width:100%">📖 Étudier 2 heures</button></div>`;return''}
+function societyDashboardHTML(){const eco=cityEconomy(),p=laborProfile(),vac=jobVacanciesForCity();return`<div class="card"><div class="sectionKicker">ÉCONOMIE DE ${city().name.toUpperCase()}</div><h3>🏙️ Tableau de bord local</h3><p class="sub">Chômage simulé : <b>${(eco.unemployment*100).toFixed(1)} %</b> • activité des entreprises : <b>${Math.round(eco.businessIndex*100)} %</b> • indice des prix : <b>${eco.priceIndex.toFixed(2)}</b><br>Budget public : <b>${Math.round(eco.publicBudget||0)}</b> cr. • transactions du mois : ${eco.transactions||0}</p><p class="sub">Repère national INSEE 2024 : ${societyLaborSummary()}.</p><p class="sub">${vac.length} types de postes actuellement visibles à la Maison de l’Emploi.</p></div>`}
+function hospitalCare(){const price=12;if(state.coins<price)return toast(`Consultation : ${price} crédits.`);state.coins-=price;state.hp=state.maxHp;state.hygiene=clamp(state.hygiene+8,0,100);recordBusinessTransaction(price,'clinic');save();toast('🏥 Soins effectués.');openSheet('physicalShop')}
+function settlePoliceSituation(){if(!state.wanted)return;const fine=Math.min(state.coins,Math.max(15,20+state.wanted*18));state.coins-=fine;state.wanted=0;save();toast(`👮 Situation régularisée • ${fine} crédits.`);openSheet('physicalShop')}
+function bankTransfer(dir){const amount=50;if(dir==='deposit'){if(state.coins<amount)return toast('Pas assez de crédits sur toi.');state.coins-=amount;state.homeBank+=amount}else{if(state.homeBank<amount)return toast('Solde insuffisant.');state.homeBank-=amount;state.coins+=amount}save();openSheet('physicalShop')}
+function sendPostalParcel(){if(state.coins<5)return toast('Il faut 5 crédits.');state.coins-=5;state.reputation=(state.reputation||0)+1;recordBusinessTransaction(5,'postoffice');advanceGameMinutes(20);save();toast('📮 Colis envoyé • +1 réputation.');openSheet('physicalShop')}
+function studyAtLibrary(){state.studyHours=(state.studyHours||0)+2;advanceGameMinutes(120);state.hunger=clamp(state.hunger-3,0,100);state.thirst=clamp(state.thirst-4,0,100);save();toast('📚 Deux heures d’étude effectuées.');openSheet('physicalShop')}
 function physicalShopHTML(){
- if(state.interior.shopType==='school')return `${schoolHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
- if(state.interior.shopType==='jobcenter')return `${employmentHTML()}${companyEconomyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
- if(state.interior.shopType==='clinic')return `<div class="card"><h3>🏥 Hôpital Horizon</h3><p class="sub">Établissement public. Les salariés formés peuvent y effectuer leurs missions.</p></div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
- const s=SHOPS[state.interior.shopType];
- if(state.interior.shopType==='housing')return `${housingAgencyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
- const valuables=state.inventory.filter(i=>STREET_ITEMS[i.id]&&i.qty>0);
- const resale=state.interior.shopType==='pawn'
-   ?`<div class="card"><h3>📦 Revente d’objets</h3>${valuables.length?valuables.map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty} • ${info.value} crédits pièce</small></div><button class="menuBtn sellLoot" data-id="${i.id}">Vendre</button></div>`}).join(''):'<p class="sub">Aucun objet revendable.</p>'}</div>`
-   :'';
- return `<div class="card"><h3>${s.icon} ${s.name}</h3><p class="sub">${state.coins} crédits${state.reputation?` • remise ${Math.min(15,state.reputation)}%`:''}</p></div>
- <div class="card">${s.stock.map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${x.price}</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`).join('')}</div>
- ${resale}
- <button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`
+ const type=state.interior.shopType,name=state.interior?.shopName||SHOPS[type]?.name||'Établissement';
+ if(!shopIsOpen(type))return`<div class="card"><div class="sectionKicker">FERMÉ</div><h3>${SHOPS[type]?.icon||'🏢'} ${name}</h3><p class="sub">Horaires habituels : ${shopHoursLabel(type)}.</p></div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ if(type==='school')return `${schoolHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ if(type==='jobcenter')return `${employmentHTML()}${companyEconomyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ if(['clinic','policeStation','fireStation','townhall','bank','postoffice','library'].includes(type))return `${serviceBuildingHTML(type)}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ const s=SHOPS[type];if(type==='housing')return `${housingAgencyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ const valuables=state.inventory.filter(i=>STREET_ITEMS[i.id]&&i.qty>0),mult=localPriceMultiplier();
+ const resale=type==='pawn'?`<div class="card"><h3>📦 Revente d’objets</h3>${valuables.length?valuables.map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty} • ${info.value} crédits pièce</small></div><button class="menuBtn sellLoot" data-id="${i.id}">Vendre</button></div>`}).join(''):'<p class="sub">Aucun objet revendable.</p>'}</div>`:'';
+ return `<div class="card"><h3>${s.icon} ${name}</h3><p class="sub">${state.coins} crédits • ouvert ${shopHoursLabel(type)}${state.reputation?` • remise ${Math.min(15,state.reputation)}%`:''}</p></div>
+ <div class="card">${s.stock.map(x=>{const pp=Math.max(1,Math.round(x.price*mult));return `<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${pp}</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`}).join('')}</div>${resale}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`
 }
-function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),finalPrice=Math.max(1,Math.round(price*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');if(COSMETIC_ITEMS[id]&&state.cosmeticsUnlocked.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;
- const svc=SERVICE_EFFECTS[id];
- if(svc){
-   if(svc.hp)state.hp=clamp(state.hp+svc.hp,0,state.maxHp);
-   if(svc.hunger)state.hunger=clamp(state.hunger+svc.hunger,0,100);
-   if(svc.thirst)state.thirst=clamp(state.thirst+svc.thirst,0,100);
-   if(svc.hygiene)state.hygiene=clamp(state.hygiene+svc.hygiene,0,100);
-   if(svc.reputation)state.reputation=Math.max(0,(state.reputation||0)+svc.reputation);
-   save();updateHUD();toast(svc.toast||'Service effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop();return;
- }
- if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(CONSUMABLES[id])addInv(id);if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(HOME_ITEMS[id])addHomeItem(id);
- if(COSMETIC_ITEMS[id]){
-   state.cosmeticsUnlocked.push(id);state.avatarVersion=(state.avatarVersion||1)+1;
-   const c=COSMETIC_ITEMS[id];
-   if(c.kind==='accessory')state.avatar.accessory=c.value;
-   if(c.kind==='top')state.avatar.top=c.value;
-   if(c.kind==='shoes')state.avatar.shoes=c.value;
-   if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload(),avatarVersion:state.avatarVersion})
- }
+function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),local=Math.max(1,Math.round(price*localPriceMultiplier())),finalPrice=Math.max(1,Math.round(local*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');if(COSMETIC_ITEMS[id]&&state.cosmeticsUnlocked.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;recordBusinessTransaction(finalPrice,state.interior?.shopType);
+ const svc=SERVICE_EFFECTS[id];if(svc){if(svc.hp)state.hp=clamp(state.hp+svc.hp,0,state.maxHp);if(svc.hunger)state.hunger=clamp(state.hunger+svc.hunger,0,100);if(svc.thirst)state.thirst=clamp(state.thirst+svc.thirst,0,100);if(svc.hygiene)state.hygiene=clamp(state.hygiene+svc.hygiene,0,100);if(svc.reputation)state.reputation=Math.max(0,(state.reputation||0)+svc.reputation);save();updateHUD();toast(svc.toast||'Service effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop();return}
+ if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(CONSUMABLES[id])addInv(id);if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(HOME_ITEMS[id])addHomeItem(id);if(COSMETIC_ITEMS[id]){state.cosmeticsUnlocked.push(id);state.avatarVersion=(state.avatarVersion||1)+1;const c=COSMETIC_ITEMS[id];if(c.kind==='accessory')state.avatar.accessory=c.value;if(c.kind==='top')state.avatar.top=c.value;if(c.kind==='shoes')state.avatar.shoes=c.value;if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload(),avatarVersion:state.avatarVersion})}
  save();updateHUD();toast(COSMETIC_ITEMS[id]?'Style acheté et équipé':'Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
-function sellLoot(id){
- const info=STREET_ITEMS[id];if(!info||!removeStack(state.inventory,id,1))return;
- state.coins+=info.value;save();toast(`${info.name} vendu : +${info.value}`);
- $('#sheetBody').innerHTML=physicalShopHTML();bindShop()
-}
+function sellLoot(id){const info=STREET_ITEMS[id];if(!info||!removeStack(state.inventory,id,1))return;state.coins+=info.value;recordBusinessTransaction(Math.max(1,Math.round(info.value*.15)),'pawn');save();toast(`${info.name} vendu : +${info.value}`);$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
 function bindShop(){
  $$('.enrollSchool').forEach(b=>b.onclick=()=>enrollSchool(b.dataset.id));const att=$('.attendSchool');if(att)att.onclick=attendSchoolDay;$$('.applyJob').forEach(b=>b.onclick=()=>applyJob(b.dataset.id));const qj=$('.quitJob');if(qj)qj.onclick=quitJob;
- $$('.inspectProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){selectedProperty=p;openSheet('property')}});
- $$('.agencyMapProperty').forEach(b=>b.onclick=()=>{const rec=portfolioRecord(b.dataset.id);if(rec)openPropertyOnMap(rec)});
- $$('.agencySetResidence').forEach(b=>b.onclick=()=>setResidence(b.dataset.id,'physicalShop'));
- $$('.agencyEndRental').forEach(b=>b.onclick=()=>endRental(b.dataset.id,'physicalShop'));
- $$('.agencyToggleListing').forEach(b=>b.onclick=()=>togglePropertyListing(b.dataset.id,'physicalShop'));
- $$('.agencyAdjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta),'physicalShop'));
- $$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));
- $$('.sellLoot').forEach(b=>b.onclick=()=>sellLoot(b.dataset.id));
- $$('.sellArtifact').forEach(b=>b.onclick=()=>sellArtifact(b.dataset.id));
- $('#leaveShop').onclick=()=>{closeSheet();leaveInterior()}
+ $$('.inspectProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){selectedProperty=p;openSheet('property')}});$$('.agencyMapProperty').forEach(b=>b.onclick=()=>{const rec=portfolioRecord(b.dataset.id);if(rec)openPropertyOnMap(rec)});$$('.agencySetResidence').forEach(b=>b.onclick=()=>setResidence(b.dataset.id,'physicalShop'));$$('.agencyEndRental').forEach(b=>b.onclick=()=>endRental(b.dataset.id,'physicalShop'));$$('.agencyToggleListing').forEach(b=>b.onclick=()=>togglePropertyListing(b.dataset.id,'physicalShop'));$$('.agencyAdjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta),'physicalShop'));
+ $$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));$$('.sellLoot').forEach(b=>b.onclick=()=>sellLoot(b.dataset.id));$$('.sellArtifact').forEach(b=>b.onclick=()=>sellArtifact(b.dataset.id));$('.hospitalCare')?.addEventListener('click',hospitalCare);$('.policeSettle')?.addEventListener('click',settlePoliceSituation);$('.bankDeposit')?.addEventListener('click',()=>bankTransfer('deposit'));$('.bankWithdraw')?.addEventListener('click',()=>bankTransfer('withdraw'));$('.postalParcel')?.addEventListener('click',sendPostalParcel);$('.libraryStudy')?.addEventListener('click',studyAtLibrary);$('#leaveShop')?.addEventListener('click',()=>{closeSheet();leaveInterior()})
 }
-
-
-
-
-function schoolHTML(){
- const cur=state.education?.current,completed=state.education?.completed||[];
- return `<div class="card"><h3>🎓 Campus Municipal</h3><p class="sub">Une journée de cours fait avancer le calendrier d’un jour. Le coût est payé à l’inscription.</p></div>
- ${cur?`<div class="card"><h3>${EDUCATION_PROGRAMS[cur.id].icon} ${EDUCATION_PROGRAMS[cur.id].name}</h3><p class="sub">Présence : ${cur.attended}/${EDUCATION_PROGRAMS[cur.id].days} jours</p><div class="progress"><i style="width:${cur.attended/EDUCATION_PROGRAMS[cur.id].days*100}%"></i></div><button class="menuBtn primary attendSchool" style="width:100%">📚 Suivre une journée de cours</button></div>`:''}
- ${Object.values(EDUCATION_PROGRAMS).map(p=>`<div class="card"><div class="lifeStat"><div><b>${p.icon} ${p.name}</b><small>${p.desc} • ${p.days} jours • ${p.cost} crédits</small></div>${completed.includes(p.id)?'<span class="qualification done">DIPLÔMÉ</span>':cur?'<span class="qualification">FORMATION EN COURS</span>':`<button class="menuBtn enrollSchool" data-id="${p.id}">S’inscrire</button>`}</div></div>`).join('')}`
-}
+function schoolHTML(){const cur=state.education?.current,completed=state.education?.completed||[],name=state.interior?.shopName||'Établissement scolaire';return `<div class="card"><h3>🎓 ${name}</h3><p class="sub">Une journée de cours fait avancer le calendrier d’un jour. Les parcours longs ouvrent les emplois plus rares et qualifiés.</p></div>${cur?`<div class="card"><h3>${EDUCATION_PROGRAMS[cur.id].icon} ${EDUCATION_PROGRAMS[cur.id].name}</h3><p class="sub">Présence : ${cur.attended}/${EDUCATION_PROGRAMS[cur.id].days} jours</p><div class="progress"><i style="width:${cur.attended/EDUCATION_PROGRAMS[cur.id].days*100}%"></i></div><button class="menuBtn primary attendSchool" style="width:100%">📚 Suivre une journée de cours</button></div>`:''}${Object.values(EDUCATION_PROGRAMS).map(p=>`<div class="card"><div class="lifeStat"><div><b>${p.icon} ${p.name}</b><small>${p.desc} • ${p.days} jours • ${p.cost} crédits</small></div>${completed.includes(p.id)?'<span class="qualification done">DIPLÔMÉ</span>':cur?'<span class="qualification">FORMATION EN COURS</span>':`<button class="menuBtn enrollSchool" data-id="${p.id}">S’inscrire</button>`}</div></div>`).join('')}`}
 function enrollSchool(id){const p=EDUCATION_PROGRAMS[id];if(!p)return;if(state.education.current)return toast('Termine d’abord ta formation actuelle.');if(state.coins<p.cost)return toast(`Inscription : ${p.cost} crédits.`);state.coins-=p.cost;state.education.current={id,attended:0};save();toast(`🎓 Inscrit : ${p.name}`);openSheet('physicalShop')}
 function attendSchoolDay(){const cur=state.education.current;if(!cur)return;const p=EDUCATION_PROGRAMS[cur.id];cur.attended++;state.schoolDays=(state.schoolDays||0)+1;state.hunger=clamp(state.hunger-10,0,100);state.thirst=clamp(state.thirst-12,0,100);state.hygiene=clamp(state.hygiene-3,0,100);advanceDay(1);state.timeOfDay=17.5;if(cur.attended>=p.days){if(!state.education.completed.includes(cur.id))state.education.completed.push(cur.id);state.education.current=null;toast(`🎓 Diplôme obtenu : ${p.name}`)}else toast(`Cours ${cur.attended}/${p.days}`);save();openSheet('physicalShop')}
-function employmentHTML(){
- const j=jobDef();
- return `<div class="card"><h3>💼 Maison de l’Emploi</h3>${j?`<p class="sub">Emploi actuel : <b>${j.icon} ${j.name}</b> • ${j.salary}/mois • ${j.sector==='public'?'fonction publique':'entreprise privée'}</p><button class="menuBtn red quitJob" style="width:100%">Démissionner</button>`:'<p class="sub">Tu n’as actuellement aucun emploi.</p>'}</div>
- ${Object.values(JOB_DEFS).map(x=>{const ok=hasQualification(x.qualification),c=state.companies[x.company];return `<div class="card"><div class="lifeStat"><div><b>${x.icon} ${x.name}</b><small>${x.salary}/mois • ${x.sector==='public'?'public':c?.name||'privé'}${x.qualification?` • ${EDUCATION_PROGRAMS[x.qualification].name}`:''}</small></div><button class="menuBtn applyJob" data-id="${x.id}" ${!ok||state.job?'disabled':''}>Postuler</button></div></div>`}).join('')}`
-}
-function applyJob(id){const j=JOB_DEFS[id];if(!j||state.job)return;if(!hasQualification(j.qualification))return toast('Diplôme requis.');state.job={id:j.id,sinceMonth:state.gameMonth};state.workMission=null;save();toast(`💼 Embauché : ${j.name}`);openSheet('physicalShop')}
+function employmentHTML(){const j=jobDef(),vac=jobVacanciesForCity(),eco=cityEconomy();return `<div class="card"><div class="sectionKicker">MARCHÉ DU TRAVAIL</div><h3>💼 ${state.interior?.shopName||'Maison de l’Emploi'}</h3><p class="sub">${city().name} • chômage simulé ${(eco.unemployment*100).toFixed(1)} %. Les métiers et niveaux de salaire sont calibrés sur les grandes structures INSEE, puis adaptés à l’économie du jeu (1 crédit ≈ 20 € de revenu mensuel de référence).</p>${j?`<p class="sub">Emploi actuel : <b>${j.icon} ${j.name}</b> • ${j.salary} cr./mois • repère ${formatEuro(j.euroNet)} net/mois • ${jobShiftLabel(j)}</p><button class="menuBtn red quitJob" style="width:100%">Démissionner</button>`:'<p class="sub">Tu n’as actuellement aucun emploi.</p>'}</div><div class="card"><h3>Offres disponibles ce mois-ci</h3><p class="sub">Les offres changent selon la ville et le mois. Les médecins et autres métiers très qualifiés restent rares.</p></div>${vac.map(x=>{const ok=hasQualification(x.qualification),c=state.companies[x.company];return `<div class="card"><div class="lifeStat"><div><b>${x.icon} ${x.name}</b><small>${x.positions} poste(s) • ${x.salary} cr./mois • ≈ ${formatEuro(x.euroNet)} net<br>${PCS_LABELS[x.category]||x.category} • ${x.sector==='public'?'secteur public':c?.name||'privé'} • ${jobShiftLabel(x)}${x.qualification?` • ${EDUCATION_PROGRAMS[x.qualification].name}`:''}</small></div><button class="menuBtn applyJob" data-id="${x.id}" ${!ok||state.job?'disabled':''}>Postuler</button></div></div>`}).join('')}`}
+function applyJob(id){const j=JOB_DEFS[id];if(!j||state.job)return;if(!jobVacanciesForCity().some(x=>x.id===id))return toast('Cette offre n’est plus disponible.');if(!hasQualification(j.qualification))return toast('Diplôme requis.');state.job={id:j.id,sinceMonth:state.gameMonth,cityId:state.cityId};state.workMission=null;cityEconomy().jobsCreated=(cityEconomy().jobsCreated||0)+1;save();toast(`💼 Embauché : ${j.name}`);openSheet('physicalShop')}
 function quitJob(){if(!state.job)return;state.job=null;state.workMission=null;save();toast('Tu as quitté ton emploi.');openSheet('physicalShop')}
-function companyEconomyHTML(){return `<div class="card"><h3>🏦 Économie locale</h3><p class="sub">Trésor public : <b>${state.cityTreasury}</b> crédits • impôts payés : ${state.taxPaid||0}</p></div>${Object.values(state.companies).map(c=>`<div class="card"><div class="lifeStat"><div><b>${c.sector==='public'?'🏛️':'🏢'} ${c.name}</b><small>${c.npcWorkers} employés PNJ</small></div><span class="jobBadge companyCash">${c.sector==='public'?'Budget public':c.cash+' cr.'}</span></div></div>`).join('')}`}
-function workHTML(){const j=jobDef();if(!j)return `<div class="card"><h3>💼 Travail</h3><p class="sub">Trouve un emploi à la Maison de l’Emploi.</p></div>`;const m=state.workMission;return `<div class="card"><h3>${j.icon} ${j.name}</h3><p class="sub">Salaire ${j.salary}/mois. Les missions font fonctionner ton employeur et renforcent sa trésorerie.</p>${m?`<p class="sub"><b>Mission :</b> ${m.text}</p><div class="progress"><i style="width:${Math.min(100,(m.progress||0)/(m.target||1)*100)}%"></i></div>`:`<button class="menuBtn primary startWork" style="width:100%">▶️ Commencer une mission de travail</button>`}</div>`}
-function chooseWorkTargetShop(types){const all=state.discoveredShops.filter(s=>s.cityId===state.cityId&&(!types||types.includes(s.type)));return all.length?choice(all):null}
-function startWorkMission(){const j=jobDef();if(!j)return toast('Aucun emploi.');if(state.workMission)return toast('Mission déjà en cours.');let m={job:j.id,progress:0,target:1};if(j.mission==='delivery'){const s=chooseWorkTargetShop(['corner','bakery','butcher','restaurant','cafe','pharmacy','florist','pawn','home','gear','rare']);if(!s)return toast('Explore quelques commerces avant de travailler.');m={...m,kind:'visitShop',shopId:s.id,text:`Livre un colis à ${SHOPS[s.type].name}.`,revenue:75}}
- else if(j.mission==='store'){const s=chooseWorkTargetShop(['corner','bakery','butcher','restaurant','cafe','pharmacy','florist','hairdresser','clothes']);if(!s)return toast('Découvre quelques commerces.');m={...m,kind:'visitShop',shopId:s.id,text:`Aide au réassort de ${SHOPS[s.type].name}.`,revenue:65}}
- else if(j.mission==='repair'){const s=chooseWorkTargetShop(['gear']);if(!s)return toast('Découvre l’atelier MécaLab.');m={...m,kind:'visitShop',shopId:s.id,text:'Effectue une réparation à l’atelier.',revenue:105}}
- else if(j.mission==='clinic'){const s=chooseWorkTargetShop(['clinic']);if(!s)return toast('Découvre l’Hôpital Horizon.');m={...m,kind:'visitShop',shopId:s.id,text:'Effectue une garde à l’Hôpital Horizon.',revenue:0}}
- else if(j.mission==='school'){const s=chooseWorkTargetShop(['school']);if(!s)return toast('Découvre le Campus Municipal.');m={...m,kind:'visitShop',shopId:s.id,text:'Assure une session de cours au Campus.',revenue:0}}
- else {m={...m,kind:'distance',target:350,text:'Patrouille 350 m dans la ville.',revenue:0,lastX:state.pos.x,lastZ:state.pos.z}}
- state.workMission=m;save();toast('Mission de travail commencée.');openSheet('work')}
-function completeWorkMission(){const m=state.workMission,j=jobDef();if(!m||!j)return;if(j.sector==='private'){const c=state.companies[j.company];if(c)c.cash+=(m.revenue||70)}else state.cityTreasury+=25;state.workCompleted=(state.workCompleted||0)+1;state.xp+=30;state.workMission=null;save();toast('✅ Mission professionnelle terminée');checkQuests()}
-function updateWorkMission(){const m=state.workMission;if(!m)return;if(m.kind==='distance'){const dx=state.pos.x-(m.lastX??state.pos.x),dz=state.pos.z-(m.lastZ??state.pos.z),d=Math.hypot(dx,dz);if(d<4){m.progress=(m.progress||0)+d}m.lastX=state.pos.x;m.lastZ=state.pos.z;if(m.progress>=m.target)completeWorkMission()}}
-function nearestWorkShop(){const m=state.workMission;if(!m||m.kind!=='visitShop')return null;const target=state.discoveredShops.find(s=>s.id===m.shopId);if(!target)return null;const d=Math.hypot(state.pos.x-target.x,state.pos.z-(target.z-5.05));return d<2.4?target:null}
+function companyEconomyHTML(){const eco=cityEconomy();return `${societyDashboardHTML()}<div class="card"><h3>🏢 Principaux employeurs</h3>${Object.values(state.companies).filter(c=>c.npcWorkers>=24).sort((a,b)=>b.npcWorkers-a.npcWorkers).slice(0,8).map(c=>`<div class="lifeStat"><div><b>${c.sector==='public'?'🏛️':'🏢'} ${c.name}</b><small>${c.npcWorkers} emplois simulés</small></div><span class="jobBadge companyCash">${c.sector==='public'?'Public':c.cash+' cr.'}</span></div>`).join('')}</div>`}
+function workHTML(){const j=jobDef();if(!j)return `<div class="card"><h3>💼 Travail</h3><p class="sub">Trouve un emploi à la Maison de l’Emploi. Les offres varient selon la spécialité économique de chaque ville.</p></div>`;const m=state.workMission,onShift=playerJobIsOnShift(j);return `<div class="card"><div class="sectionKicker">${j.sector==='public'?'SERVICE PUBLIC':'EMPLOI'}</div><h3>${j.icon} ${j.name}</h3><p class="sub">Salaire ${j.salary} cr./mois • repère ${formatEuro(j.euroNet)} net/mois • horaires ${jobShiftLabel(j)}.</p>${m?`<p class="sub"><b>Mission :</b> ${m.text}</p><div class="progress"><i style="width:${Math.min(100,(m.progress||0)/(m.target||1)*100)}%"></i></div>`:`<button class="menuBtn primary startWork" style="width:100%" ${onShift?'':'disabled'}>▶️ ${onShift?'Commencer une mission':'Hors horaires de travail'}</button>`}</div>`}
+function chooseWorkTarget(types){const all=state.discoveredShops.filter(s=>s.cityId===state.cityId&&(!types||types.includes(s.type)));if(all.length)return choice(all);const pois=CIVIC_POIS.filter(p=>!types||types.includes(p.type));if(pois.length){const p=choice(pois);return{id:`poi:${state.cityId}:${p.type}:${p.cx}:${p.cz}`,type:p.type,name:p.name,x:p.x,z:p.z}}return null}
+function startWorkMission(){const j=jobDef();if(!j)return toast('Aucun emploi.');if(state.workMission)return toast('Mission déjà en cours.');if(!playerJobIsOnShift(j))return toast(`Ton service est prévu ${jobShiftLabel(j)}.`);let m={job:j.id,progress:0,target:1};const visit=(types,text,revenue=0)=>{const s=chooseWorkTarget(types);if(!s)return null;return{...m,kind:'visitShop',shopId:s.id,targetX:s.x,targetZ:s.z,targetName:s.name||SHOPS[s.type]?.name,text:typeof text==='function'?text(s):text,revenue}};
+ if(j.mission==='delivery')m=visit(['corner','bakery','butcher','restaurant','cafe','pharmacy','florist','pawn','home','gear','postoffice'],s=>`Livre un colis à ${s.name||SHOPS[s.type]?.name}.`,75);
+ else if(j.mission==='store')m=visit(['corner','bakery','butcher','restaurant','cafe','pharmacy','florist','hairdresser','clothes'],s=>`Aide au réassort de ${s.name||SHOPS[s.type]?.name}.`,65);
+ else if(['repair','industry'].includes(j.mission))m=visit(['gear'],`Effectue une intervention technique à l’atelier.`,105);
+ else if(j.mission==='clinic')m=visit(['clinic'],`Prends ton service dans l’établissement de santé.`,0);
+ else if(j.mission==='school')m=visit(['school'],`Assure ta journée dans l’établissement scolaire.`,0);
+ else if(j.mission==='fire')m=visit(['fireStation'],`Prends ta garde à la caserne.`,0);
+ else if(j.mission==='postal')m=visit(['postoffice'],`Prends ton service au bureau de poste.`,0);
+ else if(j.mission==='bank')m=visit(['bank'],`Rejoins ton agence bancaire.`,55);
+ else if(['admin','cleaning'].includes(j.mission))m=visit(['townhall','jobcenter','school','clinic'],`Effectue ton service dans un établissement public.`,35);
+ else if(j.mission==='restaurant')m=visit(['restaurant','cafe'],`Prends ton service en salle.`,65);
+ else if(j.mission==='bakery')m=visit(['bakery'],`Prends ton poste à la boulangerie.`,55);
+ else if(j.mission==='construction')m={...m,kind:'distance',target:220,text:'Effectue une tournée de chantier de 220 m.',revenue:85,lastX:state.pos.x,lastZ:state.pos.z};
+ else if(['transport','logistics'].includes(j.mission))m={...m,kind:'distance',target:320,text:'Effectue ta tournée de transport de 320 m.',revenue:70,lastX:state.pos.x,lastZ:state.pos.z};
+ else if(j.mission==='tech')m=visit(['library','school','jobcenter'],`Interviens sur une infrastructure numérique.`,120);
+ else m={...m,kind:'distance',target:350,text:'Patrouille 350 m dans la ville.',revenue:0,lastX:state.pos.x,lastZ:state.pos.z};
+ if(!m)return toast('Aucun lieu de travail disponible dans la ville.');state.workMission=m;save();toast('Mission de travail commencée.');openSheet('work')}
+function completeWorkMission(){const m=state.workMission,j=jobDef();if(!m||!j)return;if(j.sector==='private'){const c=state.companies[j.company];if(c)c.cash+=(m.revenue||70)}else cityEconomy().publicBudget=(cityEconomy().publicBudget||0)+18;state.workCompleted=(state.workCompleted||0)+1;state.xp+=30;state.workMission=null;save();toast('✅ Mission professionnelle terminée');checkQuests()}
+function updateWorkMission(){const m=state.workMission;if(!m)return;if(m.kind==='distance'){const dx=state.pos.x-(m.lastX??state.pos.x),dz=state.pos.z-(m.lastZ??state.pos.z),d=Math.hypot(dx,dz);if(d<4)m.progress=(m.progress||0)+d;m.lastX=state.pos.x;m.lastZ=state.pos.z;if(m.progress>=m.target)completeWorkMission()}}
+function nearestWorkShop(){const m=state.workMission;if(!m||m.kind!=='visitShop')return null;let target=state.discoveredShops.find(s=>s.id===m.shopId);if(!target&&Number.isFinite(m.targetX)&&Number.isFinite(m.targetZ))target={x:m.targetX,z:m.targetZ,name:m.targetName};if(!target)return null;const d=Math.hypot(state.pos.x-target.x,state.pos.z-target.z);return d<6.5?target:null}
 
 function propertyLabel(p){return `${PROPERTY_TYPES[p.type]?.name||'Logement'} ${p.area} m²`}
 function propertyCreditUse(amount){
@@ -3241,9 +3393,15 @@ function mapShopStyle(type){
   pawn:{code:'R',color:'#ffad5c',label:'Revente'},
   housing:{code:'⌂',color:'#66d9ff',label:'Agence immobilière'},
   clothes:{code:'V',color:'#c68cff',label:'Vêtements'},
-  clinic:{code:'+',color:'#ff6f7d',label:'Santé'},
+  clinic:{code:'+',color:'#ff6f7d',label:'Hôpital / santé'},
   school:{code:'🎓',color:'#77aaff',label:'École'},
   jobcenter:{code:'J',color:'#ffd15c',label:'Emploi'},
+  policeStation:{code:'P',color:'#77b8ff',label:'Commissariat'},
+  fireStation:{code:'F',color:'#ff7667',label:'Pompiers'},
+  townhall:{code:'M',color:'#e8d59a',label:'Mairie'},
+  bank:{code:'€',color:'#77d7c6',label:'Banque'},
+  postoffice:{code:'✉',color:'#f0a0a0',label:'Poste'},
+  library:{code:'B',color:'#b5a4ff',label:'Bibliothèque'},
   gear:{code:'A',color:'#9db5c8',label:'Atelier'},
   home:{code:'M',color:'#d6a86f',label:'Maison'},
   rare:{code:'P',color:'#ab91ff',label:'Prestige'}
@@ -3277,7 +3435,7 @@ function drawCivicPois(q,center,S,detail){
  for(const poi of CIVIC_POIS){
    const exact=discovered.find(s=>s.type===poi.type&&Math.floor(s.x/CHUNK)===poi.cx&&Math.floor(s.z/CHUNK)===poi.cz),p=exact||poi;
    const dx=(p.x-center.x)*S,dz=(p.z-center.z)*S;if(Math.abs(dx)>325||Math.abs(dz)>325)continue;const st=mapShopStyle(poi.type);drawMapMarker(q,dx,dz,st.code,st.color,detail);
-   if(detail&&mapBusMode){q.fillStyle='#dceaf4';q.font='700 9px system-ui';q.textAlign='left';q.textBaseline='middle';q.fillText(poi.name,dx+11,dz-10)}
+   if(detail&&bigMapZoom>.34){q.fillStyle='#dceaf4';q.font='700 9px system-ui';q.textAlign='left';q.textBaseline='middle';q.fillText(poi.name,dx+11,dz-10)}
  }
 }
 
@@ -3545,14 +3703,14 @@ function openSheet(panel){
  if(panel==='settings'){t.textContent='Réglages';b.innerHTML=settingsHTML()}
  if(panel==='avatar'){t.textContent='Personnage';b.innerHTML=avatarCreatorHTML()}
  if(panel==='player'){t.textContent='Interaction';b.innerHTML=playerInteractionHTML()}
- if(panel==='physicalShop'){t.textContent=SHOPS[state.interior?.shopType]?.name||'Commerce';b.innerHTML=physicalShopHTML()}
+ if(panel==='physicalShop'){t.textContent=state.interior?.shopName||SHOPS[state.interior?.shopType]?.name||'Commerce';b.innerHTML=physicalShopHTML()}
  if(panel==='work'){t.textContent='Travail';b.innerHTML=workHTML()}
  if(panel==='property'){t.textContent='Dossier immobilier';b.innerHTML=propertySheetHTML(selectedProperty)}
  if(panel==='bus'){t.textContent='Transport local en temps réel';b.innerHTML=busStopHTML(currentBusStopId)}
  if(panel==='train'){t.textContent='Gare & trains';b.innerHTML=trainStationHTML()}
  bindSheet(panel)
 }
-function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.3</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.4</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
  <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>🚆</span><b>Région</b><small>Villes & trains</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
 function socialHTML(){
  const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
@@ -3596,9 +3754,10 @@ function districtHTML(){
  <p class="sub">${d.bonus}</p>
  <p class="sub">Immobilier : loyers ×${d.rentMult.toFixed(2)} • achat ×${d.buyMult.toFixed(2)}</p>
  <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
+ <p class="sub">Économie ${Math.round(cityEconomy().businessIndex*100)}% • chômage ville ${(cityEconomy().unemployment*100).toFixed(1)}% • prix ×${cityEconomy().priceIndex.toFixed(2)}</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.3</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.4</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
@@ -3655,11 +3814,15 @@ function v20CrowdFactor(hour){
  if(hour>=7&&hour<9)return .90;
  return 1
 }
+function hourInRange(h,a,b){return a<=b?h>=a&&h<b:h>=a||h<b}
+function npcLifePhase(n,hour){const o=n?.occupation,s=o?.schedule;if(!o||!s)return'leisure';const day=(absoluteGameDay()-1)%7,weekend=day>=5;if(o.status==='retired'||o.status==='unemployed')return hour>=9&&hour<21?'leisure':'home';if(weekend&&!s.weekend&&o.status!=='student')return hour>=9.5&&hour<22?'leisure':'home';if(o.status==='student'&&weekend)return hour>=10&&hour<22?'leisure':'home';const before=((s.start-1+24)%24),after=((s.end+1.2)%24);if(hourInRange(hour,before,s.start))return'commute';if(hourInRange(hour,s.start,s.end)){if(hourInRange(hour,s.lunchStart,s.lunchEnd))return'lunch';return s.night?'nightWork':'work'}if(hourInRange(hour,s.end,after))return'commute';return hour>=8&&hour<22.5?'leisure':'home'}
+function npcLifePhaseLabel(phase){return{home:'Chez lui/elle',commute:'En trajet',work:'Au travail',nightWork:'Service de nuit',lunch:'Pause déjeuner',leisure:'Temps libre'}[phase]||'Dans le quartier'}
 function v20CivilianVisible(n,hour){
  if(!n||n.role!=='civilian')return true;
  if(n.following||n.talking||n.aggroTime>0||selectedNPC===n)return true;
- const roll=Number.isFinite(n.scheduleRoll)?n.scheduleRoll:.5;
- return roll<v20CrowdFactor(hour)
+ const phase=npcLifePhase(n,hour),roll=Number.isFinite(n.scheduleRoll)?n.scheduleRoll:.5,o=n.occupation||{};
+ const presence={home:.045,commute:.98,lunch:.82,leisure:.86,work:o.publicFacing?.48:.20,nightWork:.42}[phase]??.55;
+ return roll<clamp(presence*v20CrowdFactor(hour)*1.15,.025,1)
 }
 function addV20Planter(g,key,x,z,r=.5){
  if(placementBlocked(x,z,.48))return false;

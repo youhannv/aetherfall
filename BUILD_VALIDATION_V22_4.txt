@@ -1,0 +1,14 @@
+StreetQuest V22.4 — build validation
+
+Static validation completed:
+- game.js parses successfully with Node.js syntax checker.
+- sw.js parses successfully.
+- server/server.js parses successfully.
+- all JSON files parse successfully.
+- no duplicate top-level function declarations detected in game.js.
+- NPC occupation base weights: farmers 1.3; business owners/artisans 6.8; cadres 23.0; intermediate 25.2; employees 24.8; workers 18.0.
+- 23 playable job definitions.
+- 30 new society POIs (6 per city) in addition to existing hospitals, schools, employment and housing services.
+- PWA cache: streetquest3d-v22.4-society1.
+
+Note: full iOS Safari/WebGL runtime must still be verified on-device after GitHub Pages deployment.
