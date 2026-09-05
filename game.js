@@ -201,7 +201,7 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:190,
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:191,
  gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
@@ -220,10 +220,10 @@ function loadState(){
    };
    if(loaded.interior){loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)?{x:raw.returnPos.x,z:raw.returnPos.z}:{...base.pos};loaded.interior=null;loaded.returnPos=null}
    if(migrated&&raw.housingStage){loaded.propertyCredit=(loaded.propertyCredit||0)+(raw.housingStage===1?180:raw.housingStage===2?1030:raw.housingStage>=3?2830:0);loaded.housingStage=0;loaded.landOwned=false}
-   if((raw.worldLayoutVersion||0)!==190){
+   if((raw.worldLayoutVersion||0)!==191){
      loaded.propertyCatalog=[];
      loaded.discoveredShops=[];
-     loaded.worldLayoutVersion=190;
+     loaded.worldLayoutVersion=191;
    }
    return loaded
  }catch{return structuredClone(base)}
@@ -728,28 +728,63 @@ function makeRoad(g,x0,z0){
  for(const [lx,lz] of [[15.2,25],[15.2,54],[49,15.2],[66,15.2],[82.7,39],[39,82.7]])addLamp(g,x0+lx,z0+lz);
  addBench(g,x0+18,z0+23);
 
- // LOCAL LENS FACE = +Z.
- // NORTHBOUND driver looks +Z -> head must face -Z: rot PI, NE far-side corner.
- addTrafficLight(g,x0+11.65,z0+11.65,'vertical',Math.PI,'northbound');
- // SOUTHBOUND driver looks -Z -> head must face +Z: rot 0, SW far-side corner.
- addTrafficLight(g,x0-.65,z0-.65,'vertical',0,'southbound');
- // EASTBOUND driver looks +X -> head must face -X: rot -PI/2, SE far-side corner.
- addTrafficLight(g,x0+11.65,z0-.65,'horizontal',-Math.PI/2,'eastbound');
- // WESTBOUND driver looks -X -> head must face +X: rot +PI/2, NW far-side corner.
- addTrafficLight(g,x0-.65,z0+11.65,'horizontal',Math.PI/2,'westbound')
+ // V19.1 — primary French-style signal: right side of the driver's approach, BEFORE the crossing.
+ // Local signal face = +Z.
+ // Northbound (+Z): right side = east, signal faces south (-Z).
+ addTrafficLight(g,x0+11.70,z0-10.15,'vertical',Math.PI,'northbound');
+ // Southbound (-Z): right side = west, signal faces north (+Z).
+ addTrafficLight(g,x0-.70,z0+20.15,'vertical',0,'southbound');
+ // Eastbound (+X): right side = south, signal faces west (-X).
+ addTrafficLight(g,x0-10.15,z0-.70,'horizontal',-Math.PI/2,'eastbound');
+ // Westbound (-X): right side = north, signal faces east (+X).
+ addTrafficLight(g,x0+20.15,z0+11.70,'horizontal',Math.PI/2,'westbound')
 }
 function addTrafficLight(g,x,z,axis,rot=0,approach=''){
- const group=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x20272e,metalness:.65,roughness:.35});
- const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,2.65,10),metal);pole.position.y=1.325;group.add(pole);
- const box=new THREE.Mesh(new THREE.BoxGeometry(.30,.76,.25),new THREE.MeshStandardMaterial({color:0x0f151a,roughness:.55,metalness:.18}));box.position.set(0,2.28,.20);group.add(box);
- const hoodMat=new THREE.MeshStandardMaterial({color:0x090e12,roughness:.82});
- for(const yy of [2.47,2.09]){const hood=new THREE.Mesh(new THREE.BoxGeometry(.18,.08,.08),hoodMat);hood.position.set(0,yy,.34);group.add(hood)}
- const mkLens=(y,col)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.045,14),new THREE.MeshBasicMaterial({color:col}));m.rotation.x=Math.PI/2;m.position.set(0,y,.34);group.add(m);return m};
- const red=mkLens(2.47,0x5a1a21),green=mkLens(2.09,0x173e29);
- const base=new THREE.Mesh(new THREE.CylinderGeometry(.10,.13,.09,10),new THREE.MeshStandardMaterial({color:0x2b343c,roughness:.8}));base.position.y=.045;group.add(base);
- group.position.set(x,0,z);group.rotation.y=rot;g.add(group);trafficLights.push({group,red,green,axis,approach})
-}
+ const group=new THREE.Group();
+ const metal=new THREE.MeshStandardMaterial({color:0x20272e,metalness:.62,roughness:.38});
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,2.72,10),metal);
+ pole.position.y=1.36;group.add(pole);
 
+ // Head sits slightly toward the road from the pole.
+ const box=new THREE.Mesh(
+   new THREE.BoxGeometry(.34,.82,.25),
+   new THREE.MeshStandardMaterial({color:0x10161b,roughness:.60,metalness:.15})
+ );
+ box.position.set(0,2.34,.18);group.add(box);
+
+ // PlaneGeometry front normal is +Z. FrontSide means lights cannot be seen through the back.
+ const lens=(y,color)=>{
+   const m=new THREE.Mesh(
+     new THREE.CircleGeometry(.074,18),
+     new THREE.MeshBasicMaterial({color,side:THREE.FrontSide})
+   );
+   m.position.set(0,y,.312);group.add(m);return m
+ };
+ const red=lens(2.54,0x59151d),green=lens(2.15,0x163b25);
+
+ // Visor above each lens, also on the front only.
+ const hoodMat=new THREE.MeshStandardMaterial({color:0x070b0f,roughness:.88});
+ for(const yy of [2.61,2.22]){
+   const hood=new THREE.Mesh(new THREE.BoxGeometry(.23,.07,.13),hoodMat);
+   hood.position.set(0,yy,.35);group.add(hood)
+ }
+
+ // Back plate makes the rear obviously different from the signal face.
+ const back=new THREE.Mesh(
+   new THREE.PlaneGeometry(.26,.70),
+   new THREE.MeshStandardMaterial({color:0x05080a,side:THREE.FrontSide})
+ );
+ back.rotation.y=Math.PI;back.position.set(0,2.34,.045);group.add(back);
+
+ const base=new THREE.Mesh(
+   new THREE.CylinderGeometry(.10,.13,.09,10),
+   new THREE.MeshStandardMaterial({color:0x2b343c,roughness:.8})
+ );
+ base.position.y=.045;group.add(base);
+
+ group.position.set(x,0,z);group.rotation.y=rot;
+ g.add(group);trafficLights.push({group,red,green,axis,approach})
+}
 function plannedShopType(cx,cz){
  const fixed={
   '0,0':'corner',
@@ -772,6 +807,42 @@ function plannedShopType(cx,cz){
 }
 
 
+
+
+function rotateBlockPoint(p,turn=0,mirror=false){
+ let x=p.x-43,z=p.z-43;
+ if(mirror)x=-x;
+ for(let i=0;i<turn;i++){const nx=-z,nz=x;x=nx;z=nz}
+ return{x:x+43,z:z+43}
+}
+function addUrbanPlaza(g,key,x0,z0,feature,r){
+ if(!feature)return;
+ const x=x0+feature.x,z=z0+feature.z,size=feature.size||8;
+ if(feature.type==='garden'){
+   const floor=new THREE.Mesh(new THREE.CircleGeometry(size/2,20),new THREE.MeshStandardMaterial({map:textures.grass,roughness:1}));
+   floor.rotation.x=-Math.PI/2;floor.position.set(x,.035,z);g.add(floor);
+   for(const [dx,dz] of [[-2.5,-2],[2.4,2.0]]){
+     if(!placementBlocked(x+dx,z+dz,.9))addTree(g,x+dx,z+dz,r)
+   }
+   if(!placementBlocked(x-2.0,z+2.3,.75))addBench(g,x-2.0,z+2.3);
+   return
+ }
+ const mat=feature.type==='yard'
+   ?new THREE.MeshStandardMaterial({color:0x596066,roughness:1})
+   :new THREE.MeshStandardMaterial({color:0x9c9b94,roughness:1});
+ const p=new THREE.Mesh(new THREE.PlaneGeometry(size,size),mat);
+ p.rotation.x=-Math.PI/2;p.position.set(x,.025,z);g.add(p);
+ if(feature.type==='plaza'){
+   if(!placementBlocked(x-2.4,z+2,.75))addBench(g,x-2.4,z+2);
+   if(!placementBlocked(x+2.4,z-2,.75))addBench(g,x+2.4,z-2)
+ }else{
+   const lineM=new THREE.MeshStandardMaterial({color:0xd6c36f,roughness:1});
+   for(const dx of [-2,0,2]){
+     const line=new THREE.Mesh(new THREE.PlaneGeometry(.10,size*.72),lineM);
+     line.rotation.x=-Math.PI/2;line.position.set(x+dx,.032,z);g.add(line)
+   }
+ }
+}
 
 const CITY_BLOCK_TEMPLATES={
  courtyard:{parcels:[
@@ -834,6 +905,17 @@ function chooseCommercialParcel(plan){
  return plan.parcels.map((p,i)=>({i,score:(p.face==='south'?0:p.face==='west'?1:p.face==='east'?2:3)})).sort((a,b)=>a.score-b.score)[0]?.i??0
 }
 
+
+function validateGeneratedChunk(key,g){
+ const buildingCount=colliders.filter(c=>c.key===key&&['building','house','shop'].includes(c.type)).length;
+ const peopleCount=[...npcs,...police,...enemies].filter(n=>n.key===key&&n.group?.parent).length;
+ const carCount=cars.filter(c=>c.key===key&&c.group?.parent).length;
+ if(buildingCount===0||peopleCount===0||carCount===0){
+   console.warn('StreetQuest chunk diagnostic',key,{buildingCount,peopleCount,carCount})
+ }
+ return{buildingCount,peopleCount,carCount}
+}
+
 function createChunk(cx,cz){
  const key=ck(cx,cz);if(chunks.has(key))return;
  const r=rngFor(key),g=new THREE.Group();g.userData={key,cx,cz};scene.add(g);chunks.set(key,g);
@@ -844,13 +926,21 @@ function createChunk(cx,cz){
    makeRoad(g,x0,z0);addAlleyNetwork(g,key,x0,z0,d,r);pedNetworks.set(key,buildPedNetwork(x0,z0));
    const id=districtId(cx,cz);if(!state.seenDistricts.includes(id))state.seenDistricts.push(id);
 
-   const startChunk=cx===0&&cz===0,plannedShop=plannedShopType(cx,cz),plan=buildCityBlockPlan(cx,cz,d,r,startChunk);
-   const shopIndex=plannedShop?chooseCommercialParcel(plan):-1;
-   addUrbanPlaza(g,key,x0,z0,plan.feature,r);
-
-   if(plannedShop&&shopIndex>=0){const p=plan.parcels[shopIndex];addShop(g,key,x0+p.x,z0+p.z,r,plannedShop,p)}
-   for(let i=0;i<plan.parcels.length;i++){
-     if(i===shopIndex)continue;const p=plan.parcels[i];addDenseBuilding(g,key,x0+p.x,z0+p.z,d,r,i,p.v,true,p)
+   const startChunk=cx===0&&cz===0,plannedShop=plannedShopType(cx,cz);
+   let plan=null,shopIndex=-1;
+   try{
+     plan=buildCityBlockPlan(cx,cz,d,r,startChunk);
+     shopIndex=plannedShop?chooseCommercialParcel(plan):-1;
+     addUrbanPlaza(g,key,x0,z0,plan.feature,r);
+     if(plannedShop&&shopIndex>=0){
+       const p=plan.parcels[shopIndex];addShop(g,key,x0+p.x,z0+p.z,r,plannedShop,p)
+     }
+     for(let i=0;i<plan.parcels.length;i++){
+       if(i===shopIndex)continue;
+       const p=plan.parcels[i];addDenseBuilding(g,key,x0+p.x,z0+p.z,d,r,i,p.v,true,p)
+     }
+   }catch(blockErr){
+     console.error('V19.1 block generation',key,blockErr)
    }
 
    const trees=d.style==='green'?5:d.tier==='luxury'?3:2;
@@ -860,15 +950,20 @@ function createChunk(cx,cz){
    if(r()<.58){const p=randomAlleyPoint(x0,z0,r),idc=`${key}:container:0`;if(!state.collected.includes(idc)&&!placementBlocked(p.x,p.z,.7))addContainer(g,key,idc,p.x,p.z,r()<.72?'bin':'chest')}
    if(r()<.52){const p=randomAlleyPoint(x0,z0,r),idl=`${key}:loot:0`;if(!state.collected.includes(idl)&&!placementBlocked(p.x,p.z,.55))addPickup(g,key,idl,p.x,p.z,r()<.72?'medkit':'rare')}
 
-   const npcN=3+Math.floor(r()*3)+(d.style==='central'?1:0);
-   for(let i=0;i<npcN;i++){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addNPC(g,key,p.x,p.z,r,p)}
-   if(r()<d.crimeRate*.72){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addEnemy(g,key,p.x,p.z,r,p)}
-   const policeN=r()<Math.min(.58,d.policeRate*1.8)?1:0;
-   for(let i=0;i<policeN;i++){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addPolice(g,key,p.x,p.z,r,p)}
+   try{
+     const npcN=3+Math.floor(r()*3)+(d.style==='central'?1:0);
+     for(let i=0;i<npcN;i++){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addNPC(g,key,p.x,p.z,r,p)}
+     if(r()<d.crimeRate*.72){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addEnemy(g,key,p.x,p.z,r,p)}
+     const policeN=r()<Math.min(.58,d.policeRate*1.8)?1:0;
+     for(let i=0;i<policeN;i++){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addPolice(g,key,p.x,p.z,r,p)}
+   }catch(popErr){console.error('V19.1 population generation',key,popErr)}
 
-   const carN=(d.style==='central'?3:2)+Math.floor(r()*2);
-   for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
-   if(r()<.24)addParkedCar(g,key,x0,z0,r)
+   try{
+     const carN=(d.style==='central'?3:2)+Math.floor(r()*2);
+     for(let i=0;i<carN;i++)addCar(g,key,x0,z0,r,i);
+     if(r()<.24)addParkedCar(g,key,x0,z0,r)
+   }catch(carErr){console.error('V19.1 traffic generation',key,carErr)}
+   validateGeneratedChunk(key,g)
  }catch(err){console.error('Chunk creation error',key,err);toast("⚠️ Erreur de chargement d’un quartier")}
 }
 function randomSidewalk(x0,z0,r){
@@ -2732,7 +2827,7 @@ function districtHTML(){
  <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V19</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V19.1</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}

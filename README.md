@@ -831,3 +831,32 @@ Autres ajustements :
 - suppression des virages instantanés instables : priorité à la fluidité et à l’absence de fusion
 - moins de PNJ, moins de voitures et moins de petits obstacles
 - `worldLayoutVersion 190` force une reconstruction de la ville
+
+
+# V19.1 — Hotfix génération + feux
+
+Cause exacte de la ville vide V19 :
+- `rotateBlockPoint()` avait été supprimée pendant le remplacement du générateur V18.1
+- `addUrbanPlaza()` avait également été supprimée
+- `createChunk()` appelait encore ces deux fonctions
+- le chunk construisait donc routes/feux, puis levait une ReferenceError AVANT les bâtiments, PNJ et voitures
+
+V19.1 restaure ces deux fonctions et sépare maintenant la génération en plusieurs étapes protégées :
+- bloc urbain
+- population
+- trafic
+
+Une future erreur de décoration ne peut donc plus supprimer en même temps bâtiments + habitants + voitures.
+
+## Feux V19.1
+Les signaux principaux sont maintenant placés AVANT le passage piéton, du côté droit de l'approche :
+- nordbound : côté est, face sud
+- southbound : côté ouest, face nord
+- eastbound : côté sud, face ouest
+- westbound : côté nord, face est
+
+Les lentilles ne sont plus des cylindres visibles des deux côtés.
+Elles sont des disques `FrontSide` : on voit rouge/vert uniquement lorsqu'on regarde réellement
+la FACE du feu. Le dos est un panneau noir distinct. L'orientation est donc visuellement vérifiable.
+
+`worldLayoutVersion 191` force le recalcul propre du plan.
