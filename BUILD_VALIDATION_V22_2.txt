@@ -1,0 +1,11 @@
+StreetQuest V22.2 validation
+- game.js syntax: OK
+- sw.js syntax: OK
+- server/server.js syntax: OK
+- manifest.json: OK
+- version.json: OK
+- server/package.json: OK
+- duplicate JS function declarations: 0
+- duplicate HTML ids: 0
+- transit stop declarations: 39
+- PWA cache: streetquest3d-v22.2-bus-code1

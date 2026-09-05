@@ -1,7 +1,7 @@
-# Déployer StreetQuest V22.1 en multijoueur
+# Déployer StreetQuest V22.2 en multijoueur
 
 ## GitHub Pages
-Le client reste à la racine du dépôt. Remplace tous les fichiers du jeu par ceux de V22.1.
+Le client reste à la racine du dépôt. Remplace tous les fichiers du jeu par ceux de V22.2.
 
 ## Render
 Le serveur Socket.IO est dans `server/`.

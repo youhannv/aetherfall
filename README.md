@@ -1,4 +1,19 @@
-# StreetQuest V22.1 — Région continue & bus améliorés
+# StreetQuest V22.2 — Bus code de la route & vue passager
+
+Cette version part de V22.1 et corrige spécifiquement la circulation et l'expérience à bord.
+
+## Nouveautés V22.2
+
+- bus calés sur les mêmes voies directionnelles que les voitures ;
+- freinage renforcé derrière voitures et bus ;
+- respect des feux avec distance de freinage dynamique ;
+- virages avec braquage et déplacement dans le cap du véhicule, sans glissement latéral ;
+- nom réel de chaque arrêt affiché sur le panneau physique ;
+- trois vues à bord : **Fenêtre**, **Pare-brise**, **Extérieure** ;
+- bouton `🎥` pendant le trajet pour changer de caméra ;
+- caméra passager corrigée pour suivre le cap réel du bus.
+
+## Base V22.1 conservée
 
 Cette version part de V22 et ajoute deux changements structurels.
 

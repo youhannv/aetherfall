@@ -354,7 +354,7 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:221,trainTrips:0,visitedCities:['paris'],
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:222,trainTrips:0,visitedCities:['paris'],
  gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
@@ -426,7 +426,7 @@ function checkQuests(){
 }
 
 let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],properties=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],entranceZones=[],pedNetworks=new Map(),clouds=[],starSystem=null,ambientGlowSystem=null,streetLamps=[],lampLightPool=[],lastLampLightTick=0,busStops=[],busVehicles=[],trainStations=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,mapBusMode=false,mapWorldMode=false,currentBusStopId=null,currentBoardBusId=null,busWaitRequest=null,busRide=null,busJourneyPlan=null,busTicketValidUntil=0,busLastArrivalToast='',busLastUiTick=0,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,mapBusMode=false,mapWorldMode=false,currentBusStopId=null,currentBoardBusId=null,busWaitRequest=null,busRide=null,busJourneyPlan=null,busTicketValidUntil=0,busLastArrivalToast='',busLastUiTick=0,busCameraMode='window',busViewYaw=0,busViewPitch=-.04,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
 
 
 function mpServerUrl(){return (window.STREETQUEST_DEFAULT_SERVER||localStorage.getItem('sq-mp-url')||'https://streetquest-multiplayer.onrender.com').replace(/\/$/,'')}
@@ -1553,12 +1553,19 @@ function addHomePlot(g,key,x,z){
 function addBusStopsForChunk(g,key,cx,cz){
  for(const stop of BUS_STOPS){if(stop.cx===cx&&stop.cz===cz)addBusStop(g,key,stop)}
 }
+function makeTransitStopNameSign(text){
+ const cache=makeTransitStopNameSign.cache||(makeTransitStopNameSign.cache=new Map());let tex=cache.get(text);
+ if(!tex){const c=document.createElement('canvas');c.width=768;c.height=160;const q=c.getContext('2d');q.fillStyle='#10202b';q.fillRect(0,0,c.width,c.height);q.strokeStyle='#5ca6d8';q.lineWidth=7;q.strokeRect(4,4,c.width-8,c.height-8);let fs=55;q.font=`900 ${fs}px system-ui`;while(fs>28&&q.measureText(text).width>700){fs-=2;q.font=`900 ${fs}px system-ui`}q.fillStyle='#ffffff';q.textAlign='center';q.textBaseline='middle';q.fillText(text,c.width/2,c.height/2);tex=new THREE.CanvasTexture(c);tex.colorSpace=THREE.SRGBColorSpace;cache.set(text,tex)}
+ const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false}));sp.scale.set(3.4,.72,1);return sp
+}
 function makeBusStopPole(stop,x,z){
  const group=new THREE.Group(),metal=new THREE.MeshStandardMaterial({color:0x17202a,metalness:.35,roughness:.56});
- const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.065,2.35,8),metal);pole.position.y=1.175;group.add(pole);
- const board=new THREE.Mesh(new THREE.BoxGeometry(.68,.88,.09),new THREE.MeshStandardMaterial({color:0xe8edf2,roughness:.48,metalness:.06}));board.position.set(0,2.02,0);group.add(board);
- const cap=new THREE.Mesh(new THREE.BoxGeometry(.72,.20,.11),new THREE.MeshBasicMaterial({color:0x356ca8}));cap.position.set(0,2.38,0);group.add(cap);
- const lineText=stop.lines.join(' • '),sign=makeSign(`${(busLineById(stop.lines[0])?.mode==='tram'?'TRAM':busLineById(stop.lines[0])?.mode==='navette'?'NAVETTE':'BUS')} ${lineText}`,'#dff4ff');sign.scale.set(1.45,.36,1);sign.position.set(0,2.75,0);group.add(sign);
+ const pole=new THREE.Mesh(new THREE.CylinderGeometry(.045,.065,2.45,8),metal);pole.position.y=1.225;group.add(pole);
+ const board=new THREE.Mesh(new THREE.BoxGeometry(.92,1.08,.10),new THREE.MeshStandardMaterial({color:0xf1f4f6,roughness:.44,metalness:.04}));board.position.set(0,2.08,0);group.add(board);
+ const cap=new THREE.Mesh(new THREE.BoxGeometry(.96,.20,.12),new THREE.MeshBasicMaterial({color:0x356ca8}));cap.position.set(0,2.62,0);group.add(cap);
+ const mode=busLineById(stop.lines[0])?.mode==='tram'?'TRAM':busLineById(stop.lines[0])?.mode==='navette'?'NAVETTE':'BUS';
+ const nameSign=makeTransitStopNameSign(stop.name);nameSign.position.set(0,2.22,.07);group.add(nameSign);
+ const lineText=stop.lines.join(' • '),lineSign=makeSign(`${mode} ${lineText}`,'#bfe8ff');lineSign.scale.set(1.55,.36,1);lineSign.position.set(0,2.90,.02);group.add(lineSign);
  group.position.set(x,0,z);return group
 }
 function addBusStop(g,key,stop){
@@ -1577,7 +1584,7 @@ function createBusVisual(line){
  const wheelM=new THREE.MeshStandardMaterial({color:0x121619,roughness:1}),wheelGeo=new THREE.CylinderGeometry(tram?.28:.34,tram?.28:.34,2.42,10);
  const axle=tram?[-2.25,0,2.25]:shuttle?[-1.25,1.25]:[-1.72,1.72];for(const z of axle){const w=new THREE.Mesh(wheelGeo,wheelM);w.rotation.z=Math.PI/2;w.position.set(0,.42,z);g.add(w)}
  if(tram){const mast=new THREE.Mesh(new THREE.BoxGeometry(.08,.68,.08),new THREE.MeshStandardMaterial({color:0x30383d,metalness:.4,roughness:.5}));mast.position.set(0,2.36,0);mast.rotation.z=-.28;g.add(mast)}
- const badge=makeSign(line.id,'#ffffff');badge.scale.set(.70,.28,1);badge.position.set(0,tram?2.36:2.48,-length/2-.02);g.add(badge);return g
+ const badge=makeSign(line.id,'#ffffff');badge.scale.set(.70,.28,1);badge.position.set(0,tram?2.36:2.48,-length/2-.02);g.add(badge);g.userData.vehicleLength=length;g.userData.vehicleMode=line.mode;return g
 }
 function busStopRoadPoint(stop){
  const horizontal=stop.side==='south'||stop.side==='north';
@@ -1624,7 +1631,7 @@ function initBusFleet(){
    starts.forEach((start,bi)=>{
      const group=createBusVisual(line);scene.add(group);const p=route[start];group.position.set(p.x,0,p.z);
      const dir=line.loop?1:(bi===0?1:-1),b={id:`${line.id}-${bi+1}`,line,group,route,index:start,next:0,dir,speed:6.0+(li%3)*.25,currentSpeed:0,dwell:bi===0?4.0:0,currentStopId:route[start].stopId||null,lastStopId:null,stuckFor:0,lastHit:0};
-     group.traverse(o=>{o.userData.busId=b.id});b.next=busNextIndex(b);busVehicles.push(b)
+     group.traverse(o=>{o.userData.busId=b.id});b.next=busNextIndex(b);const initialSeg=busSegment(b);if(initialSeg){if(initialSeg.mode==='h')group.position.z=initialSeg.laneCoord;else group.position.x=initialSeg.laneCoord;group.rotation.y=Math.atan2(-initialSeg.dx,-initialSeg.dz)}busVehicles.push(b)
    })
  })
 }
@@ -1638,28 +1645,63 @@ function busTerminusLabel(b){
  if(b.line.loop)return'Circulaire';const dir=busDepartureDirection(b),id=dir>0?b.line.stops[b.line.stops.length-1]:b.line.stops[0];return busStopById(id)?.name||'Terminus'
 }
 function busSegment(b){
- const raw=b.route?.[b.next];if(!raw)return null;const prev=b.route?.[b.index]||{x:b.group.position.x,z:b.group.position.z};let rdx=raw.x-prev.x,rdz=raw.z-prev.z;
- if(Math.abs(rdx)<.05&&Math.abs(rdz)<.05){rdx=raw.x-b.group.position.x;rdz=raw.z-b.group.position.z}
- const mode=Math.abs(rdx)>=Math.abs(rdz)?'h':'v',dir=mode==='h'?(rdx>=0?1:-1):(rdz>=0?1:-1);let tx=raw.x,tz=raw.z;
- // Keep every bus on the same legal directional lanes as normal traffic.
- if(mode==='h'){const roadBase=Math.round((raw.z-5.5)/CHUNK)*CHUNK;tz=roadBase+(dir>0?7.8:3.2)}
- else{const roadBase=Math.round((raw.x-5.5)/CHUNK)*CHUNK;tx=roadBase+(dir>0?3.2:7.8)}
- const dx=tx-b.group.position.x,dz=tz-b.group.position.z;return{target:{...raw,x:tx,z:tz},raw,dx,dz,dist:Math.hypot(dx,dz),mode,dir}
+ const raw=b.route?.[b.next];if(!raw)return null;
+ const prev=b.route?.[b.index]||{x:b.group.position.x,z:b.group.position.z};
+ let rdx=raw.x-prev.x,rdz=raw.z-prev.z;if(Math.abs(rdx)<.05&&Math.abs(rdz)<.05){rdx=raw.x-b.group.position.x;rdz=raw.z-b.group.position.z}
+ const mode=Math.abs(rdx)>=Math.abs(rdz)?'h':'v',dir=mode==='h'?(rdx>=0?1:-1):(rdz>=0?1:-1);
+ let tx=raw.x,tz=raw.z,laneCoord;
+ // French right-hand traffic: buses use exactly the same directional lane centres as cars.
+ if(mode==='h'){
+   const roadBase=Math.round((raw.z-5.5)/CHUNK)*CHUNK;laneCoord=roadBase+(dir>0?7.8:3.2);tz=laneCoord;
+ }else{
+   const roadBase=Math.round((raw.x-5.5)/CHUNK)*CHUNK;laneCoord=roadBase+(dir>0?3.2:7.8);tx=laneCoord;
+ }
+ const laneError=mode==='h'?Math.abs(b.group.position.z-laneCoord):Math.abs(b.group.position.x-laneCoord);
+ // At a 90° corner, first enter the new lane over a short distance inside the junction.
+ // This prevents a bus from cutting diagonally across an entire block while slowly correcting its lane.
+ let virtual=false;const axisRemaining=mode==='h'?Math.abs(raw.x-b.group.position.x):Math.abs(raw.z-b.group.position.z);
+ if(laneError>.42&&axisRemaining>5.5){virtual=true;if(mode==='h')tx=b.group.position.x+dir*Math.min(5.4,axisRemaining);else tz=b.group.position.z+dir*Math.min(5.4,axisRemaining)}
+ const dx=tx-b.group.position.x,dz=tz-b.group.position.z,dist=Math.hypot(dx,dz);
+ return{target:{...raw,x:tx,z:tz,stopId:virtual?null:raw.stopId},raw,dx,dz,dist,mode,dir,laneCoord,laneError,virtual}
 }
 function busTrafficFactor(b,seg){
- const {mode,dir}=seg;let best=18;
- for(const c of cars){if(!c?.group?.parent||c.mode!==mode||c.dir!==dir)continue;const laneGap=mode==='h'?Math.abs(c.group.position.z-b.group.position.z):Math.abs(c.group.position.x-b.group.position.x);if(laneGap>1.35)continue;const delta=mode==='h'?(c.group.position.x-b.group.position.x)*dir:(c.group.position.z-b.group.position.z)*dir;if(delta>0&&delta<best)best=delta}
- for(const o of busVehicles){if(o===b||!o?.group?.parent)continue;const os=busSegment(o);if(!os||os.mode!==mode||os.dir!==dir)continue;const laneGap=mode==='h'?Math.abs(o.group.position.z-b.group.position.z):Math.abs(o.group.position.x-b.group.position.x);if(laneGap>1.45)continue;const delta=mode==='h'?(o.group.position.x-b.group.position.x)*dir:(o.group.position.z-b.group.position.z)*dir;if(delta>0&&delta<best)best=delta}
- return best<6.4?0:best<12?(best-6.4)/5.6:1
+ const {mode,dir}=seg;let best=28;
+ // Keep a true safety gap behind every vehicle occupying our lane.
+ for(const c of cars){
+   if(!c?.group?.parent||c.mode!==mode||c.dir!==dir)continue;
+   const laneGap=mode==='h'?Math.abs(c.group.position.z-b.group.position.z):Math.abs(c.group.position.x-b.group.position.x);if(laneGap>1.20)continue;
+   const delta=mode==='h'?(c.group.position.x-b.group.position.x)*dir:(c.group.position.z-b.group.position.z)*dir;if(delta>0&&delta<best)best=delta
+ }
+ for(const o of busVehicles){
+   if(o===b||!o?.group?.parent)continue;const os=busSegment(o);if(!os||os.mode!==mode||os.dir!==dir)continue;
+   const laneGap=mode==='h'?Math.abs(o.group.position.z-b.group.position.z):Math.abs(o.group.position.x-b.group.position.x);if(laneGap>1.28)continue;
+   const delta=mode==='h'?(o.group.position.x-b.group.position.x)*dir:(o.group.position.z-b.group.position.z)*dir;if(delta>0&&delta<best)best=delta
+ }
+ // 8 m = complete stop, 8..17 m = progressive following speed.
+ return best<=8?0:best<17?clamp((best-8)/9,0,1):1
 }
 function busIntersectionState(b,seg,t){
+ if(seg.virtual)return{mustStop:false,distance:99,green:true,clear:true,approaching:false};
  const {mode,dir}=seg,cx=Math.floor(b.group.position.x/CHUNK),cz=Math.floor(b.group.position.z/CHUNK),x0=cx*CHUNK,z0=cz*CHUNK,lights=trafficSignalState(t);
- let stopAt,distance,green;
- if(mode==='v'){stopAt=dir>0?z0+CHUNK-2.9:z0+13.7;distance=dir>0?stopAt-b.group.position.z:b.group.position.z-stopAt;green=lights.vertical}
- else{stopAt=dir>0?x0+CHUNK-2.9:x0+13.7;distance=dir>0?stopAt-b.group.position.x:b.group.position.x-stopAt;green=lights.horizontal}
- const approaching=distance>=0&&distance<10.5;
- let clear=true;if(approaching){const ix=mode==='v'?x0:(dir>0?x0+CHUNK:x0),iz=mode==='h'?z0:(dir>0?z0+CHUNK:z0);for(const c of cars){if(carInsideIntersection(c,ix,iz)&&c.mode!==mode){clear=false;break}}if(clear)for(const o of busVehicles){if(o===b||!o?.group?.parent)continue;const os=busSegment(o);if(!os||os.mode===mode)continue;if(o.group.position.x>ix-1.5&&o.group.position.x<ix+12.5&&o.group.position.z>iz-1.5&&o.group.position.z<iz+12.5){clear=false;break}}}
- return{mustStop:approaching&&(!green||!clear),distance,green,clear}
+ let stopAt,distance,green,ix,iz;
+ if(mode==='v'){
+   stopAt=dir>0?z0+CHUNK-2.45:z0+13.15;distance=dir>0?stopAt-b.group.position.z:b.group.position.z-stopAt;green=lights.vertical;ix=x0;iz=dir>0?z0+CHUNK:z0
+ }else{
+   stopAt=dir>0?x0+CHUNK-2.45:x0+13.15;distance=dir>0?stopAt-b.group.position.x:b.group.position.x-stopAt;green=lights.horizontal;ix=dir>0?x0+CHUNK:x0;iz=z0
+ }
+ const speed=Math.max(0,b.currentSpeed||0),braking=Math.max(9.5,Math.min(20,5.5+speed*2.15)),approaching=distance>=0&&distance<braking;
+ let clear=true;
+ if(approaching){
+   for(const c of cars){if(!c?.group?.parent)continue;if(carInsideIntersection(c,ix,iz)&&c.mode!==mode){clear=false;break}}
+   if(clear)for(const o of busVehicles){if(o===b||!o?.group?.parent)continue;const os=busSegment(o);if(!os||os.mode===mode)continue;if(o.group.position.x>ix-1.2&&o.group.position.x<ix+12.2&&o.group.position.z>iz-1.2&&o.group.position.z<iz+12.2){clear=false;break}}
+ }
+ return{mustStop:approaching&&(!green||!clear),distance,green,clear,stopAt,approaching}
+}
+function busSteeringState(b,seg){
+ if(seg.dist<.001)return{targetYaw:b.group.rotation.y,angle:0,turnFactor:1};
+ const targetYaw=Math.atan2(-seg.dx,-seg.dz),angle=Math.atan2(Math.sin(targetYaw-b.group.rotation.y),Math.cos(targetYaw-b.group.rotation.y)),a=Math.abs(angle);
+ // Long vehicles must slow before a 90° corner instead of sliding sideways through it.
+ const turnFactor=a>.95?.18:a>.62?.36:a>.34?.62:1;return{targetYaw,angle,turnFactor}
 }
 function onBusArriveAtStop(b,stopId){
  b.currentStopId=stopId;b.lastStopId=stopId;
@@ -1684,19 +1726,33 @@ function updateBusVehicles(dt){
  for(const b of busVehicles){
    if(state.interior){b.group.visible=false;continue}
    const near=Math.hypot(state.pos.x-b.group.position.x,state.pos.z-b.group.position.z)<170;b.group.visible=near||busRide?.vehicleId===b.id;
-   if(b.dwell>0){b.currentSpeed+=(0-b.currentSpeed)*Math.min(1,dt*10);b.dwell=Math.max(0,b.dwell-dt);continue}
+   if(b.dwell>0){b.currentSpeed+=(0-b.currentSpeed)*Math.min(1,dt*11);b.dwell=Math.max(0,b.dwell-dt);continue}
    if(b.currentStopId&&busLastArrivalToast.startsWith(b.id+':'))busLastArrivalToast='';b.currentStopId=null;
    let seg=busSegment(b);if(!seg)continue;
-   if(seg.dist<.20){
-     b.group.position.set(seg.target.x,0,seg.target.z);b.index=b.next;const arrivedStop=seg.target.stopId||null;b.next=busNextIndex(b);
-     if(arrivedStop){const terminal=!b.line.loop&&(arrivedStop===b.line.stops[0]||arrivedStop===b.line.stops[b.line.stops.length-1]);b.dwell=terminal?15.0:12.0;b.currentSpeed=0;onBusArriveAtStop(b,arrivedStop);continue}
-     seg=busSegment(b);if(!seg)continue
+   if(seg.dist<.22){
+     b.group.position.set(seg.target.x,0,seg.target.z);
+     if(seg.virtual){seg=busSegment(b);if(!seg)continue}
+     else{b.index=b.next;const arrivedStop=seg.target.stopId||null;b.next=busNextIndex(b);if(arrivedStop){const terminal=!b.line.loop&&(arrivedStop===b.line.stops[0]||arrivedStop===b.line.stops[b.line.stops.length-1]);b.dwell=terminal?15.0:12.0;b.currentSpeed=0;onBusArriveAtStop(b,arrivedStop);continue}seg=busSegment(b);if(!seg)continue}
    }
-   const flow=busTrafficFactor(b,seg),signal=busIntersectionState(b,seg,t),targetSpeed=signal.mustStop?0:b.speed*flow;
-   b.currentSpeed+=(targetSpeed-b.currentSpeed)*Math.min(1,dt*(targetSpeed<b.currentSpeed?7.0:1.8));
-   if(signal.mustStop&&signal.distance<.45)b.currentSpeed=0;
-   const shouldMove=!signal.mustStop&&flow>.70;b.stuckFor=shouldMove&&b.currentSpeed<.12?(b.stuckFor||0)+dt:0;if(b.stuckFor>3.0){b.currentSpeed=Math.max(b.currentSpeed,b.speed*.35);b.stuckFor=0}
-   if(seg.dist>.001&&b.currentSpeed>.001){let step=Math.min(seg.dist,b.currentSpeed*dt);if(signal.mustStop&&signal.distance>=0)step=Math.min(step,Math.max(0,signal.distance-.28));if(step<=.001)b.currentSpeed=0;else{b.group.position.x+=seg.dx/seg.dist*step;b.group.position.z+=seg.dz/seg.dist*step}const targetYaw=Math.atan2(-seg.dx,-seg.dz),dy=Math.atan2(Math.sin(targetYaw-b.group.rotation.y),Math.cos(targetYaw-b.group.rotation.y));b.group.rotation.y+=dy*Math.min(1,dt*5.5)}
+   const flow=busTrafficFactor(b,seg),signal=busIntersectionState(b,seg,t),steer=busSteeringState(b,seg);
+   // Do not accelerate into a bend, a red light or the rear of another vehicle.
+   let targetSpeed=b.speed*flow*steer.turnFactor;if(signal.mustStop)targetSpeed=0;
+   const accel=targetSpeed<b.currentSpeed?8.8:1.55;b.currentSpeed+=(targetSpeed-b.currentSpeed)*Math.min(1,dt*accel);
+   if(signal.mustStop&&signal.distance<.38)b.currentSpeed=0;
+   // Steering first, movement second: the bus can no longer translate sideways while its body still points elsewhere.
+   const maxYawRate=(b.line.mode==='tram'?.58:.92)*(b.currentSpeed<1?1.55:1);const yawStep=clamp(steer.angle,-maxYawRate*dt,maxYawRate*dt);b.group.rotation.y+=yawStep;
+   if(seg.dist>.001&&b.currentSpeed>.001){
+     const headingError=Math.abs(Math.atan2(Math.sin(steer.targetYaw-b.group.rotation.y),Math.cos(steer.targetYaw-b.group.rotation.y)));
+     const headingFactor=headingError>.95?.12:headingError>.55?.45:1;let step=Math.min(seg.dist,b.currentSpeed*headingFactor*dt);
+     if(signal.mustStop&&signal.distance>=0)step=Math.min(step,Math.max(0,signal.distance-.30));
+     if(step<=.001)b.currentSpeed=0;else{
+       const fx=-Math.sin(b.group.rotation.y),fz=-Math.cos(b.group.rotation.y);b.group.position.x+=fx*step;b.group.position.z+=fz*step;
+       // Gentle lane-centre correction only on straight sections; never a visible sideways snap.
+       if(headingError<.20&&seg.laneError<1.0){const k=Math.min(1,dt*2.2);if(seg.mode==='h')b.group.position.z+=(seg.laneCoord-b.group.position.z)*k;else b.group.position.x+=(seg.laneCoord-b.group.position.x)*k}
+     }
+   }
+   // Anti-deadlock may help only on a green/free lane; it is forbidden to override a red light or a blocked intersection.
+   const shouldFlow=!signal.mustStop&&flow>.72&&Math.abs(steer.angle)<.35;b.stuckFor=shouldFlow&&b.currentSpeed<.10?(b.stuckFor||0)+dt:0;if(b.stuckFor>4.0){b.currentSpeed=Math.min(b.speed*.28,1.5);b.stuckFor=0}
    if(!state.interior&&!busRide&&b.currentSpeed>1.2&&t-b.lastHit>1400){const dx=Math.abs(state.pos.x-b.group.position.x),dz=Math.abs(state.pos.z-b.group.position.z),hit=seg.mode==='v'?(dx<1.30&&dz<3.1):(dx<3.1&&dz<1.30);if(hit){b.lastHit=t;hitByBus(b,seg)}}
  }
  if(busRide)syncBusRidePosition();const now=performance.now();if(now-busLastUiTick>1000){refreshBusStopRealtimeUI();busLastUiTick=now}
@@ -1782,14 +1838,14 @@ function findBoardableBus(){
 function boardBus(b){
  if(!b||!busWaitRequest)return;const free=busTicketActive()||!!(busJourneyPlan&&busJourneyPlan.legIndex>0);if(!free&&state.coins<BUS_FARE)return toast(`Il faut ${BUS_FARE} crédits pour prendre le véhicule.`);
  if(!free)state.coins-=BUS_FARE;busTicketValidUntil=performance.now()+120000;
- busRide={vehicleId:b.id,lineId:b.line.id,destinationStopId:busWaitRequest.destinationStopId,boardedStopId:busWaitRequest.stopId,exitRequested:false,startedAt:performance.now()};busWaitRequest=null;currentBusStopId=null;state.yaw=b.group.rotation.y;moveStick.x=moveStick.y=0;save();toast(`🚌 À bord de ${b.line.id} • ${free?'correspondance gratuite':'ticket '+BUS_FARE+' crédits'}`)
+ busRide={vehicleId:b.id,lineId:b.line.id,destinationStopId:busWaitRequest.destinationStopId,boardedStopId:busWaitRequest.stopId,exitRequested:false,startedAt:performance.now()};busWaitRequest=null;currentBusStopId=null;busCameraMode='window';busViewYaw=0;busViewPitch=-.04;state.yaw=-b.group.rotation.y;state.pitch=0;moveStick.x=moveStick.y=0;lookStick.x=lookStick.y=0;save();toast(`🚌 À bord de ${b.line.id} • ${free?'correspondance gratuite':'ticket '+BUS_FARE+' crédits'} • Vue fenêtre`)
 }
 function syncBusRidePosition(){
  if(!busRide)return;const b=busVehicles.find(x=>x.id===busRide.vehicleId);if(!b){busRide=null;return}state.pos.x=b.group.position.x;state.pos.z=b.group.position.z
 }
 function requestBusExit(){if(!busRide)return;busRide.exitRequested=true;toast('🔔 Arrêt demandé • descente au prochain arrêt')}
 function alightBus(b,stopId){
- const stop=busStopById(stopId);if(!stop){busRide=null;busJourneyPlan=null;return}const destName=stop.name,p=busArrivalPoint(stop,b),plan=busJourneyPlan;busRide=null;state.pos={x:p.x,z:p.z};state.yaw=b.group.rotation.y;ensureChunks(true);ensureOutdoorPositionClear();
+ const stop=busStopById(stopId);if(!stop){busRide=null;busJourneyPlan=null;return}const destName=stop.name,p=busArrivalPoint(stop,b),plan=busJourneyPlan;busRide=null;state.pos={x:p.x,z:p.z};state.yaw=-b.group.rotation.y;state.pitch=0;busViewYaw=0;busViewPitch=-.04;ensureChunks(true);ensureOutdoorPositionClear();
  if(plan){const leg=plan.legs[plan.legIndex];if(stopId===leg?.toId&&plan.legIndex<plan.legs.length-1){plan.legIndex++;const next=plan.legs[plan.legIndex];busWaitRequest={lineId:next.lineId,stopId:stop.id,destinationStopId:next.toId,startedAt:performance.now()};save();toast(`🔄 Correspondance ${next.lineId} • attends à ${stop.name} • ticket conservé`);return}if(stopId===plan.finalStopId){busJourneyPlan=null;busWaitRequest=null;save();toast(`✅ Destination atteinte : ${destName}`);return}busJourneyPlan=null;busWaitRequest=null}
  save();toast(`🚏 Descente : ${destName}${stop.lines.length>1?' • correspondances '+stop.lines.join(' / '):''}`)
 }
@@ -2060,50 +2116,21 @@ function moveEntity(n,dx,dz,pad=.34){
  }
  n.stuckFrames=(n.stuckFrames||0)+1;if(n.stuckFrames>44)recoverPerson(n);return false
 }
-function updateCamera(t=0){const riding=busRide&&busVehicles.find(x=>x.id===busRide.vehicleId),bob=!riding&&(Math.abs(moveStick.x)+Math.abs(moveStick.y)>.15)?Math.sin(t*.012)*.022:0;let px=state.pos.x,pz=state.pos.z,py=1.72+bob;if(riding){const a=riding.group.rotation.y,localZ=-1.15;px+=Math.sin(a)*localZ;pz+=Math.cos(a)*localZ;py=1.90}camera.position.set(px,py,pz);const cp=Math.cos(state.pitch),sp=Math.sin(state.pitch),sy=Math.sin(state.yaw),cy=Math.cos(state.yaw);camera.lookAt(px+sy*cp,py+sp,pz-cy*cp)}
-
-function spendFromFunds(amount){amount=Math.max(0,Math.round(amount));if((state.homeBank+state.coins)<amount)return false;const fromBank=Math.min(state.homeBank,amount);state.homeBank-=fromBank;state.coins-=amount-fromBank;return true}
-function processMonthlyFinances(){
- let income=0,expense=0,taxes=0,events=[];
- // Economy of private companies: NPC workers make money even if the player does nothing.
- for(const c of Object.values(state.companies)){if(c.sector==='private'){const revenue=Math.round(c.monthlyNpcRevenue*(.82+Math.random()*.35));const costs=Math.round(c.npcWorkers*24);c.cash=Math.max(0,c.cash+revenue-costs)}}
- // NPC taxes replenish public finances.
- const npcTaxes=1600+Math.round(Math.random()*800);state.cityTreasury+=npcTaxes;events.push(`impôts PNJ +${npcTaxes} ville`);
- const rentRec=state.propertyPortfolio.find(p=>p.id===state.residenceId&&p.tenure==='rent');
- if(rentRec){if(spendFromFunds(rentRec.rent)){expense+=rentRec.rent;state.missedRent=0;events.push(`loyer -${rentRec.rent}`)}else{state.missedRent=(state.missedRent||0)+1;events.push('loyer IMPAYÉ');if(state.missedRent>=2){state.propertyPortfolio=state.propertyPortfolio.filter(p=>p.id!==rentRec.id);state.residenceId=null;state.missedRent=0;events.push('expulsion')}}}
- let rentalIncome=0;
- for(const rec of state.propertyPortfolio.filter(p=>p.tenure==='owned'&&p.listed)){
-   const market=rec.marketRent||rec.rent||40,ratio=(rec.askingRent||market)/market;
-   if(!rec.tenant){const chance=clamp((rec.demand||1)*(1.28-ratio)*.78,.08,.90);if(Math.random()<chance){rec.tenant=true;events.push(`locataire trouvé : ${rec.label||'bien'}`)}}
-   if(rec.tenant){if(ratio>1.42&&Math.random()<.30){rec.tenant=false;events.push(`locataire parti : ${rec.label||'bien'}`)}else{const got=rec.askingRent||market;rentalIncome+=got}}
+function busCameraLabel(){return busCameraMode==='window'?'Fenêtre':busCameraMode==='front'?'Pare-brise':'Extérieure'}
+function cycleBusCamera(){if(!busRide)return;busCameraMode=busCameraMode==='window'?'front':busCameraMode==='front'?'chase':'window';busViewYaw=0;busViewPitch=busCameraMode==='chase'?.10:-.04;toast(`🎥 Vue bus : ${busCameraLabel()}`);checkInteraction()}
+function updateCamera(t=0){
+ const riding=busRide&&busVehicles.find(x=>x.id===busRide.vehicleId),bob=!riding&&(Math.abs(moveStick.x)+Math.abs(moveStick.y)>.15)?Math.sin(t*.012)*.022:0;
+ if(riding){
+   riding.group.updateMatrixWorld(true);const a=riding.group.rotation.y,baseYaw=-a;
+   if(busCameraMode==='chase'){
+     const yaw=baseYaw+busViewYaw,fx=Math.sin(yaw),fz=-Math.cos(yaw),cx=riding.group.position.x,cz=riding.group.position.z;
+     camera.position.set(cx-fx*7.4,3.8+busViewPitch*1.8,cz-fz*7.4);camera.lookAt(cx,1.15,cz);return
+   }
+   const len=riding.group.userData.vehicleLength||5.6,local=busCameraMode==='front'?new THREE.Vector3(.22,1.70,-len/2-.16):new THREE.Vector3(.78,1.72,-Math.min(1.25,len*.24));
+   const world=riding.group.localToWorld(local);camera.position.copy(world);
+   const yaw=baseYaw+busViewYaw,pitch=busViewPitch,cp=Math.cos(pitch),sp=Math.sin(pitch),sy=Math.sin(yaw),cy=Math.cos(yaw);camera.lookAt(world.x+sy*cp,world.y+sp,world.z-cy*cp);return
  }
- if(state.job){
-   const j=JOB_DEFS[state.job.id],gross=j.salary;
-   let paid=0;
-   if(j.sector==='public'){paid=Math.min(gross,state.cityTreasury);state.cityTreasury-=paid;if(paid<gross)events.push('⚠️ salaire public partiellement payé')}
-   else{const c=state.companies[j.company];paid=Math.min(gross,c?.cash||0);if(c)c.cash-=paid;if(paid<gross)events.push(`⚠️ ${c?.name||'employeur'} manque de trésorerie`)}
-   const tax=progressiveTax(paid+rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;state.cityTreasury+=tax;
-   const net=Math.max(0,paid-tax);state.homeBank+=net;income+=net;state.salaryHistory.push({month:state.gameMonth,gross:paid,tax,net,job:j.name});state.salaryHistory=state.salaryHistory.slice(-12);events.push(`salaire net +${net}`)
- }else if(rentalIncome){const tax=progressiveTax(rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;state.cityTreasury+=tax;state.homeBank+=rentalIncome-tax;income+=rentalIncome-tax}
- if(state.job&&rentalIncome){state.homeBank+=rentalIncome;income+=rentalIncome}
- else if(!state.job&&rentalIncome===0){}
- state.monthlyLedger=`Mois ${state.gameMonth} : +${income} / -${expense} • impôts ${taxes}${events.length?' • '+events.join(' • '):''}`;
- toast(`📅 ${state.monthlyLedger}`);save()
-}
-function advanceDay(days=1){
- for(let i=0;i<days;i++){
-   state.gameDay=(state.gameDay||1)+1;
-   if(state.gameDay>30){state.gameDay=1;state.gameMonth=(state.gameMonth||1)+1;processMonthlyFinances()}
- }
-}
-
-function updateParisLampLights(t){
- if(!lampLightPool.length)return;
- if(state.interior){for(const l of lampLightPool){l.visible=false;l.intensity=0}return}
- const night=state.timeOfDay>=18.2||state.timeOfDay<7.15;
- if(t-lastLampLightTick<280)return;lastLampLightTick=t;
- const nearest=streetLamps.filter(l=>l.group?.parent).map(l=>({...l,d:Math.hypot(state.pos.x-l.x,state.pos.z-l.z)})).filter(l=>l.d<24).sort((a,b)=>a.d-b.d).slice(0,lampLightPool.length);
- for(let i=0;i<lampLightPool.length;i++){const light=lampLightPool[i],lamp=nearest[i];if(!night||!lamp){light.visible=false;light.intensity=0;continue}light.visible=true;light.position.set(lamp.x,3.35,lamp.z);light.intensity=state.timeOfDay>=21||state.timeOfDay<5.5?58:42;if(lamp.globeMat)lamp.globeMat.emissiveIntensity=1.35}
+ let px=state.pos.x,pz=state.pos.z,py=1.72+bob;camera.position.set(px,py,pz);const cp=Math.cos(state.pitch),sp=Math.sin(state.pitch),sy=Math.sin(state.yaw),cy=Math.cos(state.yaw);camera.lookAt(px+sy*cp,py+sp,pz-cy*cp)
 }
 function updateWorldLight(dt){
  const prevTime=state.timeOfDay;state.timeOfDay=(state.timeOfDay+dt*.025)%24;if(state.timeOfDay<prevTime)advanceDay(1);
@@ -2155,7 +2182,7 @@ function carAheadDistance(c,max=15){
    const delta=c.mode==='v'?(o.group.position.z-c.group.position.z)*c.dir:(o.group.position.x-c.group.position.x)*c.dir;
    if(delta>0&&delta<best)best=delta
  }
- for(const b of busVehicles){const t=b.route?.[b.next];if(!t)continue;const dx=t.x-b.group.position.x,dz=t.z-b.group.position.z,mode=Math.abs(dx)>Math.abs(dz)?'h':'v',dir=mode==='h'?(dx>=0?1:-1):(dz>=0?1:-1);if(mode!==c.mode||dir!==c.dir)continue;const laneGap=c.mode==='v'?Math.abs(b.group.position.x-c.group.position.x):Math.abs(b.group.position.z-c.group.position.z);if(laneGap>.85)continue;const delta=c.mode==='v'?(b.group.position.z-c.group.position.z)*c.dir:(b.group.position.x-c.group.position.x)*c.dir;if(delta>0&&delta<best)best=delta}
+ for(const b of busVehicles){const bs=busSegment(b);if(!bs||bs.mode!==c.mode||bs.dir!==c.dir)continue;const laneGap=c.mode==='v'?Math.abs(b.group.position.x-c.group.position.x):Math.abs(b.group.position.z-c.group.position.z);if(laneGap>1.05)continue;const delta=c.mode==='v'?(b.group.position.z-c.group.position.z)*c.dir:(b.group.position.x-c.group.position.x)*c.dir;if(delta>0&&delta<best)best=delta}
  return best
 }
 function updateCars(dt,t){
@@ -2465,8 +2492,7 @@ function animate(){
  const forward=clamp(-moveStick.y+keyForward,-1,1),strafe=clamp(moveStick.x+keyStrafe,-1,1);
  const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);
  const moveSpeed=4.8*needsSpeedMultiplier();if(!busRide){movePlayer((fx*forward+rx*strafe)*moveSpeed*dt,(fz*forward+rz*strafe)*moveSpeed*dt);updatePlayerTrail()}
- state.yaw+=lookStick.x*1.8*dt;
- state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)
+ if(busRide){busViewYaw+=lookStick.x*1.65*dt;busViewPitch=clamp(busViewPitch-lookStick.y*1.10*dt,-.42,.40)}else{state.yaw+=lookStick.x*1.8*dt;state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)}
  updateNeeds(dt);updateWorkMission();if(!state.interior){updatePeople(dt,t);updateCars(dt,t);updateBusVehicles(dt);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateCamera(t);updateWorldLight(dt);updateParisLampLights(t);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>180){drawMap();lastMapTick=t}if(t-lastHudTick>100){updateHUD();lastHudTick=t}renderer.render(scene,camera);try{multiplayerTick(t,dt)}catch(err){console.error('Multiplayer frame error',err)}
 }
 
@@ -2517,7 +2543,7 @@ function checkInteraction(){
    return hidePrompt()
  }
  if(tailTheft?.active)return hidePrompt();
- if(busRide){const b=busVehicles.find(x=>x.id===busRide.vehicleId),dest=busStopById(busRide.destinationStopId);return setPrompt(`🚌 ${busRide.lineId} • à bord`,`${busRide.exitRequested?'Arrêt demandé':'Destination : '+(dest?.name||'')}${b?.currentStopId?' • '+(busStopById(b.currentStopId)?.name||''):''}`,busRide.exitRequested?'ARRÊT DEMANDÉ':'DESCENDRE',requestBusExit)}
+ if(busRide){const b=busVehicles.find(x=>x.id===busRide.vehicleId),dest=busStopById(busRide.destinationStopId);return setBusRidePrompt(`🚌 ${busRide.lineId} • à bord`,`${busRide.exitRequested?'Arrêt demandé':'Destination : '+(dest?.name||'')}${b?.currentStopId?' • '+(busStopById(b.currentStopId)?.name||''):''} • Vue ${busCameraLabel()}`,busRide.exitRequested?'ARRÊT DEMANDÉ':'DESCENDRE',requestBusExit)}
  const dockedBus=nearestDockedBus();if(dockedBus){const st=busStopById(dockedBus.currentStopId);return setPrompt(`🚌 ${dockedBus.line.id} • ${dockedBus.line.name}`,`${st?.name||'Arrêt'} • direction ${busTerminusLabel(dockedBus)} • départ dans ${Math.ceil(dockedBus.dwell)} s`,'MONTER',()=>openBusVehicle(dockedBus))}
  const boardable=findBoardableBus();if(boardable){const dest=busStopById(busWaitRequest.destinationStopId);return setPrompt(`🚌 ${boardable.line.id} est à quai`,`Vers ${busTerminusLabel(boardable)} • destination ${dest?.name||''} • départ dans ${Math.ceil(boardable.dwell)} s`,'MONTER',()=>openBusVehicle(boardable))}
 
@@ -2555,9 +2581,11 @@ function checkInteraction(){
 function setPrompt(t,d,b,fn){
  currentInteractFn=fn;const sig=`${t}|${d}|${b}`;
  if(sig!==lastPromptSig){lastPromptSig=sig;$('#promptTitle').textContent=t;$('#promptText').textContent=d;$('#promptBtn').textContent=b}
+ const alt=$('#promptAltBtn');if(alt){alt.classList.add('hidden');alt.onclick=null}
  $('#promptBtn').onclick=fn;$('#prompt').classList.remove('hidden')
 }
-function hidePrompt(){currentInteractFn=null;lastPromptSig='';if(!$('#prompt').classList.contains('hidden'))$('#prompt').classList.add('hidden')}
+function setBusRidePrompt(t,d,b,fn){setPrompt(t,d,b,fn);const alt=$('#promptAltBtn');if(alt){alt.textContent=`🎥 ${busCameraLabel()}`;alt.classList.remove('hidden');alt.onclick=cycleBusCamera}}
+function hidePrompt(){currentInteractFn=null;lastPromptSig='';const alt=$('#promptAltBtn');if(alt){alt.classList.add('hidden');alt.onclick=null}if(!$('#prompt').classList.contains('hidden'))$('#prompt').classList.add('hidden')}
 function pickupName(t){return{medkit:'Kit de soin',rare:'Cache de matériel',artifact:city().artifact}[t]}
 function artifactLabel(id){return (CITIES.find(c=>c.id===id)||{artifact:id}).artifact}
 function artifactCount(id){return state.artifactBag.filter(x=>x===id).length}
@@ -3399,7 +3427,7 @@ function openSheet(panel){
  if(panel==='train'){t.textContent='Gare & trains';b.innerHTML=trainStationHTML()}
  bindSheet(panel)
 }
-function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.1</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.2</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
  <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>🚆</span><b>Région</b><small>Villes & trains</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
 function socialHTML(){
  const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
@@ -3445,7 +3473,7 @@ function districtHTML(){
  <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.1</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.2</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
