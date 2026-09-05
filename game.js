@@ -263,7 +263,7 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:19.35,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:210,
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:212,
  gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
@@ -282,11 +282,11 @@ function loadState(){
    };
    if(loaded.interior){loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)?{x:raw.returnPos.x,z:raw.returnPos.z}:{...base.pos};loaded.interior=null;loaded.returnPos=null}
    if(migrated&&raw.housingStage){loaded.propertyCredit=(loaded.propertyCredit||0)+(raw.housingStage===1?180:raw.housingStage===2?1030:raw.housingStage>=3?2830:0);loaded.housingStage=0;loaded.landOwned=false}
-   if((raw.worldLayoutVersion||0)!==210){
-     // V21 rebuilds Paris blocks/facades while preserving progression and economy.
+   if((raw.worldLayoutVersion||0)!==212){
+     // V21.2 rebuilds Paris blocks/facades while preserving progression and economy.
      loaded.propertyCatalog=[];
      loaded.discoveredShops=[];
-     loaded.worldLayoutVersion=210;
+     loaded.worldLayoutVersion=212;
    }
    return loaded
  }catch{return structuredClone(base)}
@@ -1025,7 +1025,7 @@ function validateGeneratedChunk(key,g){
  const buildingCount=colliders.filter(c=>c.key===key&&['building','house','shop'].includes(c.type)).length;
  const peopleCount=[...npcs,...police,...enemies].filter(n=>n.key===key&&n.group?.parent).length;
  const carCount=cars.filter(c=>c.key===key&&c.group?.parent).length;
- if(buildingCount===0||peopleCount===0||carCount===0){
+ if(buildingCount<(state.cityId==='paris'?6:1)||peopleCount===0||carCount===0){
    console.warn('StreetQuest chunk diagnostic',key,{buildingCount,peopleCount,carCount})
  }
  return{buildingCount,peopleCount,carCount}
@@ -1042,15 +1042,20 @@ function createChunk(cx,cz){
    const startChunk=cx===0&&cz===0,plannedShop=plannedShopType(cx,cz);
    let plan=null,shopIndex=-1;
    try{
-     plan=buildCityBlockPlan(cx,cz,d,r,startChunk);shopIndex=plannedShop?chooseCommercialParcel(plan):-1;addUrbanPlaza(g,key,x0,z0,plan.feature,r);
+     plan=buildCityBlockPlan(cx,cz,d,r,startChunk);shopIndex=plannedShop?chooseCommercialParcel(plan):-1;
+     try{addUrbanPlaza(g,key,x0,z0,plan.feature,r)}catch(plazaErr){console.warn('V21.2 plaza',key,plazaErr)}
      const usedShopIndices=[];
-     if(plannedShop&&shopIndex>=0){const p=plan.parcels[shopIndex];if(addShop(g,key,x0+p.x,z0+p.z,r,plannedShop,p))usedShopIndices.push(shopIndex)}
+     if(plannedShop&&shopIndex>=0){const p=plan.parcels[shopIndex];try{if(addShop(g,key,x0+p.x,z0+p.z,r,plannedShop,p))usedShopIndices.push(shopIndex)}catch(shopErr){console.warn('V21.2 primary shop',key,plannedShop,shopErr)}}
      const extraShopTypes=extraShopTypesForChunk(cx,cz,d,plannedShop||null);
      const extraShopIndices=chooseCommercialParcelIndices(plan,extraShopTypes.length,usedShopIndices);
-     extraShopIndices.forEach((idx,n)=>{const p=plan.parcels[idx];if(addShop(g,key,x0+p.x,z0+p.z,r,extraShopTypes[n],p))usedShopIndices.push(idx)});
-     for(let i=0;i<plan.parcels.length;i++){if(usedShopIndices.includes(i))continue;const p=plan.parcels[i];addDenseBuilding(g,key,x0+p.x,z0+p.z,d,r,i,p.v,true,p)}
-     addExtraInfillBuildings(g,key,x0,z0,d,r)
-   }catch(blockErr){console.error('V20 block generation',key,blockErr)}
+     extraShopIndices.forEach((idx,n)=>{const p=plan.parcels[idx];try{if(addShop(g,key,x0+p.x,z0+p.z,r,extraShopTypes[n],p))usedShopIndices.push(idx)}catch(shopErr){console.warn('V21.2 extra shop',key,extraShopTypes[n],shopErr)}});
+     for(let i=0;i<plan.parcels.length;i++){
+       if(usedShopIndices.includes(i))continue;const p=plan.parcels[i];
+       try{addDenseBuilding(g,key,x0+p.x,z0+p.z,d,r,i,p.v,true,p)}catch(buildErr){console.warn('V21.2 parcel building',key,i,buildErr)}
+     }
+     try{addExtraInfillBuildings(g,key,x0,z0,d,r)}catch(infillErr){console.warn('V21.2 infill',key,infillErr)}
+   }catch(blockErr){console.error('V21.2 block plan',key,blockErr)}
+   try{ensureUrbanDensityV21(g,key,x0,z0,d,r)}catch(fallbackErr){console.error('V21.2 density fallback',key,fallbackErr)}
    try{addV20UrbanDetails(g,key,x0,z0,d,r);addV21StreetLife(g,key,x0,z0,d,r)}catch(decorErr){console.warn('V21 urban detail',key,decorErr)}
    const trees=d.style==='green'?7:d.tier==='luxury'?4:d.style==='central'?3:3;
    for(let i=0;i<trees;i++){const p=randomGreenPoint(x0,z0,r);if(!placementBlocked(p.x,p.z,1.15))addTree(g,p.x,p.z,r)}
@@ -1059,7 +1064,7 @@ function createChunk(cx,cz){
    if(r()<.52){const p=randomAlleyPoint(x0,z0,r),idl=`${key}:loot:0`;if(!state.collected.includes(idl)&&!placementBlocked(p.x,p.z,.55))addPickup(g,key,idl,p.x,p.z,r()<.72?'medkit':'rare')}
    try{
      // V20: full daytime pool + live civilian schedule; progressively calmer after dinner and clearly quieter late at night.
-     const npcBase=d.style==='central'?17:d.style==='old'?14:d.tier==='poor'?13:d.style==='industrial'?11:d.tier==='luxury'?8:11;
+     const npcBase=d.style==='central'?18:d.style==='old'?16:d.tier==='poor'?15:d.style==='industrial'?15:d.tier==='luxury'?9:13;
      const target=npcBase+Math.floor(r()*3),npcN=target; // V20 generates the daytime pool; schedules hide civilians progressively at night.
      for(let i=0;i<npcN;i++){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addNPC(g,key,p.x,p.z,r,p)}
      if(r()<d.crimeRate*.72){const p=randomPedestrianPath(x0,z0,r);p.district=d.id;addEnemy(g,key,p.x,p.z,r,p)}
@@ -2899,7 +2904,7 @@ function openSheet(panel){
  if(panel==='property'){t.textContent='Dossier immobilier';b.innerHTML=propertySheetHTML(selectedProperty)}
  bindSheet(panel)
 }
-function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V21.1</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V21.2</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
  <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>✈️</span><b>Voyager</b><small>Changer de ville</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
 function socialHTML(){
  const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
@@ -2922,7 +2927,7 @@ function districtHTML(){
  <p class="sub">Police ${Math.round(d.policeRate*100)}% • délinquance ${Math.round(d.crimeRate*100)}%</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V21.1</h3><button class="menuBtn full updateBtn" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V21.2</h3><button class="menuBtn full updateBtn" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
@@ -3053,18 +3058,26 @@ CITY_BLOCK_TEMPLATES.haussmann={parcels:[
 ],feature:{type:'plaza',x:43,z:43,size:13.2}};
 
 function cityTemplateNamesV21(d,startChunk=false){
- if(state.cityId==='paris'&&(startChunk||d.style==='central'||d.style==='old'))return ['haussmann'];
+ if(state.cityId==='paris'){
+   // Dense Paris everywhere the player expects an urban fabric. The old V21.1 left
+   // industrial/working districts on sparse service templates, which is why entire
+   // streets could look empty from the Faubourg des Ateliers.
+   if(d.style==='green')return ['garden','courtyard'];
+   if(d.tier==='luxury')return ['garden','courtyard','haussmann'];
+   return ['haussmann'];
+ }
+ if(startChunk)return ['avenue'];
  if(d.style==='green')return ['garden','courtyard'];
  if(d.tier==='luxury')return ['garden','courtyard','towers'];
  if(d.style==='industrial')return ['service','workers'];
  if(d.tier==='poor')return ['workers','workers','avenue'];
  if(d.tier==='rich')return ['courtyard','avenue','garden'];
- return ['haussmann','courtyard','avenue']
+ return ['avenue','courtyard','avenue']
 }
 
 function addAlleyNetworkV21(g,key,x0,z0,d,r){
  const alleyM=new THREE.MeshStandardMaterial({map:textures.pave,roughness:1});
- if(state.cityId==='paris'&&(d.style==='central'||d.style==='old')){
+ if(state.cityId==='paris'&&d.style!=='green'&&d.tier!=='luxury'){
    const v=new THREE.Mesh(new THREE.PlaneGeometry(3.2,52),alleyM);v.rotation.x=-Math.PI/2;v.position.set(x0+43,.055,z0+43);v.receiveShadow=true;g.add(v);
    alleys.push({key,axis:'z',x:x0+43,min:z0+17,max:z0+69,width:2.7});
    const court=new THREE.Mesh(new THREE.PlaneGeometry(15,8),new THREE.MeshStandardMaterial({color:0xa7a39a,roughness:1}));court.rotation.x=-Math.PI/2;court.position.set(x0+43,.057,z0+43);court.receiveShadow=true;g.add(court);
@@ -3118,7 +3131,10 @@ function v21Materials(){
   roof:new THREE.MeshStandardMaterial({color:0x30363d,roughness:.88,metalness:.08}),
   zinc:new THREE.MeshStandardMaterial({color:0x535b62,roughness:.73,metalness:.25}),
   wood:new THREE.MeshStandardMaterial({color:0x4b3427,roughness:.84}),
-  shopGlass:new THREE.MeshStandardMaterial({color:0xffddac,emissive:0xff9f3d,emissiveIntensity:1.15,transparent:true,opacity:.66,roughness:.18,side:THREE.DoubleSide})
+  shopGlass:new THREE.MeshStandardMaterial({color:0xffddac,emissive:0xff9f3d,emissiveIntensity:1.15,transparent:true,opacity:.66,roughness:.18,side:THREE.DoubleSide}),
+  warmBrick:new THREE.MeshStandardMaterial({color:0x9d7768,roughness:.93,metalness:.01}),
+  paleStucco:new THREE.MeshStandardMaterial({color:0xd8cdbb,roughness:.94,metalness:.01}),
+  cream:new THREE.MeshStandardMaterial({color:0xe0d5c3,roughness:.92,metalness:.01})
  };
  return v21MaterialCache
 }
@@ -3177,19 +3193,35 @@ function v21AddStorefront(g,x,z,w,d,h,r,face,type){
 }
 
 function addDenseBuildingV21(g,key,x,z,d,r,i,variant=0,planned=false,parcel=null){
- const central=d.style==='central',old=d.style==='old',green=d.style==='green',lux=d.tier==='luxury',poor=d.tier==='poor';
- const parisClassic=state.cityId==='paris'&&(central||old||d.tier==='mid'||d.tier==='rich');
- const houseChance=parcel?.houseBias??(green?.55:lux?.34:poor?.05:.07),isHouse=r()<houseChance;
+ const central=d.style==='central',old=d.style==='old',industrial=d.style==='industrial',green=d.style==='green',lux=d.tier==='luxury',poor=d.tier==='poor';
+ const parisUrban=state.cityId==='paris'&&!green&&!lux;
+ const houseChance=parcel?.houseBias??(green?.55:lux?.34:poor?.04:.055),isHouse=r()<houseChance;
  let w=parcel?Math.max(6.8,parcel.w-.34):(isHouse?7.2+r()*3:8.4+r()*2.4),dep=parcel?Math.max(6.4,parcel.d-.34):(isHouse?7+r()*3:8.4+r()*2.4);
- let h=isHouse?(4.6+r()*3.1):(parisClassic?18.0+r()*8.2:central?16+r()*14:lux?16+r()*16:poor?10+r()*10:12+r()*13);
- if(variant===4&&!isHouse)h+=8+r()*8;
+ let h;
+ if(isHouse)h=4.8+r()*3.0;
+ else if(parisUrban){
+   // Parisian streets stay human-scale and continuous. Working/industrial districts
+   // are a little lower, but no longer become textureless black towers.
+   h=central?18.5+r()*7.2:old?16.2+r()*6.2:industrial?13.8+r()*5.6:poor?13.2+r()*5.2:15.6+r()*6.4;
+ }else h=central?16+r()*14:lux?16+r()*16:poor?10+r()*10:12+r()*13;
+ if(variant===4&&!isHouse)h+=parisUrban?3.5+r()*3.5:8+r()*8;
  const bx0=Math.floor(x/CHUNK)*CHUNK,bz0=Math.floor(z/CHUNK)*CHUNK,resolved=resolveBuildingSpot(key,x,z,w,dep,bx0,bz0);if(!resolved)return false;x=resolved.x;z=resolved.z;
  const entrance=chooseAccessibleEntrance(key,x,z,w,dep,bx0,bz0,parcel?.face||null);if(!entrance)return false;
- if(parisClassic&&!isHouse){
-   const mats=v21Materials(),bodyMat=choice(mats.stone),main=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),bodyMat);main.position.set(x,h/2,z);main.castShadow=true;main.receiveShadow=true;g.add(main);
-   const plinth=new THREE.Mesh(new THREE.BoxGeometry(w*1.01,3.25,dep*1.01),mats.base);plinth.position.set(x,1.625,z);plinth.castShadow=true;g.add(plinth);
-   const groundCornice=new THREE.Mesh(new THREE.BoxGeometry(w*1.035,.20,dep*1.035),bodyMat);groundCornice.position.set(x,3.26,z);g.add(groundCornice);
-   v21AddWindowGrid(g,x,z,w,dep,h,r,entrance.face,true,3.35);if(x<bx0+27&&entrance.face!=='west')v21AddWindowGrid(g,x,z,w,dep,h,r,'west',false,3.35);if(x>bx0+56&&entrance.face!=='east')v21AddWindowGrid(g,x,z,w,dep,h,r,'east',false,3.35);if(z<bz0+31&&entrance.face!=='south')v21AddWindowGrid(g,x,z,w,dep,h,r,'south',false,3.35);if(z>bz0+54&&entrance.face!=='north')v21AddWindowGrid(g,x,z,w,dep,h,r,'north',false,3.35);v21AddParisRoof(g,x,z,w,dep,h,r,entrance.face)
+ if(parisUrban&&!isHouse){
+   const mats=v21Materials();
+   const facadePool=industrial?[mats.stone[0],mats.stone[2],mats.warmBrick,mats.paleStucco]:poor?[mats.stone[2],mats.warmBrick,mats.paleStucco]:[mats.stone[0],mats.stone[1],mats.stone[2],mats.stone[3],mats.cream];
+   const bodyMat=choice(facadePool),main=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),bodyMat);main.position.set(x,h/2,z);main.castShadow=true;main.receiveShadow=true;g.add(main);
+   const plinthMat=industrial?mats.paleStucco:mats.base;
+   const plinth=new THREE.Mesh(new THREE.BoxGeometry(w*1.01,3.25,dep*1.01),plinthMat);plinth.position.set(x,1.625,z);plinth.castShadow=true;plinth.receiveShadow=true;g.add(plinth);
+   for(const yy of [3.26,Math.min(h-2.2,9.35),Math.min(h-1.25,15.35)]){if(yy>=h-1.0)continue;const band=new THREE.Mesh(new THREE.BoxGeometry(w*1.028,.13,dep*1.028),bodyMat);band.position.set(x,yy,z);g.add(band)}
+   v21AddWindowGrid(g,x,z,w,dep,h,r,entrance.face,true,3.35);
+   // Add the side facades that can actually be seen from adjacent streets. This removes
+   // the blank monolith effect at intersections without multiplying every hidden wall.
+   if(x<bx0+28&&entrance.face!=='west')v21AddWindowGrid(g,x,z,w,dep,h,r,'west',false,3.35);
+   if(x>bx0+55&&entrance.face!=='east')v21AddWindowGrid(g,x,z,w,dep,h,r,'east',false,3.35);
+   if(z<bz0+30&&entrance.face!=='south')v21AddWindowGrid(g,x,z,w,dep,h,r,'south',false,3.35);
+   if(z>bz0+54&&entrance.face!=='north')v21AddWindowGrid(g,x,z,w,dep,h,r,'north',false,3.35);
+   v21AddParisRoof(g,x,z,w,dep,h,r,entrance.face)
  }else{
    const texChoice=poor?choice([textures.brick,textures.residential,textures.panel]):lux?choice([textures.parisCream,textures.stone,textures.modern]):choice([textures.residential,textures.stone,textures.brick]);
    const main=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),new THREE.MeshStandardMaterial({map:texChoice,roughness:.87,metalness:.03}));main.position.set(x,h/2,z);main.castShadow=true;main.receiveShadow=true;g.add(main);addBuildingDetails(g,x,z,w,dep,h,r,d,isHouse,variant)
@@ -3203,10 +3235,21 @@ function addShopV21(g,key,x,z,r,forcedType=null,parcel=null){
  let w=parcel?Math.max(7.2,parcel.w-.34):10.2,dep=parcel?Math.max(7.0,parcel.d-.34):10.0;
  const resolved=resolveBuildingSpot(key,x,z,w,dep,bx0,bz0);if(!resolved)return false;x=resolved.x;z=resolved.z;
  const entrance=chooseAccessibleEntrance(key,x,z,w,dep,bx0,bz0,parcel?.face||null);if(!entrance)return false;
- const dct=districtFor(Math.floor(x/CHUNK),Math.floor(z/CHUNK)),parisClassic=state.cityId==='paris'&&(dct.style==='central'||dct.style==='old'||dct.tier==='mid'||dct.tier==='rich');
- const h=parisClassic?18.5+r()*7.5:10+r()*6,mats=v21Materials(),bodyMat=parisClassic?choice(mats.stone):new THREE.MeshStandardMaterial({color:0x69625a,roughness:.86});
+ const dct=districtFor(Math.floor(x/CHUNK),Math.floor(z/CHUNK)),parisUrban=state.cityId==='paris'&&dct.style!=='green'&&dct.tier!=='luxury';
+ const mats=v21Materials(),h=parisUrban?(dct.style==='industrial'?14.5+r()*5.2:dct.tier==='poor'?14+r()*5:17.5+r()*7):10+r()*6;
+ const facadePool=dct.style==='industrial'?[mats.stone[0],mats.warmBrick,mats.paleStucco]:dct.tier==='poor'?[mats.stone[2],mats.warmBrick,mats.paleStucco]:mats.stone;
+ const bodyMat=parisUrban?choice(facadePool):new THREE.MeshStandardMaterial({color:0x746b62,roughness:.86});
  const body=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),bodyMat);body.position.set(x,h/2,z);body.castShadow=true;body.receiveShadow=true;g.add(body);
- if(parisClassic){const plinth=new THREE.Mesh(new THREE.BoxGeometry(w*1.01,3.35,dep*1.01),mats.base);plinth.position.set(x,1.675,z);g.add(plinth);v21AddWindowGrid(g,x,z,w,dep,h,r,entrance.face,true,4.55);if(x<bx0+27&&entrance.face!=='west')v21AddWindowGrid(g,x,z,w,dep,h,r,'west',false,4.55);if(x>bx0+56&&entrance.face!=='east')v21AddWindowGrid(g,x,z,w,dep,h,r,'east',false,4.55);if(z<bz0+31&&entrance.face!=='south')v21AddWindowGrid(g,x,z,w,dep,h,r,'south',false,4.55);if(z>bz0+54&&entrance.face!=='north')v21AddWindowGrid(g,x,z,w,dep,h,r,'north',false,4.55);v21AddParisRoof(g,x,z,w,dep,h,r,entrance.face)}
+ if(parisUrban){
+   const plinth=new THREE.Mesh(new THREE.BoxGeometry(w*1.01,3.45,dep*1.01),mats.base);plinth.position.set(x,1.725,z);plinth.receiveShadow=true;g.add(plinth);
+   const band=new THREE.Mesh(new THREE.BoxGeometry(w*1.03,.15,dep*1.03),bodyMat);band.position.set(x,4.45,z);g.add(band);
+   v21AddWindowGrid(g,x,z,w,dep,h,r,entrance.face,true,4.55);
+   if(x<bx0+28&&entrance.face!=='west')v21AddWindowGrid(g,x,z,w,dep,h,r,'west',false,4.55);
+   if(x>bx0+55&&entrance.face!=='east')v21AddWindowGrid(g,x,z,w,dep,h,r,'east',false,4.55);
+   if(z<bz0+30&&entrance.face!=='south')v21AddWindowGrid(g,x,z,w,dep,h,r,'south',false,4.55);
+   if(z>bz0+54&&entrance.face!=='north')v21AddWindowGrid(g,x,z,w,dep,h,r,'north',false,4.55);
+   v21AddParisRoof(g,x,z,w,dep,h,r,entrance.face)
+ }
  v21AddStorefront(g,x,z,w,dep,h,r,entrance.face,type);
  colliders.push({key,minX:x-w/2-.22,maxX:x+w/2+.22,minZ:z-dep/2-.22,maxZ:z+dep/2+.22,type:'shop'});
  shops.push({key,x,z,type,group:body,door:{x:entrance.outX,z:entrance.outZ},entranceFace:entrance.face});registerEntranceZone(key,entrance,`${key}:shop:${type}`);
@@ -3214,10 +3257,9 @@ function addShopV21(g,key,x,z,r,forcedType=null,parcel=null){
 }
 
 function addExtraInfillBuildingsV21(g,key,x0,z0,d,r){
- // Haussmann blocks are already deliberately dense. Extra random boxes were the main source of visual clutter and blocked entrances.
- if(state.cityId==='paris'&&(d.style==='central'||d.style==='old'))return;
+ if(state.cityId==='paris'&&d.style!=='green'&&d.tier!=='luxury')return;
  const candidates=[{x:29,z:34,w:7.0,d:9.5,face:'west',v:0},{x:57,z:34,w:7.0,d:9.5,face:'east',v:1},{x:29,z:52,w:7.0,d:9.5,face:'west',v:1},{x:57,z:52,w:7.0,d:9.5,face:'east',v:0}];
- let added=0;for(const c of candidates){if(added>=2||r()>.58)continue;if(addDenseBuilding(g,key,x0+c.x,z0+c.z,d,r,90+added,c.v,false,c))added++}
+ let added=0;for(const c of candidates){if(added>=3||r()>.68)continue;if(addDenseBuilding(g,key,x0+c.x,z0+c.z,d,r,90+added,c.v,false,c))added++}
 }
 
 function addLampV21(g,x,z){
@@ -3225,8 +3267,8 @@ function addLampV21(g,x,z){
  const base=new THREE.Mesh(new THREE.CylinderGeometry(.17,.22,.22,12),metal);base.position.y=.11;post.add(base);
  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.058,.083,3.10,12),metal);pole.position.y=1.67;post.add(pole);
  const collar=new THREE.Mesh(new THREE.CylinderGeometry(.14,.11,.18,12),metal);collar.position.y=3.20;post.add(collar);
- const globeMat=new THREE.MeshStandardMaterial({color:0xfff1d5,emissive:0xffbd5f,emissiveIntensity:1.35,roughness:.28});const globe=new THREE.Mesh(new THREE.SphereGeometry(.31,16,12),globeMat);globe.position.y=3.48;post.add(globe);
- const halo=new THREE.Mesh(new THREE.SpriteMaterial({color:0xffc66f,transparent:true,opacity:.15,depthWrite:false}));halo.scale.set(1.45,1.45,1);halo.position.y=3.48;post.add(halo);
+ const globeMat=new THREE.MeshStandardMaterial({color:0xfff3d9,emissive:0xffb950,emissiveIntensity:1.60,roughness:.24});const globe=new THREE.Mesh(new THREE.SphereGeometry(.34,16,12),globeMat);globe.position.y=3.48;post.add(globe);
+ const halo=new THREE.Mesh(new THREE.SpriteMaterial({color:0xffc66f,transparent:true,opacity:.15,depthWrite:false}));halo.scale.set(1.70,1.70,1);halo.position.y=3.48;post.add(halo);
  post.position.set(x,0,z);g.add(post);const key=g.userData?.key||'';streetLamps.push({key,group:post,x,z,globeMat});colliders.push({key,minX:x-.21,maxX:x+.21,minZ:z-.21,maxZ:z+.21,type:'lamp'})
 }
 
@@ -3252,15 +3294,53 @@ function createCarVisualV21(color,kind='car'){
  if(kind==='taxi'){const sign=new THREE.Mesh(new THREE.BoxGeometry(.58,.18,.30),new THREE.MeshStandardMaterial({color:0xffd65f,emissive:0x7a4a0d,emissiveIntensity:.35}));sign.position.set(0,1.70,0);group.add(sign)}return group
 }
 
+
+function addEmergencyUrbanShellV21(g,key,x,z,w,dep,h,r){
+ const rr={minX:x-w/2-.18,maxX:x+w/2+.18,minZ:z-dep/2-.18,maxZ:z+dep/2+.18};
+ if(colliders.some(c=>c.key===key&&['building','house','shop','playerHome'].includes(c.type)&&rectsTouch(rr,c)))return false;
+ const mat=new THREE.MeshStandardMaterial({map:r()<.5?textures.parisStone:textures.parisCream,roughness:.90,metalness:.01});
+ const body=new THREE.Mesh(new THREE.BoxGeometry(w,h,dep),mat);body.position.set(x,h/2,z);body.castShadow=true;body.receiveShadow=true;g.add(body);
+ const roof=new THREE.Mesh(new THREE.BoxGeometry(w*.98,.75,dep*.98),new THREE.MeshStandardMaterial({color:0x343a40,roughness:.90}));roof.position.set(x,h+.38,z);g.add(roof);
+ const cornice=new THREE.Mesh(new THREE.BoxGeometry(w*1.03,.16,dep*1.03),new THREE.MeshStandardMaterial({color:0xcabfae,roughness:.92}));cornice.position.set(x,3.25,z);g.add(cornice);
+ colliders.push({key,...rr,type:'building'});return true
+}
+
+function ensureUrbanDensityV21(g,key,x0,z0,d,r){
+ if(state.cityId!=='paris'||d.style==='green'||d.tier==='luxury')return;
+ let count=colliders.filter(c=>c.key===key&&['building','house','shop'].includes(c.type)).length;
+ if(count>=8)return;
+ const fallback=[
+  {x:21,z:23,w:9.2,d:14.2,face:'south',v:0,houseBias:0},
+  {x:31.6,z:23,w:9.2,d:14.2,face:'south',v:1,houseBias:0},
+  {x:52.0,z:23,w:9.2,d:14.2,face:'south',v:0,houseBias:0},
+  {x:62.0,z:23,w:8.6,d:14.2,face:'south',v:1,houseBias:0},
+  {x:21,z:60.5,w:9.2,d:10.8,face:'north',v:1,houseBias:0},
+  {x:31.6,z:60.5,w:9.2,d:10.8,face:'north',v:0,houseBias:0},
+  {x:52.0,z:60.5,w:9.2,d:10.8,face:'north',v:1,houseBias:0},
+  {x:62.0,z:60.5,w:8.6,d:10.8,face:'north',v:0,houseBias:0}
+ ];
+ for(let i=0;i<fallback.length&&count<8;i++){
+   const c=fallback[i];
+   try{if(addDenseBuilding(g,key,x0+c.x,z0+c.z,d,r,180+i,c.v,true,c))count++}catch(err){console.warn('V21.2 detailed fallback parcel',key,i,err)}
+ }
+ // Last-resort visual shells: a decoration error must never leave only roads/grass again.
+ if(count<8){
+   for(const [dx,dz,w,dep] of [[21,23,9,14],[32,23,9,14],[52,23,9,14],[62,23,8,14],[21,60,9,10],[32,60,9,10],[52,60,9,10],[62,60,8,10]]){
+     if(count>=8)break;
+     if(addEmergencyUrbanShellV21(g,key,x0+dx,z0+dz,w,dep,14+r()*4,r))count++
+   }
+ }
+}
+
 function addV21StreetLife(g,key,x0,z0,d,r){
- const lively=d.style==='central'||d.style==='old';
+ const lively=state.cityId==='paris'&&(d.style==='central'||d.style==='old'||d.style==='industrial'||d.tier==='poor'||d.tier==='working'||d.tier==='mid');
  // Parisian street furniture: small planters, bicycle racks and café furniture kept on sidewalk edges.
  const rackMat=v21Materials().rail;
  const racks=lively?[[16.0,34],[66.8,45]]:[[16.2,36]];
- for(const [dx,dz] of racks){if(r()>.72)continue;const rg=new THREE.Group();for(let i=0;i<3;i++){const hoop=new THREE.Mesh(new THREE.TorusGeometry(.34,.045,6,12,Math.PI),rackMat);hoop.rotation.z=Math.PI/2;hoop.position.set(i*.46,.34,0);rg.add(hoop)}rg.position.set(x0+dx,0,z0+dz);rg.rotation.y=(dx<30)?0:Math.PI/2;g.add(rg)}
+ for(const [dx,dz] of racks){if(r()>(lively?.88:.58))continue;const rg=new THREE.Group();for(let i=0;i<3;i++){const hoop=new THREE.Mesh(new THREE.TorusGeometry(.34,.045,6,12,Math.PI),rackMat);hoop.rotation.z=Math.PI/2;hoop.position.set(i*.46,.34,0);rg.add(hoop)}rg.position.set(x0+dx,0,z0+dz);rg.rotation.y=(dx<30)?0:Math.PI/2;g.add(rg)}
  // Extra café/bakery terraces are visual-only and are positioned beside, never in front of, entrances.
  for(const s of shops.filter(q=>q.key===key&&['cafe','restaurant','bakery'].includes(q.type))){
-   if(r()>.72)continue;const side=(s.entranceFace==='south'||s.entranceFace==='north');const tangent=side?{x:1,z:0}:{x:0,z:1};
+   if(r()>(lively?.88:.62))continue;const side=(s.entranceFace==='south'||s.entranceFace==='north');const tangent=side?{x:1,z:0}:{x:0,z:1};
    for(const k of [-1,1]){const tx=s.door.x+tangent.x*k*1.55,tz=s.door.z+tangent.z*k*1.55;if(placementBlocked(tx,tz,.42))continue;const table=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.055,12),new THREE.MeshStandardMaterial({color:0x6f5037,roughness:.92}));table.position.set(tx,.70,tz);g.add(table);const leg=new THREE.Mesh(new THREE.CylinderGeometry(.045,.055,.68,8),rackMat);leg.position.set(tx,.35,tz);g.add(leg)}
  }
 }
@@ -3275,17 +3355,17 @@ function buildV21Skyline(){
 function updateV21NightLighting(t){
  if(state.interior){for(const l of lampLightPool){l.visible=false;l.intensity=0}return}
  const hour=state.timeOfDay,night=hour>=18.2||hour<7.0,deep=hour>=21||hour<5.5;
- if(t-lastV21LightTick>260){lastV21LightTick=t;const near=streetLamps.filter(l=>l.group?.parent).map(l=>({...l,dist:Math.hypot(state.pos.x-l.x,state.pos.z-l.z)})).filter(l=>l.dist<26).sort((a,b)=>a.dist-b.dist).slice(0,lampLightPool.length);for(let i=0;i<lampLightPool.length;i++){const light=lampLightPool[i],lamp=near[i];if(!lamp||!night){light.visible=false;light.intensity=0;continue}light.visible=true;light.position.set(lamp.x,3.35,lamp.z);light.intensity=deep?62:44}}
+ if(t-lastV21LightTick>260){lastV21LightTick=t;const near=streetLamps.filter(l=>l.group?.parent).map(l=>({...l,dist:Math.hypot(state.pos.x-l.x,state.pos.z-l.z)})).filter(l=>l.dist<26).sort((a,b)=>a.dist-b.dist).slice(0,lampLightPool.length);for(let i=0;i<lampLightPool.length;i++){const light=lampLightPool[i],lamp=near[i];if(!lamp||!night){light.visible=false;light.intensity=0;continue}light.visible=true;light.position.set(lamp.x,3.35,lamp.z);light.intensity=deep?70:52}}
  if(t-lastV21WindowTick>1200){lastV21WindowTick=t;const intensity=night?(deep?1.05:.78):.04;if(v21MaterialCache?.warmGlass){v21MaterialCache.warmGlass.emissiveIntensity=intensity;v21MaterialCache.shopGlass.emissiveIntensity=night?1.25:.55}for(const l of streetLamps){if(l.globeMat)l.globeMat.emissiveIntensity=night?1.45:.28}}
  if(v21Skyline){v21Skyline.position.x=Math.round(state.pos.x/72)*72;v21Skyline.position.z=Math.round(state.pos.z/72)*72}
 }
 
 function updateWorldLightV21(dt){
  const prevTime=state.timeOfDay;state.timeOfDay=(state.timeOfDay+dt*.025)%24;if(state.timeOfDay<prevTime)advanceDay(1);
- const sun=scene.getObjectByName('sun'),hemi=scene.children.find(x=>x.isHemisphereLight),fill=scene.getObjectByName('nightFill');const solar=Math.sin((state.timeOfDay-6)/24*Math.PI*2),day=clamp(solar*.72+.34,.025,1),night=1-day,cloudDim=state.weather==='cloudy'?.82:state.weather==='rain'?.64:1;
- if(sun){sun.intensity=(.035+day*1.70)*cloudDim;sun.position.set(state.pos.x+34,56,state.pos.z+24);sun.target.position.set(state.pos.x,0,state.pos.z);sun.target.updateMatrixWorld()}
- if(hemi)hemi.intensity=.34+day*1.30;if(fill)fill.intensity=.30+night*.52;
- const nightSky=new THREE.Color(0x08172b),duskSky=new THREE.Color(0x31506d),daySky=new THREE.Color(0x90b5cf);let sky=nightSky.clone();if(day<.42)sky.lerp(duskSky,day/.42);else sky=duskSky.clone().lerp(daySky,(day-.42)/.58);sky.multiplyScalar(cloudDim*.22+.78);scene.background.copy(sky);scene.fog.color.copy(sky);renderer.toneMappingExposure=.96+day*.12+night*.08;
+ const sun=scene.getObjectByName('sun'),hemi=scene.children.find(x=>x.isHemisphereLight),fill=scene.getObjectByName('nightFill');const solar=Math.sin((state.timeOfDay-6)/24*Math.PI*2),day=clamp(solar*.72+.36,.04,1),night=1-day,cloudDim=state.weather==='cloudy'?.84:state.weather==='rain'?.70:1;
+ if(sun){sun.intensity=(.16+day*1.55)*cloudDim;sun.position.set(state.pos.x+34,56,state.pos.z+24);sun.target.position.set(state.pos.x,0,state.pos.z);sun.target.updateMatrixWorld()}
+ if(hemi)hemi.intensity=.58+day*1.16;if(fill)fill.intensity=.40+night*.58;
+ const nightSky=new THREE.Color(0x0a1c32),duskSky=new THREE.Color(0x3b6382),daySky=new THREE.Color(0x9fc2d9);let sky=nightSky.clone();if(day<.42)sky.lerp(duskSky,day/.42);else sky=duskSky.clone().lerp(daySky,(day-.42)/.58);sky.multiplyScalar(cloudDim*.18+.82);scene.background.copy(sky);scene.fog.color.copy(sky);renderer.toneMappingExposure=1.02+day*.10+night*.09;
  if(performance.now()-lastWeatherTick>42000){lastWeatherTick=performance.now();const rr=Math.random();state.weather=rr<.68?'clear':rr<.86?'cloudy':'rain'}
 }
 

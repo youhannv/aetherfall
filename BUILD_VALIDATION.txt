@@ -1,15 +1,16 @@
-StreetQuest 3D V21.1 — Paris Cinematic Fix
+StreetQuest 3D V21.2 — Paris Dense Cinematic
 
-Correctif critique:
-- La V21 déclarait plusieurs fonctions une seconde fois dans game.js.
-- game.js est chargé avec <script type="module"> : ces redéclarations provoquaient une SyntaxError avant init(), donc aucun canvas WebGL ni aucune ville ne pouvaient apparaître.
-- Les implémentations V21 sont maintenant nommées explicitement *V21 puis activées sans redéclaration de binding module.
-- Cache Service Worker incrémenté vers streetquest3d-v21.1-fix1 pour forcer l'iPhone/GitHub Pages à récupérer le game.js corrigé.
+Corrections majeures par rapport à V21.1 :
+- Tous les quartiers urbains de Paris utilisent maintenant des îlots denses (objectif >= 8 bâtiments, plan normal ~10).
+- Le Faubourg des Ateliers et les quartiers populaires reçoivent les mêmes façades détaillées : fenêtres, balcons, corniches, toits et éclairage, avec une palette plus ouvrière/brique.
+- Garantie anti-quartier-vide après génération procédurale.
+- Éclairage de l'aube/nuit relevé pour éviter les silhouettes noires.
+- Plus de PNJ dans les quartiers populaires/industriels et mobilier de rue plus fréquent.
+- Cache Service Worker : streetquest3d-v21.2-dense1
+- worldLayoutVersion : 212.
 
-Validations effectuées:
-- node --check sur game.js en tant que module ES (.mjs) : OK
-- aucune fonction top-level dupliquée : OK
-- sw.js : syntaxe OK
-- multiplayer-config.js : syntaxe OK
-- server/server.js : syntaxe OK
-- manifest.json / version.json / server/package.json : JSON valide
+Contrôles exécutés :
+- node --check game.js
+- node --check sw.js / multiplayer-config.js / server/server.js
+- validation JSON manifest/version/package
+- contrôle des références d'assets du Service Worker

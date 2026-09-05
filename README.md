@@ -1,4 +1,4 @@
-# StreetQuest 3D V21.1 — Paris Cinematic
+# StreetQuest 3D V21.2 — Paris Dense Cinematic
 
 Cette version remplace la direction artistique V20.1 par une génération parisienne beaucoup plus dense et cohérente : fronts de rue haussmanniens, commerces en rez-de-chaussée, façades modulaires, éclairage nocturne réel, skyline, voitures et végétation retravaillées.
 
@@ -17,6 +17,10 @@ Cette version remplace la direction artistique V20.1 par une génération parisi
 
 ## Déploiement
 
-Décompresse ce dossier à la racine du dépôt GitHub Pages, commit/push, puis recharge la PWA. V21 utilise le cache `streetquest3d-v21.1-fix1.1-fix1` et migre automatiquement la sauvegarde V20.1 vers `sq3d-v21`.
+Décompresse ce dossier à la racine du dépôt GitHub Pages, commit/push, puis recharge la PWA. V21 utilise le cache `streetquest3d-v21.2-dense1` et migre automatiquement la sauvegarde V20.1 vers `sq3d-v21`.
 
 Voir `V21_CHECKLIST.md` avant publication.
+
+
+## Correctif V21.2
+Cette version corrige spécifiquement les quartiers presque vides de V21.1. Les zones urbaines parisiennes utilisent un plan dense avec une garantie de densité et les façades détaillées sont actives aussi dans le Faubourg des Ateliers, les Docks et les quartiers populaires.

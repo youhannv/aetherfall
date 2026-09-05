@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V21.1">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V21.2">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V21.1</title>
+<title>StreetQuest 3D V21.2</title>
 </head>
 <body>
 <div id="app">
@@ -152,7 +152,7 @@
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" crossorigin="anonymous"></script>
 <script src="multiplayer-config.js"></script>
 <script>
-// V21.1 startup diagnostics: surface module/runtime failures instead of leaving a blank city.
+// V21.2 startup diagnostics: surface module/runtime failures instead of leaving a blank city.
 window.addEventListener('error',e=>{
   const msg=e?.message||'Erreur JavaScript inconnue';
   if(String(msg).includes('Script error'))return;
