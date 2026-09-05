@@ -1,25 +1,13 @@
-STREETQUEST V20 — VALIDATION BUILD
+StreetQuest V20.1 — validation automatique
 
-[OK] Version worldLayoutVersion=200
-[OK] Sauvegarde V20
-[OK] Cache SW V20
-[OK] Lampadaires boule
-[OK] Lampadaires uniquement makeRoad
-[OK] Aucun ancien trottoir 84.5
-[OK] Trottoir est/sud 70.5
-[OK] Vendeurs face comptoir
-[OK] Clients face comptoir
-[OK] Planning population nuit
-[OK] Feux trois couleurs
-[OK] Phase tous rouges
-[OK] Voitures stationnées bord chaussée
-[OK] DA V20 CSS
-[OK] Eiffel / repère Paris
-[OK] Titre HTML V20
-[OK] Guide GitHub présent
-[OK] .nojekyll présent
-[OK] manifest.json JSON valide
-[OK] version.json JSON valide
-[OK] server/package.json JSON valide
-
-21/21 contrôles réussis.
+OK - game.js : syntaxe JavaScript valide (node --check)
+OK - server/server.js : syntaxe JavaScript valide (node --check)
+OK - version.json : JSON valide
+OK - manifest.json : JSON valide
+OK - cache PWA mis à jour : streetquest3d-v20.1
+OK - persistance mise à jour : sq3d-v20.1 avec reprise sq3d-v20
+OK - worldLayoutVersion : 201
+OK - nouveaux commerces intégrés : bakery, butcher, restaurant, cafe, pharmacy, florist, hairdresser
+OK - nouveaux services intégrés : coiffure, bouquets, petit soin
+OK - densification urbaine augmentée : commerces supplémentaires + infill buildings
+OK - population urbaine augmentée : PNJ et voitures renforcés

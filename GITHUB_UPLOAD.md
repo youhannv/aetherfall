@@ -1,4 +1,4 @@
-# StreetQuest V20 — mise en ligne GitHub Pages
+# StreetQuest V20.1 — mise en ligne GitHub Pages
 
 Ce ZIP est prêt à être placé **à la racine** du dépôt GitHub Pages.
 

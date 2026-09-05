@@ -25,17 +25,17 @@ const roomName=city=>`city:${safeText(city,20)||'paris'}`;
 app.get('/',(_,res)=>res.json({name:'StreetQuest Multiplayer',status:'online',players:players.size}));
 app.get('/health',(_,res)=>res.status(200).send('ok'));
 app.get('/debug',(_,res)=>res.json({
- version:'17.0',
+ version:'20.0',
  sockets:io.engine.clientsCount,
  joinedPlayers:players.size,
- players:[...players.values()].map(p=>({name:p.name,city:p.city,x:p.x,z:p.z,avatar:p.avatar,voice:p.voice}))
+ players:[...players.values()].map(p=>({name:p.name,city:p.city,x:p.x,z:p.z,avatar:p.avatar,avatarVersion:p.avatarVersion,voice:p.voice,interior:p.interior}))
 }));
 
-function publicPlayer(p){return{id:p.id,name:p.name,city:p.city,x:p.x,z:p.z,yaw:p.yaw,color:p.color,avatar:p.avatar,avatarVersion:p.avatarVersion||p.avatar?.version||1,voice:!!p.voice}}
+function publicPlayer(p){return{id:p.id,name:p.name,city:p.city,x:p.x,z:p.z,yaw:p.yaw,color:p.color,avatar:p.avatar,avatarVersion:p.avatarVersion||1,voice:!!p.voice,interior:!!p.interior}}
 function emitCount(city){const room=io.sockets.adapter.rooms.get(roomName(city));io.to(roomName(city)).emit('world:count',room?.size||0)}
 function joinWorld(socket,data={}){
  const previous=players.get(socket.id);if(previous){socket.leave(roomName(previous.city));emitCount(previous.city)}
- const city=safeText(data.city,20)||'paris',p={id:socket.id,name:safeText(data.name,18)||'Joueur',city,x:safeNum(data.x),z:safeNum(data.z),yaw:safeNum(data.yaw),color:Number(data.color)||0x5fa7d8,avatar:safeAvatar(data.avatar),avatarVersion:Math.max(1,Math.floor(safeNum(data.avatarVersion||data.avatar?.version,1))),voice:!!previous?.voice,lastMove:0};
+ const city=safeText(data.city,20)||'paris',p={id:socket.id,name:safeText(data.name,18)||'Joueur',city,x:safeNum(data.x),z:safeNum(data.z),yaw:safeNum(data.yaw),color:Number(data.color)||0x5fa7d8,avatar:safeAvatar(data.avatar),avatarVersion:Math.max(1,Math.floor(safeNum(data.avatarVersion||data.avatar?.version,1))),voice:!!previous?.voice,interior:!!data.interior,lastMove:0};
  players.set(socket.id,p);socket.join(roomName(city));console.log('[player joined]',p.name,p.city,'players:',players.size);
  const list=[...players.values()].filter(x=>x.city===city).map(publicPlayer);socket.emit('world:players',list);socket.to(roomName(city)).emit('player:joined',publicPlayer(p));emitCount(city)
 }
@@ -44,8 +44,21 @@ io.on('connection',socket=>{
  console.log('[socket connected]',socket.id,'open sockets:',io.engine.clientsCount);
  socket.on('player:join',data=>joinWorld(socket,data));
  socket.on('player:appearance',data=>{
-   const p=players.get(socket.id);if(!p)return;p.avatar=safeAvatar(data?.avatar);p.avatarVersion=Math.max(p.avatarVersion||1,Math.floor(safeNum(data?.avatarVersion||data?.avatar?.version,1)));
+   const p=players.get(socket.id);if(!p)return;
+   p.avatar=safeAvatar(data?.avatar);
+   p.avatarVersion=Math.max((p.avatarVersion||1)+1,Math.floor(safeNum(data?.avatarVersion||data?.avatar?.version,1)));
    io.to(roomName(p.city)).emit('player:appearance',publicPlayer(p))
+ });
+ socket.on('player:profile-sync',data=>{
+   const p=players.get(socket.id);if(!p)return;
+   const next=safeAvatar(data?.avatar),sig=JSON.stringify(next),old=JSON.stringify(p.avatar);
+   p.interior=!!data?.interior;
+   if(sig!==old){p.avatar=next;p.avatarVersion=Math.max((p.avatarVersion||1)+1,Math.floor(safeNum(data?.avatarVersion,1)));io.to(roomName(p.city)).emit('player:appearance',publicPlayer(p))}
+ });
+ socket.on('player:presence',data=>{
+   const p=players.get(socket.id);if(!p)return;p.interior=!!data?.interior;
+   if(Number.isFinite(Number(data?.x)))p.x=Number(data.x);if(Number.isFinite(Number(data?.z)))p.z=Number(data.z);
+   io.to(roomName(p.city)).emit('player:presence',publicPlayer(p))
  });
  socket.on('voice:state',data=>{const p=players.get(socket.id);if(!p)return;p.voice=!!data?.enabled;io.to(roomName(p.city)).emit('player:voice',publicPlayer(p))});
  socket.on('voice:signal',data=>{const p=players.get(socket.id),to=safeText(data?.to,80),target=players.get(to);if(!p||!target||target.city!==p.city)return;const kind=safeText(data?.kind,12);if(!['offer','answer','ice'].includes(kind))return;io.to(to).emit('voice:signal',{from:socket.id,kind,sdp:data?.sdp||null,candidate:data?.candidate||null})});
@@ -56,7 +69,7 @@ io.on('connection',socket=>{
    const city=safeText(data.city,20)||p.city;if(city!==p.city){joinWorld(socket,{...p,...data,city});return}
    const nx=safeNum(data.x,p.x),nz=safeNum(data.z,p.z),ny=safeNum(data.yaw,p.yaw);
    if(Math.hypot(nx-p.x,nz-p.z)>12)return; // simple anti-teleport alpha
-   p.x=nx;p.z=nz;p.yaw=ny;socket.to(roomName(p.city)).emit('player:moved',publicPlayer(p))
+   p.x=nx;p.z=nz;p.yaw=ny;p.interior=!!data.interior;socket.to(roomName(p.city)).emit('player:moved',publicPlayer(p))
  });
  socket.on('chat:send',data=>{
    const p=players.get(socket.id),message=safeText(data?.message,100);if(!p||!message)return;

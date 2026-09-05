@@ -1,4 +1,4 @@
-# StreetQuest 3D V4
+# StreetQuest 3D V20.1 — Paris Living City
 
 V4 pensée comme un jeu d'aventure/exploration chill en portrait pour iPhone.
 
@@ -714,3 +714,272 @@ Multijoueur :
 Le serveur V17 doit être redéployé sur Render pour les nouvelles fonctions vocales/sociales.
 
 - Les anciens artefacts/scanner ne sont plus générés ni affichés en V17.
+
+
+# V18 — City & Physics
+
+Cette version corrige les problèmes de génération et de synchronisation signalés après V17.
+
+## Ville / bâtiments
+- marges de construction renforcées : aucun volume de bâtiment ne peut dépasser sur les trottoirs
+- les ruelles centrales sont réservées avant la construction
+- chaque bâtiment résidentiel possède exactement une entrée calculée vers le trottoir ou la ruelle la plus proche
+- un corridor piéton est réservé entre la porte et la voie publique
+- les bâtiments créés ensuite ne peuvent pas couper ce corridor
+- les commerces sont eux aussi placés sur une parcelle sûre avec une façade orientée vers une voie accessible
+- le vieux faux portail plein sud a été supprimé
+- le plan passe à `worldLayoutVersion 180`, ce qui force la reconstruction propre des annonces/points de commerce hérités
+
+## PNJ
+- évitement dynamique entre PNJ, voitures et murs
+- récupération automatique vers un vrai waypoint piéton si un PNJ finit dans une collision
+- après blocage prolongé, le PNJ est replacé sur son trajet au lieu de rester prisonnier d’un mur
+- pendant une conversation il reste immobile et orienté vers le joueur
+
+## Circulation
+- feux repositionnés exclusivement sur l’angle du trottoir
+- suppression des deux poteaux qui étaient posés sur la chaussée
+- spawn des voitures avec distance de sécurité
+- suivi de véhicule / ralentissement quand une voiture est devant
+- test de collision dynamique à chaque déplacement
+- un véhicule n’entre plus volontairement dans une intersection si la nouvelle position est occupée
+- réduction des fusions de véhicules et des chevauchements
+
+## Carte
+- suppression des points PNJ et police
+- joueurs en ligne visibles
+- commerces codés visuellement : F nourriture, R revente, I immobilier, V vêtements, + santé, etc.
+- un seul libellé par type de quartier dans la zone visible
+- repère du logement et du bien immobilier sélectionné
+- la grande carte reste consultable depuis une agence même lorsque le joueur est à l’intérieur
+
+## Multijoueur
+- un joueur entrant dans un magasin/logement devient invisible dans la rue pour les autres
+- il réapparaît à sa vraie position lorsqu’il ressort
+- l’état `interior` est transmis par Render
+- le skin complet est recopié dans chaque message de mouvement
+- le client compare aussi une signature des caractéristiques : une mise à jour de peau, cheveux, coiffure, haut, pantalon, chaussures, accessoire ou corpulence force la reconstruction de l’avatar
+- synchronisation de profil périodique de secours
+
+## Immobilier
+- coordonnées X/Y sur chaque annonce
+- bouton `Voir carte`
+- depuis l’Agence Habitat : bouton `Visiter`
+- la visite téléporte dans le logement
+- sortir de la visite ramène dans l’agence, pas dans la rue
+- vendeurs / conseillers 3D ajoutés dans les commerces
+
+## Besoins
+- faim, soif et hygiène diminuent environ 3 à 4 fois moins vite
+- baisse encore plus lente à l’intérieur
+- perte de vie par manque critique fortement ralentie
+
+
+# V18.1 — Urban Blocks
+
+La ville n'est plus remplie en lançant des immeubles indépendants à des positions semi-aléatoires.
+Chaque chunk choisit maintenant un **modèle d'îlot urbain complet**, puis le fait pivoter / miroir
+de façon déterministe selon le quartier.
+
+Modèles inclus :
+- `courtyard` : bâtiments autour d'une cour centrale
+- `avenue` : façades plus continues le long des rues
+- `garden` : habitat plus aéré avec cœur végétal
+- `towers` : grandes constructions et place centrale
+- `workers` : îlot plus dense pour quartiers populaires
+- `service` : cour de service pour secteur industriel
+- `starter` : îlot plus lisible autour de la zone de départ
+
+Chaque modèle définit à l'avance :
+- les emplacements constructibles
+- la place / cour / jardin central
+- la densité
+- les emplacements privilégiés du commerce
+- les passages piétons restant libres
+
+Le moteur V18 conserve ensuite ses sécurités :
+- retraits des trottoirs
+- ruelles réservées
+- corridor réel entre chaque porte et l'espace public
+- collision bâtiment contre bâtiment
+- suppression d'une construction si la parcelle ne peut réellement pas la contenir
+
+Autres ajustements :
+- variation de taille des bâtiments réduite dans les îlots planifiés
+- presque plus de déplacement aléatoire des bâtiments
+- décor urbain posé uniquement dans les espaces réellement libres
+- poubelles / coffres / objets ne peuvent plus obstruer une entrée
+- voitures garées uniquement sur un emplacement libre
+- trafic légèrement réduit pour une circulation plus lisible sur mobile
+- `worldLayoutVersion 181` : régénération propre des points de commerce et annonces hérités
+
+
+# V19 — City Rebuild
+
+- vrai réseau piéton aux coordonnées de trottoir 12.5 / 84.5
+- apparition PNJ espacée sur des segments de chemin
+- récupération PNJ exclusivement sur réseau piéton
+- 4 parcelles maximum par îlot, dimensions maximales explicites
+- bâtiments et auvents contraints à l’intérieur de leur parcelle
+- façade d’entrée préférée définie par l’urbanisme
+- circulation à droite conforme à la France
+- quatre feux par intersection
+- chaque feu est du bon côté de l’intersection et orienté vers le conducteur correspondant
+- quatre passages piétons et quatre lignes d’arrêt
+- 1,5 seconde tout rouge entre les axes
+- contrôle d’occupation d’intersection avant engagement
+- suppression des virages instantanés instables : priorité à la fluidité et à l’absence de fusion
+- moins de PNJ, moins de voitures et moins de petits obstacles
+- `worldLayoutVersion 190` force une reconstruction de la ville
+
+
+# V19.1 — Hotfix génération + feux
+
+Cause exacte de la ville vide V19 :
+- `rotateBlockPoint()` avait été supprimée pendant le remplacement du générateur V18.1
+- `addUrbanPlaza()` avait également été supprimée
+- `createChunk()` appelait encore ces deux fonctions
+- le chunk construisait donc routes/feux, puis levait une ReferenceError AVANT les bâtiments, PNJ et voitures
+
+V19.1 restaure ces deux fonctions et sépare maintenant la génération en plusieurs étapes protégées :
+- bloc urbain
+- population
+- trafic
+
+Une future erreur de décoration ne peut donc plus supprimer en même temps bâtiments + habitants + voitures.
+
+## Feux V19.1
+Les signaux principaux sont maintenant placés AVANT le passage piéton, du côté droit de l'approche :
+- nordbound : côté est, face sud
+- southbound : côté ouest, face nord
+- eastbound : côté sud, face ouest
+- westbound : côté nord, face est
+
+Les lentilles ne sont plus des cylindres visibles des deux côtés.
+Elles sont des disques `FrontSide` : on voit rouge/vert uniquement lorsqu'on regarde réellement
+la FACE du feu. Le dos est un panneau noir distinct. L'orientation est donc visuellement vérifiable.
+
+`worldLayoutVersion 191` force le recalcul propre du plan.
+
+
+# V19.2 — sens de circulation + densité restaurée
+
+## Sens de circulation
+Correction importante :
+StreetQuest affiche ses coordonnées avec `Y = -Z`.
+
+Donc :
+- `+Z` correspond visuellement au SUD
+- `-Z` correspond visuellement au NORD
+
+V19/V19.1 avaient raisonné comme si `+Z` était le nord, ce qui avait inversé les voies en voulant
+appliquer la conduite à droite.
+
+V19.2 remet la logique correcte qui existait visuellement avant :
+- véhicule vers +Z (sud) : moitié OUEST de la chaussée verticale (`x=3.2`)
+- véhicule vers -Z (nord) : moitié EST (`x=7.8`)
+- véhicule vers +X (est) : moitié SUD de la chaussée horizontale (`z=7.8`)
+- véhicule vers -X (ouest) : moitié NORD (`z=3.2`)
+
+C'est bien de la conduite à droite dans le repère réel du jeu.
+
+Les feux sont repositionnés en conséquence sur le côté droit de CHAQUE approche et orientés
+vers le conducteur correspondant.
+
+## Densité de ville
+V19 avait volontairement limité chaque îlot à quatre bâtiments, ce qui était trop radical.
+
+V19.2 utilise :
+- 6 bâtiments minimum dans la plupart des modèles
+- jusqu'à 8 bâtiments dans les quartiers avenue / populaires
+- davantage d'habitations dans les zones normales et populaires
+- zones vertes encore plus aérées, mais plus du tout vides
+
+## Population
+Objectifs par chunk :
+- quartier central : 7 à 9 PNJ
+- populaire : 6 à 8
+- normal : 5 à 7
+- industriel / luxe : 5 à 7
+
+La séparation physique entre PNJ reste active, mais le rayon de spawn a été légèrement diminué
+pour permettre une ville plus vivante sans recréer les groupes fusionnés.
+
+## Véhicules
+Objectifs :
+- central / populaire : 5 à 7 voitures actives
+- normal / industriel / luxe : 4 à 6
+- voitures garées plus fréquentes
+
+La distance de sécurité, les feux, la phase tout-rouge et le contrôle d'intersection restent actifs.
+
+`worldLayoutVersion 192` force la régénération des îlots.
+
+
+# V20 — Paris Living City
+
+V20 part de V19.2 et conserve les systèmes de jeu / multijoueur existants, mais refait la direction artistique et la densité urbaine.
+
+## Direction artistique
+- rendu Paris nocturne / crépuscule plus chaleureux et plus contrasté
+- façades parisiennes pierre / crème avec fenêtres éclairées
+- balcons, corniches, toitures sombres, cheminées et végétation de façade
+- commerces plus hauts et mieux intégrés visuellement aux rues
+- vitrines et intérieurs chauds
+- lune et repère parisien stylisé visibles dans le ciel de Paris
+- UI sombre vitrée plus proche de la maquette V20
+
+## Lampadaires
+- ancien lampadaire directionnel supprimé
+- nouveau lampadaire boule parfaitement symétrique
+- placement uniquement sur les bandes trottoir
+- aucun lampadaire volontairement placé dans la chaussée
+
+## Circulation et feux
+- sens V19.2 conservé : Y écran = -Z monde
+- conduite à droite conservée
+- 4 approches conservées
+- feux déplacés sur le côté droit de chaque approche
+- face du feu visible uniquement pour les conducteurs concernés
+- ajout du jaune + phase tout rouge
+- distances de sécurité / occupation de carrefour conservées
+
+## Ville / densité
+- chunk de départ utilise le modèle `avenue` dense
+- quartiers centre et populaires privilégient les blocs à 8 bâtiments
+- maisons fortement réduites dans le centre et les quartiers urbains
+- davantage de voitures actives et de voitures stationnées
+- arbres, jardinières, bancs et bornes ajoutés sans toucher aux corridors d'entrée
+- entrées et corridors V18/V19 conservés
+
+## Population jour / nuit
+- journée : ville nettement plus peuplée
+- 18h30–21h : activité réduite mais encore vivante
+- 21h–23h : baisse supplémentaire
+- 23h–5h30 : rues nettement plus calmes
+- police / ennemis restent séparés de la densité civile
+
+## Commerces
+- vendeur placé derrière le comptoir et tourné VERS le comptoir / le client
+- clients décoratifs placés côté client et tournés VERS le comptoir
+- correction explicite du problème des personnages dos au comptoir
+
+## Robustesse conservée
+- récupération PNJ bloqués
+- collisions bâtiments / voies / corridors
+- reconstruction du plan avec `worldLayoutVersion 200`
+- sauvegarde V20 dans `sq3d-v20`, avec migration automatique depuis V19/V18/V17/V16/V15
+- cache PWA `streetquest3d-v20.1`
+
+## GitHub Pages
+Décompresse le dossier et remplace les fichiers du dépôt par le contenu de V20. Commit/push puis attends le redéploiement GitHub Pages. Sur iPhone, si une ancienne version reste affichée, utilise le bouton de vérification de mise à jour ou recharge la PWA après le déploiement.
+
+
+## V20.0 — correctifs de cohérence supplémentaires
+
+- Les routes piétonnes Est/Nord utilisent maintenant le trottoir proche de l'îlot (`70.5`) et non le trottoir situé de l'autre côté de la route suivante : les PNJ restent dans leur vrai quartier et les portes ne créent plus de corridor traversant la chaussée.
+- Les voitures stationnées sont générées au bord de la chaussée et non dans la bande de trottoir.
+- La population civile possède un planning dynamique : le pool de journée est généré une fois, puis une partie des PNJ rentre automatiquement à l'intérieur en soirée/nuit et ressort quand l'activité remonte.
+- Les PNJ hors horaire ne bloquent plus le joueur, les autres PNJ ni les interactions.
+- La lune est masquée en journée.
+- Les lampadaires boule utilisent un halo au sol très léger et peu coûteux plutôt qu'une multitude de lumières ponctuelles, afin de conserver de bonnes performances sur iPhone.

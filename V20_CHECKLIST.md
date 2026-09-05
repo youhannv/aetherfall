@@ -1,4 +1,4 @@
-# StreetQuest V20 — checklist de validation
+# StreetQuest V20.1 — checklist de validation
 
 ## Monde
 - [ ] Aucun lampadaire dans la chaussée.
@@ -27,6 +27,6 @@
 - [ ] Pas de zoom/pinch Safari.
 - [ ] Joysticks utilisables avec un doigt chacun.
 - [ ] Mini-carte lisible.
-- [ ] Service worker charge `streetquest3d-v20`.
+- [ ] Service worker charge `streetquest3d-v20.1`.
 - [ ] `version.json` affiche 20.0.
 - [ ] Sauvegarde V19 migrée sans perdre la progression.
