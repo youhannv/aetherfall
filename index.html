@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V21.2">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V21.3">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V21.2</title>
+<title>StreetQuest 3D V21.3</title>
 </head>
 <body>
 <div id="app">
@@ -151,32 +151,23 @@
 </div>
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js" crossorigin="anonymous"></script>
 <script src="multiplayer-config.js"></script>
-<script>
-// V21.2 startup diagnostics: surface module/runtime failures instead of leaving a blank city.
-window.addEventListener('error',e=>{
-  const msg=e?.message||'Erreur JavaScript inconnue';
-  if(String(msg).includes('Script error'))return;
-  console.error('StreetQuest startup error',e.error||e);
-});
-window.addEventListener('unhandledrejection',e=>console.error('StreetQuest promise error',e.reason));
-</script>
 <script type="module" src="game.js"></script>
 <script>
 (() => {
   let registration = null;
-  const btn = () => document.getElementById('forceUpdate');
+  const btn = () => document.getElementById('updateBtn');
 
   function markUpdateReady(){
     const b=btn(); if(!b)return;
     b.classList.add('updateReady');
-    b.textContent='⬆ Installer la mise à jour';
+    b.textContent='⬆';
     b.title='Nouvelle version disponible';
   }
 
   async function checkUpdate(forceReload=false){
     const b=btn();
     try{
-      if(b){b.classList.add('checking');b.textContent='… Vérification'}
+      if(b){b.classList.add('checking');b.textContent='…'}
       if(!('serviceWorker' in navigator)){ if(forceReload)location.reload(); return; }
       registration = registration || await navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'});
       await registration.update();
@@ -197,10 +188,10 @@ window.addEventListener('unhandledrejection',e=>console.error('StreetQuest promi
       }else if(forceReload){
         location.reload();
       }else{
-        const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻ Vérifier les mises à jour'}
+        const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻'}
       }
     }catch(e){
-      const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻ Vérifier les mises à jour'}
+      const b2=btn(); if(b2){b2.classList.remove('checking');b2.textContent='↻'}
     }
   }
 
