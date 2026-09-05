@@ -1,4 +1,16 @@
-# StreetQuest 3D V21.3 — Paris Stable Cinematic
+# StreetQuest 3D V21.4 — Solid Facades & Fluid Traffic
+
+## Changements V21.4
+
+- Façades parisiennes désormais **en couleur pleine**, sans fausses fenêtres peintes dans les textures. Les couleurs alternent entre les bâtiments d’un même îlot.
+- Les **portes sont conservées** et les commerces gardent leur devanture; les fenêtres résidentielles seront redessinées dans une prochaine passe.
+- Suppression temporaire des voitures garées sur la chaussée : toutes les voitures générées sur les voies roulent.
+- Correction du deadlock de trafic causé par l’ancien test de collision circulaire entre voies parallèles/perpendiculaires.
+- Relance automatique d’une voiture anormalement immobile quand son feu est vert et sa voie libre.
+- Moins de voitures simultanées par chunk, mais circulation continue.
+- Optimisation iPhone : résolution interne 1.25×, shadow map 512, ombres détaillées seulement dans le chunk du joueur, 4 lampadaires dynamiques proches, LOD PNJ à 58–64 m, HUD 10 Hz et mini-carte ~5,5 Hz.
+- Modèles de voitures simplifiés pour réduire fortement le nombre de meshes/draw calls.
+- Sauvegarde `sq3d-v21.4`, compatible V21.3/V20.1.
 
 Cette version repart volontairement du générateur V20.1 stable après les régressions V21/V21.2 qui pouvaient laisser des quartiers vides. La génération des routes, bâtiments, PNJ et véhicules reste sur le cœur éprouvé V20.1; la nouvelle direction artistique est appliquée de façon additive et non par remplacement du générateur.
 

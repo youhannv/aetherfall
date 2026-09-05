@@ -1,18 +1,29 @@
-StreetQuest V21.3 — validation 2026-09-05
+StreetQuest V21.4 — validation 2026-09-05
 
-Base de génération: V20.1 stable.
-Aucune réassignation des fonctions critiques de génération de chunks.
+Validation statique effectuée :
+- game.js : node --check OK
+- sw.js : node --check OK
+- multiplayer-config.js : node --check OK
+- server/server.js : node --check OK
+- manifest.json : JSON OK
+- version.json : JSON OK
+- server/package.json : JSON OK
 
-Validation statique:
-- game.js: node --check OK
-- sw.js: node --check OK
-- multiplayer-config.js: node --check OK
-- server/server.js: node --check OK
-- version.json / manifest.json / server/package.json: JSON OK
+Contrôles V21.4 :
+- façades Paris : matériaux couleur pleine alternés par îlot
+- fausses fenêtres résidentielles retirées ; portes conservées
+- voitures garées : aucun appel dans createChunk
+- circulation : collision radiale inter-voies supprimée + anti-stall
+- voitures : 6 meshes standard / 7 taxi (au lieu d'environ 20)
+- marquages routiers : 1 InstancedMesh/chunk (au lieu de 46 meshes)
+- lampadaires : 3 meshes chacun (au lieu de 6)
+- feux tricolores : 5 meshes chacun (au lieu d'environ 10)
+- détails de façade : 2 lignes de balcon max + toit/cheminée
+- LOD PNJ : 58-64 m hors interactions importantes
+- ombres : shadow map 512 + casters uniquement dans le chunk joueur
+- renderer pixel ratio : 1.25 max
+- HUD : 10 Hz ; mini-carte : ~5.5 Hz
 
-Simulation de génération (25 chunks autour de la zone de la capture x=+18, z=-228):
-- 25/25 chunks avec au moins 1 bâtiment, 1 PNJ et 1 véhicule
-- chunk cible Paris 0,-4: 7 bâtiments, 11 PNJ, 6 véhicules
-
-Cache PWA: streetquest3d-v21.3-stable1
-Version: 21.3.0
+Cache PWA: streetquest3d-v21.4-solid1
+Version: 21.4.0
+World layout: 214
