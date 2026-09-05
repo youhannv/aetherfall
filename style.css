@@ -202,3 +202,6 @@ body{background:radial-gradient(circle at top,#10263c 0%,#07111a 45%,#040910 100
 
 /* V18.1 — Urban block polish */
 .mapLegendV18 span:last-child{opacity:.72}
+
+/* V19 City Rebuild */
+.policeChip{font-size:10px!important;letter-spacing:.04em}

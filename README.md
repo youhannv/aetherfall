@@ -812,3 +812,22 @@ Autres ajustements :
 - voitures garées uniquement sur un emplacement libre
 - trafic légèrement réduit pour une circulation plus lisible sur mobile
 - `worldLayoutVersion 181` : régénération propre des points de commerce et annonces hérités
+
+
+# V19 — City Rebuild
+
+- vrai réseau piéton aux coordonnées de trottoir 12.5 / 84.5
+- apparition PNJ espacée sur des segments de chemin
+- récupération PNJ exclusivement sur réseau piéton
+- 4 parcelles maximum par îlot, dimensions maximales explicites
+- bâtiments et auvents contraints à l’intérieur de leur parcelle
+- façade d’entrée préférée définie par l’urbanisme
+- circulation à droite conforme à la France
+- quatre feux par intersection
+- chaque feu est du bon côté de l’intersection et orienté vers le conducteur correspondant
+- quatre passages piétons et quatre lignes d’arrêt
+- 1,5 seconde tout rouge entre les axes
+- contrôle d’occupation d’intersection avant engagement
+- suppression des virages instantanés instables : priorité à la fluidité et à l’absence de fusion
+- moins de PNJ, moins de voitures et moins de petits obstacles
+- `worldLayoutVersion 190` force une reconstruction de la ville
