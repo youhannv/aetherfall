@@ -1,0 +1,9 @@
+StreetQuest V22.2.1 HOTFIX
+
+Root cause fixed:
+- V22.2 bus-camera refactor accidentally removed updateParisLampLights().
+- animate() still called it before renderer.render(), causing a ReferenceError every frame and a blank 3D viewport.
+- spendFromFunds(), processMonthlyFinances() and advanceDay() were also accidentally removed and are restored.
+- Lamp lighting is now guarded so a cosmetic lighting exception cannot prevent renderer.render().
+- World layout version remains 222: player position/progression/world layout are not force-reset.
+- Service-worker cache bumped to streetquest3d-v22.2.1-hotfix1.

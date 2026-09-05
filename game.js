@@ -2116,6 +2116,43 @@ function moveEntity(n,dx,dz,pad=.34){
  }
  n.stuckFrames=(n.stuckFrames||0)+1;if(n.stuckFrames>44)recoverPerson(n);return false
 }
+
+
+// V22.2.1 HOTFIX — restored helpers accidentally removed during the V22.2 bus-camera refactor.
+function spendFromFunds(amount){amount=Math.max(0,Math.round(amount));if((state.homeBank+state.coins)<amount)return false;const fromBank=Math.min(state.homeBank,amount);state.homeBank-=fromBank;state.coins-=amount-fromBank;return true}
+function processMonthlyFinances(){
+ let income=0,expense=0,taxes=0,events=[];
+ for(const c of Object.values(state.companies)){if(c.sector==='private'){const revenue=Math.round(c.monthlyNpcRevenue*(.82+Math.random()*.35));const costs=Math.round(c.npcWorkers*24);c.cash=Math.max(0,c.cash+revenue-costs)}}
+ const npcTaxes=1600+Math.round(Math.random()*800);state.cityTreasury+=npcTaxes;events.push(`impôts PNJ +${npcTaxes} ville`);
+ const rentRec=state.propertyPortfolio.find(p=>p.id===state.residenceId&&p.tenure==='rent');
+ if(rentRec){if(spendFromFunds(rentRec.rent)){expense+=rentRec.rent;state.missedRent=0;events.push(`loyer -${rentRec.rent}`)}else{state.missedRent=(state.missedRent||0)+1;events.push('loyer IMPAYÉ');if(state.missedRent>=2){state.propertyPortfolio=state.propertyPortfolio.filter(p=>p.id!==rentRec.id);state.residenceId=null;state.missedRent=0;events.push('expulsion')}}}
+ let rentalIncome=0;
+ for(const rec of state.propertyPortfolio.filter(p=>p.tenure==='owned'&&p.listed)){
+   const market=rec.marketRent||rec.rent||40,ratio=(rec.askingRent||market)/market;
+   if(!rec.tenant){const chance=clamp((rec.demand||1)*(1.28-ratio)*.78,.08,.90);if(Math.random()<chance){rec.tenant=true;events.push(`locataire trouvé : ${rec.label||'bien'}`)}}
+   if(rec.tenant){if(ratio>1.42&&Math.random()<.30){rec.tenant=false;events.push(`locataire parti : ${rec.label||'bien'}`)}else{const got=rec.askingRent||market;rentalIncome+=got}}
+ }
+ if(state.job){
+   const j=JOB_DEFS[state.job.id],gross=j.salary;let paid=0;
+   if(j.sector==='public'){paid=Math.min(gross,state.cityTreasury);state.cityTreasury-=paid;if(paid<gross)events.push('⚠️ salaire public partiellement payé')}
+   else{const c=state.companies[j.company];paid=Math.min(gross,c?.cash||0);if(c)c.cash-=paid;if(paid<gross)events.push(`⚠️ ${c?.name||'employeur'} manque de trésorerie`)}
+   const tax=progressiveTax(paid+rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;state.cityTreasury+=tax;
+   const net=Math.max(0,paid-tax);state.homeBank+=net;income+=net;state.salaryHistory.push({month:state.gameMonth,gross:paid,tax,net,job:j.name});state.salaryHistory=state.salaryHistory.slice(-12);events.push(`salaire net +${net}`)
+ }else if(rentalIncome){const tax=progressiveTax(rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;state.cityTreasury+=tax;state.homeBank+=rentalIncome-tax;income+=rentalIncome-tax}
+ if(state.job&&rentalIncome){state.homeBank+=rentalIncome;income+=rentalIncome}
+ state.monthlyLedger=`Mois ${state.gameMonth} : +${income} / -${expense} • impôts ${taxes}${events.length?' • '+events.join(' • '):''}`;
+ toast(`📅 ${state.monthlyLedger}`);save()
+}
+function advanceDay(days=1){for(let i=0;i<days;i++){state.gameDay=(state.gameDay||1)+1;if(state.gameDay>30){state.gameDay=1;state.gameMonth=(state.gameMonth||1)+1;processMonthlyFinances()}}}
+function updateParisLampLights(t){
+ if(!lampLightPool.length)return;
+ if(state.interior){for(const l of lampLightPool){l.visible=false;l.intensity=0}return}
+ const night=state.timeOfDay>=18.2||state.timeOfDay<7.15;
+ if(t-lastLampLightTick<280)return;lastLampLightTick=t;
+ const nearest=streetLamps.filter(l=>l.group?.parent).map(l=>({...l,d:Math.hypot(state.pos.x-l.x,state.pos.z-l.z)})).filter(l=>l.d<24).sort((a,b)=>a.d-b.d).slice(0,lampLightPool.length);
+ for(let i=0;i<lampLightPool.length;i++){const light=lampLightPool[i],lamp=nearest[i];if(!night||!lamp){light.visible=false;light.intensity=0;continue}light.visible=true;light.position.set(lamp.x,3.35,lamp.z);light.intensity=state.timeOfDay>=21||state.timeOfDay<5.5?58:42;if(lamp.globeMat)lamp.globeMat.emissiveIntensity=1.35}
+}
+
 function busCameraLabel(){return busCameraMode==='window'?'Fenêtre':busCameraMode==='front'?'Pare-brise':'Extérieure'}
 function cycleBusCamera(){if(!busRide)return;busCameraMode=busCameraMode==='window'?'front':busCameraMode==='front'?'chase':'window';busViewYaw=0;busViewPitch=busCameraMode==='chase'?.10:-.04;toast(`🎥 Vue bus : ${busCameraLabel()}`);checkInteraction()}
 function updateCamera(t=0){
@@ -2493,7 +2530,7 @@ function animate(){
  const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);
  const moveSpeed=4.8*needsSpeedMultiplier();if(!busRide){movePlayer((fx*forward+rx*strafe)*moveSpeed*dt,(fz*forward+rz*strafe)*moveSpeed*dt);updatePlayerTrail()}
  if(busRide){busViewYaw+=lookStick.x*1.65*dt;busViewPitch=clamp(busViewPitch-lookStick.y*1.10*dt,-.42,.40)}else{state.yaw+=lookStick.x*1.8*dt;state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)}
- updateNeeds(dt);updateWorkMission();if(!state.interior){updatePeople(dt,t);updateCars(dt,t);updateBusVehicles(dt);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateCamera(t);updateWorldLight(dt);updateParisLampLights(t);updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>180){drawMap();lastMapTick=t}if(t-lastHudTick>100){updateHUD();lastHudTick=t}renderer.render(scene,camera);try{multiplayerTick(t,dt)}catch(err){console.error('Multiplayer frame error',err)}
+ updateNeeds(dt);updateWorkMission();if(!state.interior){updatePeople(dt,t);updateCars(dt,t);updateBusVehicles(dt);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateCamera(t);updateWorldLight(dt);try{updateParisLampLights(t)}catch(err){console.error('Lamp-light frame error',err)}updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>180){drawMap();lastMapTick=t}if(t-lastHudTick>100){updateHUD();lastHudTick=t}renderer.render(scene,camera);try{multiplayerTick(t,dt)}catch(err){console.error('Multiplayer frame error',err)}
 }
 
 
