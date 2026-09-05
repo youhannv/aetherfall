@@ -1,4 +1,4 @@
-# StreetQuest 3D V4
+# StreetQuest 3D V20 — Paris Living City
 
 V4 pensée comme un jeu d'aventure/exploration chill en portrait pour iPhone.
 
@@ -914,3 +914,72 @@ Objectifs :
 La distance de sécurité, les feux, la phase tout-rouge et le contrôle d'intersection restent actifs.
 
 `worldLayoutVersion 192` force la régénération des îlots.
+
+
+# V20 — Paris Living City
+
+V20 part de V19.2 et conserve les systèmes de jeu / multijoueur existants, mais refait la direction artistique et la densité urbaine.
+
+## Direction artistique
+- rendu Paris nocturne / crépuscule plus chaleureux et plus contrasté
+- façades parisiennes pierre / crème avec fenêtres éclairées
+- balcons, corniches, toitures sombres, cheminées et végétation de façade
+- commerces plus hauts et mieux intégrés visuellement aux rues
+- vitrines et intérieurs chauds
+- lune et repère parisien stylisé visibles dans le ciel de Paris
+- UI sombre vitrée plus proche de la maquette V20
+
+## Lampadaires
+- ancien lampadaire directionnel supprimé
+- nouveau lampadaire boule parfaitement symétrique
+- placement uniquement sur les bandes trottoir
+- aucun lampadaire volontairement placé dans la chaussée
+
+## Circulation et feux
+- sens V19.2 conservé : Y écran = -Z monde
+- conduite à droite conservée
+- 4 approches conservées
+- feux déplacés sur le côté droit de chaque approche
+- face du feu visible uniquement pour les conducteurs concernés
+- ajout du jaune + phase tout rouge
+- distances de sécurité / occupation de carrefour conservées
+
+## Ville / densité
+- chunk de départ utilise le modèle `avenue` dense
+- quartiers centre et populaires privilégient les blocs à 8 bâtiments
+- maisons fortement réduites dans le centre et les quartiers urbains
+- davantage de voitures actives et de voitures stationnées
+- arbres, jardinières, bancs et bornes ajoutés sans toucher aux corridors d'entrée
+- entrées et corridors V18/V19 conservés
+
+## Population jour / nuit
+- journée : ville nettement plus peuplée
+- 18h30–21h : activité réduite mais encore vivante
+- 21h–23h : baisse supplémentaire
+- 23h–5h30 : rues nettement plus calmes
+- police / ennemis restent séparés de la densité civile
+
+## Commerces
+- vendeur placé derrière le comptoir et tourné VERS le comptoir / le client
+- clients décoratifs placés côté client et tournés VERS le comptoir
+- correction explicite du problème des personnages dos au comptoir
+
+## Robustesse conservée
+- récupération PNJ bloqués
+- collisions bâtiments / voies / corridors
+- reconstruction du plan avec `worldLayoutVersion 200`
+- sauvegarde V20 dans `sq3d-v20`, avec migration automatique depuis V19/V18/V17/V16/V15
+- cache PWA `streetquest3d-v20`
+
+## GitHub Pages
+Décompresse le dossier et remplace les fichiers du dépôt par le contenu de V20. Commit/push puis attends le redéploiement GitHub Pages. Sur iPhone, si une ancienne version reste affichée, utilise le bouton de vérification de mise à jour ou recharge la PWA après le déploiement.
+
+
+## V20.0 — correctifs de cohérence supplémentaires
+
+- Les routes piétonnes Est/Nord utilisent maintenant le trottoir proche de l'îlot (`70.5`) et non le trottoir situé de l'autre côté de la route suivante : les PNJ restent dans leur vrai quartier et les portes ne créent plus de corridor traversant la chaussée.
+- Les voitures stationnées sont générées au bord de la chaussée et non dans la bande de trottoir.
+- La population civile possède un planning dynamique : le pool de journée est généré une fois, puis une partie des PNJ rentre automatiquement à l'intérieur en soirée/nuit et ressort quand l'activité remonte.
+- Les PNJ hors horaire ne bloquent plus le joueur, les autres PNJ ni les interactions.
+- La lune est masquée en journée.
+- Les lampadaires boule utilisent un halo au sol très léger et peu coûteux plutôt qu'une multitude de lumières ponctuelles, afin de conserver de bonnes performances sur iPhone.

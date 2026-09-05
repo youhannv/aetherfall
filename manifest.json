@@ -1,11 +1,11 @@
 {
-  "name": "StreetQuest 3D V19.2 — Traffic & Density",
-  "short_name": "StreetQuest V19.2",
+  "name": "StreetQuest 3D V20 — Paris Living City",
+  "short_name": "StreetQuest V20",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#071019",
-  "theme_color": "#071019",
+  "background_color": "#050a10",
+  "theme_color": "#050a10",
   "icons": [
     {
       "src": "icon-192.png",
