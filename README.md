@@ -1,21 +1,34 @@
-# StreetQuest 3D V21.5 — Réseau Bus & Plan de Ville
+# StreetQuest V22 — 5 villes & réseau ferroviaire
 
-## Nouveautés
-- 5 lignes de bus nommées B1 à B5 avec itinéraires multi-quartiers et changements de direction.
-- 24 arrêts de bus physiques dans la ville, avec interaction et déplacement rapide.
-- Tarif de bus : 2 crédits ; le temps de jeu avance selon le nombre d’arrêts parcourus.
-- Des bus visibles circulent sur les tracés principaux.
-- Carte complète du réseau inspirée d’un plan de transport : lignes colorées, arrêts, terminus et noms de lignes.
-- Boutons `Réseau complet` et `Autour de moi` dans la carte.
-- Agences Habitat et écoles visibles sur la carte même avant découverte.
-- 3 agences immobilières et 3 écoles garanties dans la génération centrale du réseau.
-- Sauvegarde `sq3d-v21.5`, compatible avec V21.4/V21.3/V20.1.
+V22 remplace le monde procédural sans fin par **5 villes finies et identifiables**, entourées d'une couronne rurale légère :
 
-## Lignes
-- B1 — Campus ↔ Faubourg
-- B2 — Jardins ↔ Belvédère
-- B3 — Nord-Ouest ↔ Parc Sud
-- B4 — Circulaire Centre
-- B5 — Transversale des Rives
+- **Paris** — capitale dense, emplois, administrations, immobilier cher ; bus métropolitain.
+- **Valmont** — ville verte et résidentielle ; bus local, villas et lac.
+- **Montfleur** — ville universitaire ; tram + bus campus.
+- **Saint-Roch** — ville industrielle et populaire ; tramway des Forges.
+- **Belle-Rive** — ville côtière ; bus et navettes littorales.
 
-Le bouton **Carte** ouvre désormais le plan complet du réseau. Le clic sur la mini-carte ouvre toujours une vue locale.
+## Région et trains
+
+Les villes sont reliées par deux axes ferroviaires :
+
+- **IC1** : Paris → Montfleur → Saint-Roch → Belle-Rive
+- **R2** : Paris → Valmont → Montfleur
+
+Le changement instantané de ville a été supprimé. Il faut rejoindre la gare de la ville, choisir une destination et prendre le train. Le trajet consomme du temps de jeu et des crédits. Une animation de voyage montre la campagne entre les villes.
+
+## Carte
+
+La carte possède trois niveaux :
+
+1. **Région** — les 5 villes et les axes ferroviaires.
+2. **Transports** — le réseau local de la ville actuelle avec véhicules en temps réel.
+3. **Local** — rues, commerces, écoles, agences immobilières, gare et joueur.
+
+## Monde fini
+
+Chaque ville a une zone urbaine fixe et une couronne de campagne composée de champs, haies, routes rurales et éléments agricoles. Le déplacement à pied est borné à cette région locale : plus de génération infinie.
+
+## Sauvegarde
+
+La sauvegarde V21.6 est migrée automatiquement vers `sq3d-v22`.

@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V21.5">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V22">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V21.5</title>
+<title>StreetQuest 3D V22</title>
 </head>
 <body>
 <div id="app">
@@ -126,19 +126,23 @@
 
   <div id="mapOverlay" class="mapOverlay hidden">
    <div class="mapOverlayBox">
-    <div class="sheetHead"><div><h2>Plan de ville & bus</h2><small id="mapGpsReadout" class="mapGpsReadout">Origine O(0,0) • X +0 • Y +0</small></div><button id="closeMapOverlay" class="roundBtn">✕</button></div>
-    <div class="mapModeBar"><button id="mapBusMode" class="mapModeBtn">🚌 Réseau complet</button><button id="mapLocalMode" class="mapModeBtn">📍 Autour de moi</button></div>
+    <div class="sheetHead"><div><h2>Carte StreetQuest</h2><small id="mapGpsReadout" class="mapGpsReadout">Origine O(0,0) • X +0 • Y +0</small></div><button id="closeMapOverlay" class="roundBtn">✕</button></div>
+    <div class="mapModeBar"><button id="mapWorldMode" class="mapModeBtn">🌍 Région</button><button id="mapBusMode" class="mapModeBtn">🚍 Transports</button><button id="mapLocalMode" class="mapModeBtn">📍 Local</button></div>
     <div class="mapZoomBar"><button id="mapZoomOut" class="roundBtn">−</button><span id="mapZoomLabel">100%</span><button id="mapZoomIn" class="roundBtn">+</button></div>
     <canvas id="bigMinimap" width="640" height="640"></canvas>
-    <div class="busLegendLines">
-      <span style="--line:#e75b6f"><b>B1</b> Campus ↔ Faubourg</span>
-      <span style="--line:#46a6e8"><b>B2</b> Jardins ↔ Belvédère</span>
-      <span style="--line:#54b979"><b>B3</b> Nord-Ouest ↔ Parc Sud</span>
-      <span style="--line:#f1a33a"><b>B4</b> Circulaire Centre</span>
-      <span style="--line:#a67be8"><b>B5</b> Transversale des Rives</span>
-    </div>
-    <div class="mapLegend mapLegendV18"><span><b style="color:#66d9ff">⌂</b> Agence immobilière</span><span><b style="color:#77aaff">🎓</b> École</span><span><b style="color:#ff6f7d">+</b> Santé</span><span><b style="color:#ffd15c">J</b> Emploi</span><span><b style="color:#65e4ff">●</b> Joueur en ligne</span><span><b style="color:#ffdc6d">⌂</b> Bien / logement</span><span>○ Arrêt de bus</span><span>△ Toi</span></div>
+    <div class="busLegendLines"><span style="--line:#e75b6f"><b>B1</b> Réseau local</span></div>
+    <div class="mapLegend mapLegendV18"><span><b style="color:#66d9ff">⌂</b> Agence immobilière</span><span><b style="color:#77aaff">🎓</b> École</span><span><b style="color:#ff6f7d">+</b> Santé</span><span><b style="color:#ffd15c">J</b> Emploi</span><span><b style="color:#65e4ff">●</b> Joueur en ligne</span><span><b style="color:#ffdc6d">⌂</b> Bien / logement</span><span>○ Arrêt de transport</span><span><b style="color:#f2d35c">T</b> Gare</span><span>△ Toi</span></div>
    </div>
+  </div>
+ </div>
+
+ <div id="trainTravelOverlay" class="trainTravelOverlay hidden" aria-live="polite">
+  <div class="trainTravelCard">
+   <div class="trainWindow"><div class="trainFields"></div><div class="trainPoles"></div></div>
+   <div class="sectionKicker">VOYAGE EN TRAIN</div>
+   <h2 id="trainTravelTitle">🚆 En route</h2>
+   <p id="trainTravelSub">🌾 Champs, fermes et villages défilent par la fenêtre…</p>
+   <div class="trainProgress"><span id="trainTravelBar"></span></div>
   </div>
  </div>
 

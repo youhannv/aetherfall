@@ -1,16 +1,8 @@
-StreetQuest V21.5 — validation
-
-Version: 21.5.0
-Cache PWA: streetquest3d-v21.5-bus1
-
-Contrôles effectués :
-- syntaxe game.js / sw.js / server.js : OK
-- version.json / manifest.json / server/package.json : JSON valides
-- réseau : 5 lignes, 24 arrêts, 8 POI civiques
-- références ligne ↔ arrêt cohérentes : OK
-- chaque tracé est composé de segments routiers horizontaux/verticaux : OK
-- chaque arrêt est situé à proximité de son tracé : OK
-- 3 agences immobilières + 3 écoles garanties : OK
-- migration de sauvegarde depuis V21.4/V21.3/V20.1 : présente
-
-Note : le conteneur de validation ne fournit pas de contexte WebGL iOS/Safari ; le rendu GPU final doit donc être vérifié sur l’iPhone après déploiement.
+StreetQuest V22 validation — 2026-09-05
+- game.js checked as an ES module (.mjs) with Node: OK
+- duplicate top-level function declarations: none
+- server/server.js syntax: OK
+- JSON files parsed: OK
+- 5-city regional rail graph: connected
+- every local transit line references existing stops: OK
+- HTML required V22 map/train IDs: OK

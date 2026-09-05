@@ -1,32 +1,16 @@
-# Déployer StreetQuest V15 en multijoueur
+# Déployer StreetQuest V22 en multijoueur
 
-## 1. GitHub
-Garde les fichiers du jeu à la racine du dépôt pour GitHub Pages.
-Le dossier `server/` peut rester dans le même dépôt : GitHub Pages ne l’exécutera pas.
+## GitHub Pages
+Le client reste à la racine du dépôt. Remplace tous les fichiers du jeu par ceux de V22.
 
-## 2. Render
-1. Crée un compte Render.
-2. `New` > `Web Service`.
-3. Connecte ton dépôt GitHub StreetQuest.
-4. Root Directory : `server`
-5. Build Command : `npm install`
-6. Start Command : `npm start`
-7. Health Check Path : `/health`
-8. Déploie.
+## Render
+Le serveur Socket.IO est dans `server/`.
 
-Render te donnera une adresse du type :
-`https://streetquest-server-xxxx.onrender.com`
+- Root Directory : `server`
+- Build Command : `npm install`
+- Start Command : `npm start`
+- Health Check Path : `/health`
 
-## 3. Dans le jeu
-StreetQuest > Réglages > Multijoueur Alpha :
-- choisis ton pseudo
-- colle l’URL Render
-- appuie sur Connecter
+Le serveur V22 sépare naturellement les joueurs par `cityId` : Paris, Valmont, Montfleur, Saint-Roch et Belle-Rive sont cinq salles distinctes. Le changement de salle se fait quand un joueur arrive dans une nouvelle ville par le train.
 
-L’URL est mémorisée sur l’appareil.
-
-## Important
-Cette V15 synchronise la présence, les positions, le chat et les émotes. La progression économique reste encore enregistrée localement sur chaque appareil. Pour une vraie économie multijoueur inviolable et persistante, la prochaine étape est une base serveur (PostgreSQL/Supabase) avec argent, propriétés, inventaires et PNJ validés côté serveur.
-
-
-V18: remplacer aussi `server/server.js` et `server/package.json`, puis laisser Render redéployer. Le serveur V18 transporte désormais `interior` et la synchronisation renforcée des skins.
+La progression économique reste locale au navigateur ; la présence, les positions, le chat, la voix et l'avatar passent par le serveur multijoueur.

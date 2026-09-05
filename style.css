@@ -238,3 +238,31 @@ body{background:radial-gradient(circle at top,#10263c 0%,#07111a 45%,#040910 100
 .busLineCard>.menuBtn small{grid-column:2;color:#8fa7b8}
 .busLineHead{display:flex;align-items:center;gap:10px;margin-bottom:8px}.busLineHead>div{display:flex;flex-direction:column}.busLineHead small{color:#8fa7b8;margin-top:2px}
 @supports not (color:color-mix(in srgb,#fff 50%,transparent)){.busLegendLines span{border-color:rgba(126,208,255,.25)}.busLegendLines b,.busBadge{box-shadow:none}}
+
+/* V21.6 — bus temps réel, attente, trajet et correspondances */
+.busRealtime{color:#8fe2bb!important;font-weight:760;line-height:1.35}
+.busPlanner select{width:100%;margin:8px 0 9px;min-height:42px;background:#09121b;color:#eef7ff;border:1px solid rgba(126,208,255,.25);border-radius:10px;padding:0 10px}
+.busWaitCard,.busJourneyCard{border-color:rgba(98,214,174,.30)!important;background:linear-gradient(180deg,rgba(19,49,47,.72),rgba(13,29,34,.88))!important}
+.busWaitCard,.busJourneyCard{display:flex;flex-direction:column;gap:5px}.busWaitCard small,.busJourneyCard small{color:#a8c8c3}
+.busTicketLive{margin:8px 0;padding:8px 10px;border-radius:10px;background:rgba(67,153,112,.18);border:1px solid rgba(105,230,164,.24);color:#a9edc8;font-size:10px;font-weight:800}
+.busPlanner .menuBtn{margin-top:2px}
+
+/* ========================================================================== */
+/* STREETQUEST V22 — FIVE CITIES / REGIONAL RAIL                             */
+/* ========================================================================== */
+.mapModeBar{grid-template-columns:repeat(3,1fr)}
+.cityIdentity{border-left:3px solid rgba(126,208,255,.24)}
+.cityIdentity.currentCity{border-left-color:#f2d35c;box-shadow:inset 0 0 0 1px rgba(242,211,92,.12)}
+.trainDestination{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}
+.trainDestination .menuBtn{min-width:126px}
+.trainTravelOverlay{position:fixed;inset:0;z-index:260;background:rgba(2,7,12,.94);display:flex;align-items:center;justify-content:center;padding:22px;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.trainTravelCard{width:min(92vw,540px);background:linear-gradient(180deg,#0b1722,#07111a);border:1px solid rgba(126,208,255,.35);border-radius:28px;padding:18px;box-shadow:0 22px 70px rgba(0,0,0,.45);overflow:hidden}
+.trainTravelCard h2{margin:8px 0 4px}.trainTravelCard p{color:#c7d8e2;font-size:13px;line-height:1.45}
+.trainWindow{height:180px;border-radius:20px;overflow:hidden;position:relative;background:linear-gradient(#6f9ab7 0 46%,#7ca35f 46% 63%,#b9984f 63% 100%);border:1px solid rgba(255,255,255,.12);margin-bottom:16px}
+.trainFields{position:absolute;left:-25%;right:-25%;bottom:-10px;height:94px;background:repeating-linear-gradient(165deg,#b9994e 0 36px,#7d984d 36px 72px,#c0a35c 72px 108px);animation:sqTrainFields 1.3s linear infinite;transform:skewY(-4deg)}
+.trainPoles{position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 106px,rgba(33,45,48,.76) 106px 110px,transparent 110px 212px);animation:sqTrainPoles .75s linear infinite}
+.trainPoles:after{content:"";position:absolute;left:0;right:0;top:39px;height:2px;background:rgba(40,52,55,.58)}
+.trainProgress{height:8px;border-radius:999px;background:#172733;overflow:hidden;margin-top:14px}.trainProgress span{display:block;width:0;height:100%;background:linear-gradient(90deg,#65d6ff,#f2d35c);transition:width .45s ease}
+@keyframes sqTrainFields{from{transform:translateX(0) skewY(-4deg)}to{transform:translateX(120px) skewY(-4deg)}}
+@keyframes sqTrainPoles{from{background-position:0 0}to{background-position:212px 0}}
+@media(max-width:560px){.mapModeBar{gap:5px}.mapModeBtn{font-size:10px;padding:9px 4px}.trainDestination{grid-template-columns:1fr}.trainDestination .menuBtn{width:100%}.trainWindow{height:145px}}
