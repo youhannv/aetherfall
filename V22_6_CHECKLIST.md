@@ -1,0 +1,23 @@
+# V22.6 — checklist
+
+- [x] 23 uniformes professionnels cohérents
+- [x] PNJ : uniforme uniquement pendant le service
+- [x] Joueur : uniforme dans le sac sans armoire
+- [x] Uniforme rangé dans une vraie armoire si le logement en possède une
+- [x] Changement depuis l’armoire uniquement à proximité de celle-ci
+- [x] Uniforme visible en multijoueur
+- [x] Plafond intérieur des logements
+- [x] Salle de bain : douche, lavabo, WC
+- [x] Cuisine : four, plaques, évier, placards
+- [x] Achat toujours non meublé
+- [x] Location pouvant être meublée
+- [x] Lit : repos + PV
+- [x] DLU simulée sur tous les aliments sauf l’eau
+- [x] Stockage ambiant / réfrigérateur / congélateur
+- [x] Mauvais stockage = altération accélérée
+- [x] Aliment gâté à jeter
+- [x] Aliments crus à cuisiner
+- [x] Recettes au four / plaques
+- [x] Rayons physiques dans épicerie, boulangerie et boucherie
+- [x] Caddie puis passage en caisse
+- [x] Migration des sauvegardes V22

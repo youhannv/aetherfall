@@ -1,0 +1,20 @@
+StreetQuest V22.6 — validation build
+===================================
+
+PASS — game.js : syntaxe JavaScript (node --check)
+PASS — sw.js : syntaxe JavaScript
+PASS — server/server.js : syntaxe JavaScript
+PASS — manifest.json / version.json / server/package.json : JSON valide
+PASS — 519 déclarations de fonctions, 519 noms uniques, aucune fonction du build V22.5 de base supprimée
+PASS — 23 métiers / 23 définitions d’uniformes, correspondance complète
+PASS — 20 aliments périssables référencés dans FOOD_META ; eau incluse avec durée illimitée
+PASS — recettes : ingrédients et sorties référencent des aliments connus
+PASS — achat immobilier forcé non meublé ; location conserve le statut meublé/non meublé
+PASS — armoire réelle requise pour ranger automatiquement les uniformes à domicile
+PASS — changement depuis l’armoire limité à la résidence et à proximité de l’armoire
+PASS — logement : plafond, salle de bain et cuisine fixe présents
+PASS — magasin alimentaire : rayons interactifs, caddie et caisse présents
+PASS — version 22.6 et cache streetquest3d-v22.6-dailylife1 cohérents
+PASS — worldLayoutVersion 226 cohérent
+
+Limite de validation : le moteur 3D importe Three.js depuis un CDN. L’environnement de build ne reproduit pas exactement Safari/WebGL sur iPhone, donc un test final sur l’appareil reste nécessaire après déploiement. Les contrôles statiques et de cohérence du build sont passés.

@@ -1,16 +1,39 @@
-# StreetQuest V22.5 — Lieux vivants
+# StreetQuest V22.6 — Vie quotidienne réaliste
 
-V22.5 part de la V22.4.1 vérifiée et conserve les 5 villes, la région continue à pied, les trains, bus/trams, l’immobilier, les emplois et l’économie locale.
+V22.6 conserve les 5 villes, la région continue, les trains, bus/trams, l’immobilier, les emplois, l’économie locale et les lieux vivants de V22.5.
 
-## Nouveautés
+## Uniformes professionnels
+- 23 métiers disposent d’une tenue cohérente.
+- Les PNJ portent leur uniforme uniquement pendant leur service ; hors travail ils repassent en tenue civile.
+- Le joueur reçoit la tenue de son emploi. Sans armoire disponible, elle occupe une place dans le sac.
+- Dans un logement meublé avec armoire, ou après installation d’une armoire, les uniformes du sac sont rangés dans l’armoire.
+- Pour enfiler un uniforme rangé à domicile, le joueur doit être dans sa résidence et s’approcher de l’armoire.
+- Si l’uniforme est dans le sac, le joueur peut se changer depuis le sac.
+- L’apparence de l’uniforme est synchronisée avec les autres joueurs en ligne.
 
-- Extérieurs différenciés par activité : hôpital/urgences, commissariat, caserne, mairie, banque, poste, bibliothèque, école, Maison de l’Emploi, agence immobilière, boulangerie, boucherie, pharmacie, café, restaurant, fleuriste, coiffeur, atelier, vêtements, etc.
-- Intérieurs spécifiques avec mobilier cohérent : lits et accueil hospitalier, bureaux de police, vestiaires de caserne, guichets, rayonnages, tables de restaurant, présentoirs de boulangerie/boucherie, postes de coiffure, salles de cours, etc.
-- PNJ d’ambiance dans les lieux : salariés, patients, élèves/étudiants, clients et usagers selon le type d’établissement et ses horaires.
-- Effectif simulé affiché dans la fiche de chaque établissement, avec des ordres de grandeur adaptés au type de structure.
-- Carte plus lisible : suppression des cercles autour des lettres/icônes de POI, remplacés par un contour sombre du texte.
-- Conservation des correctifs V22.4.1 sur la génération des services civiques et les finances mensuelles.
+## Logements
+- Les intérieurs ont désormais un vrai plafond : plus de ciel visible depuis les pièces.
+- Salle de bain fixe avec douche, lavabo/miroir et WC.
+- Cuisine fixe avec évier, four, plaques et placards.
+- Un achat immobilier est toujours livré non meublé.
+- Une location peut être meublée ou non meublée selon l’annonce.
+- Mobilier installable : lit, canapé, table, armoire, réfrigérateur, congélateur, poubelle, etc.
+- Douche : restaure l’hygiène. Lavabo : brossage des dents.
+- Lit : 8 h de repos et récupération de PV.
 
-## Déploiement GitHub Pages
+## Nourriture, DLU et conservation
+- Tous les aliments ont une DLU simulée sauf l’eau.
+- Les produits ont un stockage conseillé : placard/température ambiante, réfrigérateur ou congélateur.
+- Le mauvais stockage accélère fortement l’altération.
+- Les aliments gâtés ne peuvent plus être consommés et doivent être jetés.
+- Les aliments crus principaux (poulet, steak, œufs, pizza surgelée) doivent être cuisinés.
+- Recettes réalisables avec le four et les plaques.
 
-Remplacer tout le contenu du dépôt par ce dossier. Le cache PWA est `streetquest3d-v22.5-places1`. La sauvegarde V22 est conservée.
+## Courses en magasin
+- Épicerie, boulangerie et boucherie possèdent des rayons physiques.
+- Le joueur s’approche d’un rayon, prend le produit et l’ajoute au caddie.
+- Le caddie garde le détail et la quantité des articles.
+- Le paiement se fait ensuite à la caisse ; les produits achetés sont ajoutés au sac avec leur fraîcheur/stockage.
+
+## Déploiement
+Remplacer tout le contenu du dépôt par ce dossier. Le cache PWA est `streetquest3d-v22.6-dailylife1`. La sauvegarde V22 est migrée sans être effacée.

@@ -186,8 +186,48 @@ const CONSUMABLES={
  steak:{id:'steak',name:'Steak',icon:'🥩',price:14,thirst:0,hunger:48,hygiene:0,desc:'+48 faim'},
  sausage:{id:'sausage',name:'Saucisses',icon:'🌭',price:9,thirst:0,hunger:34,hygiene:0,desc:'+34 faim'},
  dinner:{id:'dinner',name:'Menu du soir',icon:'🍽️',price:18,thirst:10,hunger:74,hygiene:0,desc:'+74 faim'},
- dessert:{id:'dessert',name:'Dessert',icon:'🍰',price:7,thirst:0,hunger:18,hygiene:0,desc:'+18 faim'}
+ dessert:{id:'dessert',name:'Dessert',icon:'🍰',price:7,thirst:0,hunger:18,hygiene:0,desc:'+18 faim'},
+ milk:{id:'milk',name:'Lait',icon:'🥛',price:4,thirst:12,hunger:7,hygiene:0,desc:'Produit frais'},
+ eggs:{id:'eggs',name:'Œufs',icon:'🥚',price:5,thirst:0,hunger:10,hygiene:0,desc:'À cuisiner'},
+ cheese:{id:'cheese',name:'Fromage',icon:'🧀',price:7,thirst:0,hunger:16,hygiene:0,desc:'Produit frais'},
+ chicken:{id:'chicken',name:'Poulet cru',icon:'🍗',price:11,thirst:0,hunger:30,hygiene:0,desc:'À cuire'},
+ vegetables:{id:'vegetables',name:'Légumes',icon:'🥕',price:6,thirst:4,hunger:18,hygiene:0,desc:'Frais'},
+ pasta:{id:'pasta',name:'Pâtes',icon:'🍝',price:4,thirst:0,hunger:22,hygiene:0,desc:'Épicerie sèche'},
+ rice:{id:'rice',name:'Riz',icon:'🍚',price:4,thirst:0,hunger:22,hygiene:0,desc:'Épicerie sèche'},
+ frozenPizza:{id:'frozenPizza',name:'Pizza surgelée',icon:'🍕',price:8,thirst:0,hunger:40,hygiene:0,desc:'À conserver au congélateur'}
 };
+
+const FOOD_META={
+ water:{storage:'ambient',days:{ambient:99999,fridge:99999,freezer:99999}},
+ soda:{storage:'ambient',days:{ambient:120,fridge:160,freezer:200}},
+ bread:{storage:'ambient',days:{ambient:3,fridge:6,freezer:45}},
+ croissant:{storage:'ambient',days:{ambient:1.5,fridge:3,freezer:30}},
+ pastry:{storage:'fridge',days:{ambient:1,fridge:4,freezer:30}},
+ sandwich:{storage:'fridge',days:{ambient:.45,fridge:2,freezer:12}},
+ meal:{storage:'fridge',days:{ambient:.35,fridge:3,freezer:35}},
+ dinner:{storage:'fridge',days:{ambient:.35,fridge:3,freezer:35}},
+ dessert:{storage:'fridge',days:{ambient:.6,fridge:4,freezer:30}},
+ coffee:{storage:'ambient',days:{ambient:.35,fridge:1,freezer:2}},
+ steak:{storage:'fridge',days:{ambient:.2,fridge:3,freezer:90}},
+ sausage:{storage:'fridge',days:{ambient:.25,fridge:4,freezer:75}},
+ milk:{storage:'fridge',days:{ambient:.25,fridge:6,freezer:30}},
+ eggs:{storage:'fridge',days:{ambient:3,fridge:21,freezer:2}},
+ cheese:{storage:'fridge',days:{ambient:1,fridge:14,freezer:45}},
+ chicken:{storage:'fridge',days:{ambient:.18,fridge:2,freezer:90}},
+ vegetables:{storage:'fridge',days:{ambient:2,fridge:7,freezer:45}},
+ pasta:{storage:'ambient',days:{ambient:180,fridge:180,freezer:180}},
+ rice:{storage:'ambient',days:{ambient:240,fridge:240,freezer:240}},
+ frozenPizza:{storage:'freezer',days:{ambient:.15,fridge:1,freezer:120}}
+};
+const FOOD_SHOP_TYPES=new Set(['corner','bakery','butcher']);
+const RAW_FOODS=new Set(['steak','chicken','eggs','frozenPizza']);
+const COOKING_RECIPES=[
+ {id:'pastaVeg',name:'Pâtes aux légumes',icon:'🍝',needs:{pasta:1,vegetables:1},makes:'meal'},
+ {id:'omelette',name:'Omelette au fromage',icon:'🍳',needs:{eggs:1,cheese:1},makes:'meal'},
+ {id:'chickenRice',name:'Poulet au riz',icon:'🍗',needs:{chicken:1,rice:1},makes:'dinner'},
+ {id:'steakVeg',name:'Steak & légumes',icon:'🥩',needs:{steak:1,vegetables:1},makes:'dinner'},
+ {id:'pizza',name:'Pizza au four',icon:'🍕',needs:{frozenPizza:1},makes:'dinner'}
+];
 
 const STREET_ITEMS={
  phone:{id:'phone',name:'Téléphone',icon:'📱',value:95},
@@ -217,6 +257,13 @@ const SHOPS={
   {id:'sandwich',name:'Sandwich',icon:'🥪',price:6,desc:'+34 faim'},
   {id:'meal',name:'Repas complet',icon:'🍲',price:11,desc:'+62 faim'},
   {id:'soda',name:'Soda',icon:'🥤',price:4,desc:'+28 soif'},
+  {id:'milk',name:'Lait',icon:'🥛',price:4,desc:'Produit frais'},
+  {id:'eggs',name:'Œufs',icon:'🥚',price:5,desc:'À conserver au frais'},
+  {id:'cheese',name:'Fromage',icon:'🧀',price:7,desc:'Produit frais'},
+  {id:'vegetables',name:'Légumes',icon:'🥕',price:6,desc:'Rayon frais'},
+  {id:'pasta',name:'Pâtes',icon:'🍝',price:4,desc:'Épicerie sèche'},
+  {id:'rice',name:'Riz',icon:'🍚',price:4,desc:'Épicerie sèche'},
+  {id:'frozenPizza',name:'Pizza surgelée',icon:'🍕',price:8,desc:'Rayon surgelés'},
   {id:'hygieneKit',name:"Kit d’hygiène",icon:'🧼',price:8,desc:'+40 propreté'},
   {id:'medkit',name:'Kit de soin',icon:'🩹',price:28,desc:'+40 PV'}
  ]},
@@ -231,6 +278,7 @@ const SHOPS={
  butcher:{name:'Boucherie du Marché',icon:'🥩',stock:[
   {id:'steak',name:'Steak',icon:'🥩',price:14,desc:'+48 faim'},
   {id:'sausage',name:'Saucisses',icon:'🌭',price:9,desc:'+34 faim'},
+  {id:'chicken',name:'Poulet cru',icon:'🍗',price:11,desc:'À cuire'},
   {id:'meal',name:'Repas complet',icon:'🍲',price:11,desc:'+62 faim'},
   {id:'water',name:"Bouteille d’eau",icon:'💧',price:3,desc:'+42 soif'}
  ]},
@@ -289,7 +337,11 @@ SHOPS.home={name:'Maison & Co',icon:'🪑',stock:[
   {id:'table',name:'Table',icon:'🪵',price:90,desc:'Mobilier'},
   {id:'lamp',name:'Lampe',icon:'💡',price:55,desc:'Décoration'},
   {id:'plant',name:'Plante',icon:'🪴',price:45,desc:'Décoration verte'},
-  {id:'wardrobe',name:'Armoire',icon:'🧰',price:175,desc:'Grand rangement'}
+  {id:'wardrobe',name:'Armoire',icon:'🚪',price:175,desc:'Vêtements et uniformes'},
+  {id:'bed',name:'Lit',icon:'🛏️',price:220,desc:'Repos et récupération'},
+  {id:'fridge',name:'Réfrigérateur',icon:'🧊',price:260,desc:'Conserver les aliments frais'},
+  {id:'freezer',name:'Congélateur',icon:'❄️',price:230,desc:'Conservation longue durée'},
+  {id:'trashBin',name:'Poubelle cuisine',icon:'🗑️',price:45,desc:'Jeter les aliments gâtés'}
 ]};
 
 
@@ -321,7 +373,7 @@ function normalizedAvatar(a={}){
   build:builds.includes(a.build)?a.build:'standard'
  }
 }
-function avatarPayload(){return {...normalizedAvatar(state.avatar),version:state.avatarVersion||1}}
+function avatarPayload(){return {...currentAvatar(),version:state.avatarVersion||1}}
 
 SHOPS.clothes={name:'NeoStyle',icon:'👕',stock:Object.values(COSMETIC_ITEMS).map(x=>({id:x.id,name:x.name,icon:x.icon,price:x.price,desc:'Apparence multijoueur'}))};
 
@@ -396,6 +448,7 @@ function makeNpcLifeAnchors(n,r){
  return{home,work,lunch,leisure};
 }
 function npcRoutineTarget(n,phase,hour){const a=n.lifeAnchors;if(!a)return null;if(phase==='home')return a.home;if(phase==='work'||phase==='nightWork')return a.work;if(phase==='lunch')return a.lunch;if(phase==='leisure')return a.leisure;if(phase==='commute'){const start=n.occupation?.schedule?.start??8;return hourInRange(hour,(start-1+24)%24,start)?a.work:a.home}return null}
+function applyNpcWorkwear(n){if(!n?.clothMat||!n?.pantsMat)return;const working=n.lifePhase==='work'||n.lifePhase==='nightWork',u=working?occupationWorkwear(n.occupation?.title||''):null;if(u){n.clothMat.color.set(u.top);n.pantsMat.color.set(u.pants);n.workwearApplied=true}else if(n.workwearApplied||!working){n.clothMat.color.setHex(n.casualTop||0x56697a);n.pantsMat.color.setHex(n.casualPants||0x222b34);n.workwearApplied=false}}
 function updateNpcDailyRoutine(n,dt){
  const phase=n.lifePhase,target=npcRoutineTarget(n,phase,state.timeOfDay);if(!target)return'patrol';
  if(phase==='leisure'&&Math.hypot(n.group.position.x-target.x,n.group.position.z-target.z)<1.4)return'patrol';
@@ -441,6 +494,22 @@ const JOB_DEFS={
  engineer:makeJob('engineer','Ingénieur','📐','private','tech',3900,'university','tech','tech','cadre',[8,17],.42,.62),
  doctor:makeJob('doctor','Médecin','⚕️','public','hospital',6000,'medical','clinic','health','cadre',[8,18],.22,.15)
 };
+
+const JOB_WORKWEAR={
+ courier:{name:'Tenue de livraison',top:'#d9782f',pants:'#263746',accessory:'cap'},retail:{name:'Tenue de magasin',top:'#406f5b',pants:'#263a34',accessory:'none'},cleaner:{name:"Tenue d’entretien",top:'#5d8794',pants:'#304451',accessory:'none'},waiter:{name:'Tenue de service',top:'#f0eee7',pants:'#25292f',accessory:'none'},warehouse:{name:'Tenue logistique',top:'#4d6576',pants:'#303840',accessory:'none'},constructionWorker:{name:'Tenue de chantier',top:'#e3a52f',pants:'#37434c',accessory:'cap'},industrialWorker:{name:"Tenue d’atelier",top:'#506a79',pants:'#2d363d',accessory:'none'},baker:{name:'Tenue de boulanger',top:'#eee2cc',pants:'#6a513e',accessory:'cap'},postalWorker:{name:'Tenue postale',top:'#d3ad37',pants:'#3c4a5b',accessory:'none'},adminAssistant:{name:'Tenue administrative',top:'#637388',pants:'#303844',accessory:'none'},busDriver:{name:'Tenue conducteur',top:'#4d6f82',pants:'#26343e',accessory:'none'},mechanic:{name:'Combinaison mécanique',top:'#4e6575',pants:'#30363b',accessory:'none'},technician:{name:'Tenue technique',top:'#557482',pants:'#2f3d44',accessory:'none'},careAssistant:{name:'Tenue aide-soignant',top:'#739db7',pants:'#405569',accessory:'none'},nurse:{name:'Tenue infirmier',top:'#55a89f',pants:'#385c63',accessory:'none'},policeOfficer:{name:'Uniforme de police',top:'#315477',pants:'#1f344a',accessory:'cap'},firefighter:{name:'Tenue sapeur-pompier',top:'#ad463b',pants:'#28343c',accessory:'none'},teacher:{name:'Tenue professionnelle enseignant',top:'#6a7994',pants:'#39434e',accessory:'none'},accountant:{name:'Tenue de bureau',top:'#52657c',pants:'#2e3540',accessory:'none'},bankAdvisor:{name:'Tenue bancaire',top:'#456e68',pants:'#2d3938',accessory:'none'},developer:{name:'Tenue professionnelle tech',top:'#485f80',pants:'#2a323d',accessory:'none'},engineer:{name:'Tenue ingénieur',top:'#526c7c',pants:'#2d3740',accessory:'none'},doctor:{name:'Blouse médicale',top:'#edf1f2',pants:'#59656d',accessory:'none'}
+};
+function occupationWorkwear(o=''){const x=o.toLowerCase();if(x.includes('médecin'))return JOB_WORKWEAR.doctor;if(x.includes('infirm'))return JOB_WORKWEAR.nurse;if(x.includes('aide-soignant'))return JOB_WORKWEAR.careAssistant;if(x.includes('polic'))return JOB_WORKWEAR.policeOfficer;if(x.includes('pompier'))return JOB_WORKWEAR.firefighter;if(x.includes('boulanger'))return JOB_WORKWEAR.baker;if(x.includes('mécan'))return JOB_WORKWEAR.mechanic;if(x.includes('enseign'))return JOB_WORKWEAR.teacher;if(x.includes('postal'))return JOB_WORKWEAR.postalWorker;if(x.includes('serveur'))return JOB_WORKWEAR.waiter;if(x.includes('chauffeur')||x.includes('conducteur'))return JOB_WORKWEAR.busDriver;if(x.includes('ouvrier'))return JOB_WORKWEAR.industrialWorker;if(x.includes('vendeur')||x.includes('commerce'))return JOB_WORKWEAR.retail;if(x.includes('technicien'))return JOB_WORKWEAR.technician;if(x.includes('ingénieur'))return JOB_WORKWEAR.engineer;if(x.includes('développeur'))return JOB_WORKWEAR.developer;if(x.includes('banque')||x.includes('conseiller bancaire'))return JOB_WORKWEAR.bankAdvisor;return null}
+function hasResidence(){return !!state.residenceId}
+function atOwnResidence(){return !!(state.interior?.type==='property'&&state.interior.propertyId===state.residenceId)}
+function workUniformRecord(){return state.job?state.workUniforms?.[state.job.id]||null:null}
+function currentAvatar(){const a=normalizedAvatar(state.avatar),u=state.uniformWorn&&JOB_WORKWEAR[state.uniformWorn];return u?{...a,top:u.top,pants:u.pants,accessory:u.accessory||'none'}:a}
+function syncPlayerAppearance(){state.avatarVersion=(state.avatarVersion||1)+1;if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload(),avatarVersion:state.avatarVersion})}
+function residenceHasWardrobe(){if(!state.residenceId)return false;const rec=portfolioRecord(state.residenceId);return !!rec&&propertyFurnitureList(rec).includes('wardrobe')}
+function nearHomeZone(kind,range=2.5){if(!atOwnResidence())return false;const z=interiorHomeZones?.find(v=>v.id===kind);return !!z&&Math.hypot(state.pos.x-z.x,state.pos.z-z.z)<=range}
+function issueWorkUniform(jobId){if(!JOB_WORKWEAR[jobId])return;if(!state.workUniforms)state.workUniforms={};const loc=residenceHasWardrobe()?'wardrobe':'bag';if(!state.workUniforms[jobId])state.workUniforms[jobId]={jobId,location:loc};else if(loc==='wardrobe')state.workUniforms[jobId].location='wardrobe'}
+function storeBagUniformsAtHome(){if(!residenceHasWardrobe())return;for(const u of Object.values(state.workUniforms||{}))if(u.location==='bag')u.location='wardrobe'}
+function wearWorkUniform(){const j=state.job?.id,u=workUniformRecord();if(!j||!u)return toast("Tu n’as pas d’uniforme professionnel.");if(u.location==='wardrobe'){if(!atOwnResidence())return toast('Ton uniforme est dans ton armoire : rentre chez toi pour te changer.');if(!nearHomeZone('wardrobe',2.6))return toast('Approche-toi de ton armoire pour te changer.')}state.uniformWorn=j;syncPlayerAppearance();save();toast(`👔 ${JOB_WORKWEAR[j].name} enfilée.`);openSheet(currentPanel||'work')}
+function removeWorkUniform(){if(!state.uniformWorn)return;state.uniformWorn=null;syncPlayerAppearance();save();toast('Tenue civile remise.');openSheet(currentPanel||'work')}
 const COMPANY_TEMPLATES={
  logistics:{id:'logistics',name:'NeoExpress Logistique',sector:'private',cash:3600,npcWorkers:34,monthlyNpcRevenue:2350},
  retailGroup:{id:'retailGroup',name:'Commerces Réunis',sector:'private',cash:4200,npcWorkers:58,monthlyNpcRevenue:3300},
@@ -528,7 +597,11 @@ const HOME_ITEMS={
  table:{id:'table',name:'Table',icon:'🪵'},
  lamp:{id:'lamp',name:'Lampe',icon:'💡'},
  plant:{id:'plant',name:'Plante',icon:'🪴'},
- wardrobe:{id:'wardrobe',name:'Armoire',icon:'🧰'}
+ wardrobe:{id:'wardrobe',name:'Armoire',icon:'🚪'},
+ bed:{id:'bed',name:'Lit',icon:'🛏️'},
+ fridge:{id:'fridge',name:'Réfrigérateur',icon:'🧊'},
+ freezer:{id:'freezer',name:'Congélateur',icon:'❄️'},
+ trashBin:{id:'trashBin',name:'Poubelle cuisine',icon:'🗑️'}
 };
 const HOME_SLOTS=[
  {x:-5.5,z:-4.2},{x:-2.1,z:-4.0},{x:1.3,z:-4.0},{x:4.8,z:-4.0},
@@ -552,8 +625,8 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:225,trainTrips:0,visitedCities:['paris'],
- gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityEconomies:freshCityEconomies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,studyHours:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:226,trainTrips:0,visitedCities:['paris'],
+ gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityEconomies:freshCityEconomies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,studyHours:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[],workUniforms:{},uniformWorn:null,foodLots:[],foodStorage:{pantry:[],fridge:[],freezer:[]},shopCart:{shopType:null,items:[]},residenceFurniture:{},dentalHygiene:70
 };
 let state=loadState();
 if(!CITIES.some(c=>c.id===state.cityId))state.cityId='paris';if(!state.visitedCities.includes(state.cityId))state.visitedCities.push(state.cityId);
@@ -568,15 +641,19 @@ function loadState(){
      ...structuredClone(base),...raw,
      pos:{...base.pos,...(raw.pos||{})},homeStorage:{...base.homeStorage,...(raw.homeStorage||{})},
      homeStock:raw.homeStock||[],homePlaced:raw.homePlaced||[],artifactBag:raw.artifactBag||[],discoveredShops:raw.discoveredShops||[],
-     propertyCatalog:(raw.propertyCatalog||[]).map(p=>({...p,cityId:p.cityId||'paris'})),propertyPortfolio:(raw.propertyPortfolio||[]).map(p=>({...p,cityId:p.cityId||'paris'})),
-     education:{current:null,completed:[],...(raw.education||{})},companies:{...freshCompanies(),...(raw.companies||{})},cityEconomies:Object.fromEntries(Object.entries(freshCityEconomies()).map(([id,v])=>[id,{...v,...(raw.cityEconomies?.[id]||{})}])),salaryHistory:raw.salaryHistory||[],agendaCustom:raw.agendaCustom||[],knownNpcOccupations:raw.knownNpcOccupations||[],soundEnabled:raw.soundEnabled!==false,avatar:normalizedAvatar(raw.avatar||AVATAR_DEFAULT),avatarCreated:!!raw.avatarCreated,avatarVersion:raw.avatarVersion||1,cosmeticsUnlocked:raw.cosmeticsUnlocked||[]
+     propertyCatalog:(raw.propertyCatalog||[]).map(p=>({...p,cityId:p.cityId||'paris',furnished:p.furnished??((Array.from(p.id||'').reduce((a,c)=>a+c.charCodeAt(0),0)%100)<52)})),propertyPortfolio:(raw.propertyPortfolio||[]).map(p=>({...p,cityId:p.cityId||'paris',furnished:p.furnished??(p.tenure==='rent')})),
+     education:{current:null,completed:[],...(raw.education||{})},companies:{...freshCompanies(),...(raw.companies||{})},cityEconomies:Object.fromEntries(Object.entries(freshCityEconomies()).map(([id,v])=>[id,{...v,...(raw.cityEconomies?.[id]||{})}])),salaryHistory:raw.salaryHistory||[],agendaCustom:raw.agendaCustom||[],knownNpcOccupations:raw.knownNpcOccupations||[],soundEnabled:raw.soundEnabled!==false,avatar:normalizedAvatar(raw.avatar||AVATAR_DEFAULT),avatarCreated:!!raw.avatarCreated,avatarVersion:raw.avatarVersion||1,cosmeticsUnlocked:raw.cosmeticsUnlocked||[],workUniforms:raw.workUniforms||{},uniformWorn:raw.uniformWorn||null,foodLots:raw.foodLots||[],foodStorage:{pantry:[],fridge:[],freezer:[],...(raw.foodStorage||{})},shopCart:raw.shopCart||{shopType:null,items:[]},residenceFurniture:raw.residenceFurniture||{},dentalHygiene:Number.isFinite(raw.dentalHygiene)?raw.dentalHygiene:70
    };
    if(loaded.interior){loaded.pos=raw.returnPos&&Number.isFinite(raw.returnPos.x)&&Number.isFinite(raw.returnPos.z)?{x:raw.returnPos.x,z:raw.returnPos.z}:{...base.pos};loaded.interior=null;loaded.returnPos=null}
    if(migrated&&raw.housingStage){loaded.propertyCredit=(loaded.propertyCredit||0)+(raw.housingStage===1?180:raw.housingStage===2?1030:raw.housingStage>=3?2830:0);loaded.housingStage=0;loaded.landOwned=false}
    if((raw.worldLayoutVersion||0)<215){loaded.propertyCatalog=[];loaded.discoveredShops=[]}
    if((raw.worldLayoutVersion||0)<220){loaded.pos={...base.pos};loaded.interior=null;loaded.returnPos=null;loaded.discoveredShops=[];loaded.seenDistricts=[]}
    if(loaded.job?.id==='police')loaded.job={...loaded.job,id:'policeOfficer'};if(loaded.job&&!JOB_DEFS[loaded.job.id])loaded.job=null;
-   loaded.worldLayoutVersion=225;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
+   loaded.worldLayoutVersion=226;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
+   // Migrate old stack-based food to dated lots once. Water is also lot-based but never expires.
+   if(!raw.foodLots){for(const st of [...(loaded.inventory||[])])if(FOOD_META[st.id]){for(let q=0;q<st.qty;q++)loaded.foodLots.push({uid:`legacy-${Date.now()}-${st.id}-${q}-${Math.random()}`,id:st.id,qty:1,location:'bag',freshness:1,lastCheck:((loaded.gameMonth-1)*30+(loaded.gameDay||1))+loaded.timeOfDay/24});loaded.inventory=loaded.inventory.filter(x=>!FOOD_META[x.id])}}
+   if(loaded.residenceId){const rr=loaded.propertyPortfolio.find(p=>p.id===loaded.residenceId);const ownF=loaded.residenceFurniture?.[loaded.residenceId]||[];const furnishedRental=!!rr?.furnished&&rr?.tenure==='rent';const hasWardrobe=furnishedRental||ownF.includes('wardrobe');if(hasWardrobe)for(const u of Object.values(loaded.workUniforms||{}))if(u.location==='bag')u.location='wardrobe';else for(const u of Object.values(loaded.workUniforms||{}))if(u.location==='wardrobe')u.location='bag'}
+   if(loaded.uniformWorn&&!loaded.job)loaded.uniformWorn=null;
    return loaded
  }catch{return structuredClone(base)}
 }
@@ -587,7 +664,22 @@ function save(){
 }
 function city(){return CITIES.find(c=>c.id===state.cityId)||CITIES[0]}
 function weapon(){return WEAPONS[state.equipped]||WEAPONS.fists}
-function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)}
+function invCount(){return state.inventory.reduce((a,x)=>a+x.qty,0)+(state.foodLots||[]).filter(x=>x.location==='bag').reduce((a,x)=>a+(x.qty||1),0)+Object.values(state.workUniforms||{}).filter(x=>x.location==='bag').length}
+
+function gameStamp(){return absoluteGameDay()+(state.timeOfDay||0)/24}
+function foodStorageLabel(loc){return{bag:'sac',ambient:'température ambiante',pantry:'placard',fridge:'réfrigérateur',freezer:'congélateur'}[loc]||loc}
+function foodEffectiveStorage(loc){return loc==='pantry'?'ambient':loc}
+function refreshFoodSpoilage(){const now=gameStamp();for(const lot of state.foodLots||[]){if(lot.id==='water'){lot.freshness=1;lot.lastCheck=now;continue}const meta=FOOD_META[lot.id];if(!meta)continue;const elapsed=Math.max(0,now-(lot.lastCheck??now)),storage=foodEffectiveStorage(lot.location==='bag'?'ambient':lot.location),days=Math.max(.05,meta.days[storage]||meta.days.ambient||1);lot.freshness=clamp((lot.freshness??1)-elapsed/days,0,1);lot.lastCheck=now}}
+function foodFreshLabel(lot){refreshFoodSpoilage();if(lot.id==='water')return'ne périme pas';const f=lot.freshness??1;return f<=0?'GÂTÉ':f<.25?'à consommer vite':f<.6?'correct':'frais'}
+function foodDluLabel(lot){refreshFoodSpoilage();if(lot.id==='water')return'DLU : aucune';const meta=FOOD_META[lot.id];if(!meta)return'DLU inconnue';if((lot.freshness??1)<=0)return'DLU dépassée';const storage=foodEffectiveStorage(lot.location==='bag'?'ambient':lot.location),days=Math.max(.05,meta.days[storage]||meta.days.ambient||1),left=(lot.freshness??1)*days;return left<1?`DLU : ~${Math.max(1,Math.round(left*24))} h`:`DLU : ~${Math.ceil(left)} j`}
+function addFoodLot(id,location='bag',qty=1){if(!FOOD_META[id])return;state.foodLots=state.foodLots||[];for(let i=0;i<qty;i++)state.foodLots.push({uid:`f-${Date.now()}-${Math.random().toString(36).slice(2)}`,id,qty:1,location,freshness:1,lastCheck:gameStamp()})}
+function foodLotsAt(loc){refreshFoodSpoilage();return(state.foodLots||[]).filter(x=>x.location===loc)}
+function removeFoodLot(uid){const i=(state.foodLots||[]).findIndex(x=>x.uid===uid);if(i<0)return null;return state.foodLots.splice(i,1)[0]}
+function takeFreshFood(id,locations=['bag','pantry','fridge','freezer']){refreshFoodSpoilage();const lot=(state.foodLots||[]).filter(x=>x.id===id&&locations.includes(x.location)&&(x.freshness??1)>0).sort((a,b)=>(a.freshness??1)-(b.freshness??1))[0];return lot?removeFoodLot(lot.uid):null}
+function foodCount(id){refreshFoodSpoilage();return(state.foodLots||[]).filter(x=>x.id===id&&(x.freshness??1)>0).length}
+function moveFoodLot(uid,to){if(!atOwnResidence())return toast('Il faut être chez toi pour ranger les courses.');const lot=(state.foodLots||[]).find(x=>x.uid===uid);if(!lot)return;const allowed=['bag','pantry','fridge','freezer'];if(!allowed.includes(to))return;if(to==='fridge'&&!propertyFurnitureList(portfolioRecord(state.residenceId)).includes('fridge'))return toast('Il te faut un réfrigérateur.');if(to==='freezer'&&!propertyFurnitureList(portfolioRecord(state.residenceId)).includes('freezer'))return toast('Il te faut un congélateur.');if(to==='bag'&&invCount()>=state.bagMax)return toast('Sac plein.');refreshFoodSpoilage();lot.location=to;lot.lastCheck=gameStamp();save();openSheet('home')}
+function discardFood(uid,fromPanel='home'){const lot=removeFoodLot(uid);if(!lot)return;toast(`🗑️ ${CONSUMABLES[lot.id]?.name||lot.id} jeté.`);save();openSheet(fromPanel)}
+function cookRecipe(id){if(!atOwnResidence())return toast('Il faut utiliser ta cuisine.');const r=COOKING_RECIPES.find(x=>x.id===id);if(!r)return;for(const[k,q]of Object.entries(r.needs))if(foodCount(k)<q)return toast(`Il manque : ${CONSUMABLES[k]?.name||k}`);for(const[k,q]of Object.entries(r.needs))for(let i=0;i<q;i++)takeFreshFood(k,['pantry','fridge','freezer','bag']);const rec=portfolioRecord(state.residenceId),dest=propertyFurnitureList(rec).includes('fridge')?'fridge':'bag';addFoodLot(r.makes,dest,1);advanceGameMinutes(35);state.hunger=clamp(state.hunger-2,0,100);toast(`🍳 ${r.name} préparé et rangé au frais.`);save();openSheet('home')}
 function addStack(list,id,qty=1){const x=list.find(i=>i.id===id);x?x.qty+=qty:list.push({id,qty})}
 function removeStack(list,id,qty=1){const x=list.find(i=>i.id===id);if(!x||x.qty<qty)return false;x.qty-=qty;if(x.qty<=0)list.splice(list.indexOf(x),1);return true}
 function stackCount(list,id){return (list.find(i=>i.id===id)||{qty:0}).qty}
@@ -625,7 +717,7 @@ function checkQuests(){
 }
 
 let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],properties=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],entranceZones=[],pedNetworks=new Map(),clouds=[],starSystem=null,ambientGlowSystem=null,streetLamps=[],lampLightPool=[],lastLampLightTick=0,busStops=[],busVehicles=[],trainStations=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,interiorAmbientPeople=[],lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,mapBusMode=false,mapWorldMode=false,currentBusStopId=null,currentBoardBusId=null,busWaitRequest=null,busRide=null,busJourneyPlan=null,busTicketValidUntil=0,busLastArrivalToast='',busLastUiTick=0,busCameraMode='window',busViewYaw=0,busViewPitch=-.04,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,interiorAmbientPeople=[],interiorHomeZones=[],interiorProductShelves=[],lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,mapBusMode=false,mapWorldMode=false,currentBusStopId=null,currentBoardBusId=null,busWaitRequest=null,busRide=null,busJourneyPlan=null,busTicketValidUntil=0,busLastArrivalToast='',busLastUiTick=0,busCameraMode='window',busViewYaw=0,busViewPitch=-.04,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
 
 
 function mpServerUrl(){return (window.STREETQUEST_DEFAULT_SERVER||localStorage.getItem('sq-mp-url')||'https://streetquest-multiplayer.onrender.com').replace(/\/$/,'')}
@@ -1573,8 +1665,9 @@ function makePropertyListing(key,x,z,isHouse,d,r,serial=0){
  const t=PROPERTY_TYPES[type],area=Math.round(t.baseArea+pr()*t.areaVar),quality=.82+pr()*.36+(d.wealth-1)*.12;
  const rent=Math.max(12,Math.round(t.baseRent*d.rentMult*(area/t.baseArea)*quality)),buyPrice=Math.max(220,Math.round(t.baseBuy*d.buyMult*(area/t.baseArea)*quality/10)*10);
  const rooms=type==='studio'?1:type==='flat2'?2:type==='flat3'?3:type==='house'?4+Math.floor(pr()*2):6+Math.floor(pr()*3);
- const marketed=pr()<.48,offer=pr()<.34?'rent':pr()<.67?'sale':'both';
- return{id,cityId:state.cityId,key,cx:Math.floor(x/CHUNK),cz:Math.floor(z/CHUNK),x,z,type,area,rooms,rent,buyPrice,districtId:d.id,districtName:d.name,tier:d.tier,demand:d.propertyDemand,marketed,offer,agency:'Agence Habitat'}
+ const marketed=pr()<.48,offer=pr()<.34?'rent':pr()<.67?'sale':'both',furnished=pr()<.52;
+ const furnishedRent=furnished?Math.round(rent*1.12):rent;
+ return{id,cityId:state.cityId,key,cx:Math.floor(x/CHUNK),cz:Math.floor(z/CHUNK),x,z,type,area,rooms,rent:furnishedRent,baseRent:rent,buyPrice,districtId:d.id,districtName:d.name,tier:d.tier,demand:d.propertyDemand,marketed,offer,agency:'Agence Habitat',furnished}
 }
 function rememberProperty(p){
  const i=state.propertyCatalog.findIndex(x=>x.id===p.id);
@@ -2254,7 +2347,8 @@ function createPerson(role,key,x,z,r,path=null){
    name:isPolice?choice(['Brigadier Morel','Agent Diaz','Agent Leroy']):(hostile?'Rôdeur hostile':choice(['Lina','Noah','Maya','Nino','Sara','Eliott','Inès','Adam','Jade','Milo'])),
    missionGiven:false,caught:false,pickpocketed:false,heading:0,alertness:75+r()*45,chasing:false,lastSeen:0,aggroTime:0,lastHit:0,calledPolice:false,following:false,trust:.25+r()*.7,courage:.2+r()*.75,followDoubt:r()*.55,routeStuck:0,followStuck:0,lastSafe:{x,z},talking:false
  };
- n.baseSpeed=n.speed;n.lifeAnchors=makeNpcLifeAnchors(n,r);n.householdSize=1+Math.floor(r()*4);n.habit=NPC_HABITS[Math.floor(r()*NPC_HABITS.length)];n.commuteMode=r()<.42?'à pied':r()<.76?'en transports':'en véhicule';n.lifePhase=npcLifePhase(n,state.timeOfDay);
+ n.clothMat=cloth;n.pantsMat=lm;n.casualTop=clothColor;n.casualPants=0x222b34;n.workwearApplied=false;
+ n.baseSpeed=n.speed;n.lifeAnchors=makeNpcLifeAnchors(n,r);n.householdSize=1+Math.floor(r()*4);n.habit=NPC_HABITS[Math.floor(r()*NPC_HABITS.length)];n.commuteMode=r()<.42?'à pied':r()<.76?'en transports':'en véhicule';n.lifePhase=npcLifePhase(n,state.timeOfDay);applyNpcWorkwear(n);
  n.npcId=`${state.cityId}:${key}:${Math.round(x*10)}:${Math.round(z*10)}:${n.name}`;
  if(role==='civilian')group.visible=v20CivilianVisible(n,state.timeOfDay);
  group.traverse(o=>{o.userData.person=n});
@@ -2724,7 +2818,7 @@ function callNearbyPolice(n,t){
 function updatePeople(dt,t){
  policeSeeing=false;
  for(const n of npcs){
-   n.lifePhase=npcLifePhase(n,state.timeOfDay);const baseSpeed=n.baseSpeed||n.speed;const phaseSpeed=n.lifePhase==='commute'?1.22:n.lifePhase==='leisure'?.82:n.lifePhase==='lunch'?.90:1;n.speed=baseSpeed*phaseSpeed;
+   n.lifePhase=npcLifePhase(n,state.timeOfDay);applyNpcWorkwear(n);const baseSpeed=n.baseSpeed||n.speed;const phaseSpeed=n.lifePhase==='commute'?1.22:n.lifePhase==='leisure'?.82:n.lifePhase==='lunch'?.90:1;n.speed=baseSpeed*phaseSpeed;
    const scheduled=v20CivilianVisible(n,state.timeOfDay);
    const dPlayer=Math.hypot(state.pos.x-n.group.position.x,state.pos.z-n.group.position.z);
    const essential=n.talking||n.following||n.aggroTime>0||selectedNPC===n||tailTheft?.npc===n;
@@ -2799,22 +2893,11 @@ function needsSpeedMultiplier(){
  return low<10?.68:low<25?.82:1
 }
 function updateNeeds(dt){
- const calm=state.interior?(state.interior.type==='shop'?.12:.38):1;
- state.hunger=clamp(state.hunger-dt*.0085*calm,0,100);
- state.thirst=clamp(state.thirst-dt*.0120*calm,0,100);
- state.hygiene=clamp(state.hygiene-dt*.0050*calm,0,100);
- if(state.hunger<=0||state.thirst<=0){
-   state.hp=Math.max(1,state.hp-dt*(state.thirst<=0?.34:.18))
- }
+ const calm=state.interior?(state.interior.type==='shop'?.12:.38):1;state.hunger=clamp(state.hunger-dt*.0085*calm,0,100);state.thirst=clamp(state.thirst-dt*.0120*calm,0,100);state.hygiene=clamp(state.hygiene-dt*.0050*calm,0,100);state.dentalHygiene=clamp((state.dentalHygiene??70)-dt*.0018*calm,0,100);refreshFoodSpoilage();if(state.hunger<=0||state.thirst<=0)state.hp=Math.max(1,state.hp-dt*(state.thirst<=0?.34:.18))
 }
 function useConsumable(id){
- const c=CONSUMABLES[id];if(!c||!removeStack(state.inventory,id,1))return;
- state.hunger=clamp(state.hunger+(c.hunger||0),0,100);
- state.thirst=clamp(state.thirst+(c.thirst||0),0,100);
- state.hygiene=clamp(state.hygiene+(c.hygiene||0),0,100);
- toast(`${c.icon} ${c.name} utilisé`);save();openSheet('bag')
+ const c=CONSUMABLES[id];if(!c)return;if(RAW_FOODS.has(id))return toast('Cet aliment doit être cuisiné avant d’être consommé.');let ok=false;if(FOOD_META[id]){const lot=takeFreshFood(id,['bag']);if(!lot){const bad=(state.foodLots||[]).find(x=>x.id===id&&x.location==='bag'&&(x.freshness??1)<=0);return toast(bad?'Cet aliment est gâté : jette-le.':'Tu n’en as pas dans ton sac.')}ok=true}else ok=removeStack(state.inventory,id,1);if(!ok)return;state.hunger=clamp(state.hunger+(c.hunger||0),0,100);state.thirst=clamp(state.thirst+(c.thirst||0),0,100);state.hygiene=clamp(state.hygiene+(c.hygiene||0),0,100);toast(`${c.icon} ${c.name} consommé`);save();openSheet('bag')
 }
-
 function ensureInteriorConsistency(){
  if(state.interior&&!interiorGroup){
    const p=state.returnPos&&Number.isFinite(state.returnPos.x)&&Number.isFinite(state.returnPos.z)?state.returnPos:base.pos;
@@ -2872,12 +2955,14 @@ function checkInteraction(){
    const exitLine=interiorBounds.z-1.45;
    if(state.pos.z>exitLine)return state.interior?.returnTo?setPrompt('🚪 Retour à l’agence','Terminer la visite et retrouver le conseiller.','RETOUR',leaveInterior):setPrompt('🚪 Porte de sortie','Retourner dans la rue.','SORTIR',leaveInterior);
    if(state.interior.type==='shop'){
+     const shelf=interiorProductShelves.map(q=>({...q,d:Math.hypot(state.pos.x-q.x,state.pos.z-q.z)})).sort((a,b)=>a.d-b.d)[0];if(shelf&&shelf.d<1.8)return setPrompt(`🛒 ${shelf.name}`,'Prendre un article et le mettre dans le caddie.','PRENDRE',()=>addToCart(shelf.id));
      if(interiorSeller?.group?.parent){
        const d=Math.hypot(state.pos.x-interiorSeller.group.position.x,state.pos.z-interiorSeller.group.position.z);
        if(d<3.05)return setPrompt(interiorSeller.name,`${interiorSeller.role} • ${state.interior.shopName||SHOPS[state.interior.shopType].name}`,'PARLER',()=>openSheet('physicalShop'))
      }
      return hidePrompt()
    }
+   if(state.interior.type==='property'){const z=interiorHomeZones.map(q=>({...q,d:Math.hypot(state.pos.x-q.x,state.pos.z-q.z)})).sort((a,b)=>a.d-b.d)[0];if(z&&z.d<2.15){if(z.id==='shower')return setPrompt('🚿 Douche','Se laver et restaurer l’hygiène.','SE DOUCHER',showerAtHome);if(z.id==='sink')return setPrompt('🪥 Lavabo','Se brosser les dents.','BROSSER',brushTeethAtHome);if(z.id==='bed')return setPrompt('🛏️ Lit','Dormir et récupérer des PV.','DORMIR',restAtHome);return setPrompt(`${z.icon} ${z.label}`,'Gérer le logement, le rangement et la cuisine.','UTILISER',()=>openSheet('home'))}return hidePrompt()}
    if(state.interior.type==='home'&&state.pos.z<-4.9)return setPrompt('Gestion du logement','Gérer stockage et aménagement.','GÉRER',()=>openSheet('home'));
    return hidePrompt()
  }
@@ -3131,7 +3216,7 @@ function addInteriorExitDoor(width,depth){
 function enterInterior(type,obj,opts={}){
  if(!opts.preserveReturn&&!state.interior)state.returnPos={...state.pos};
  state.interior={type,shopType:obj?.type||null,shopName:type==='shop'?(obj?.displayName||obj?.name||SHOPS[obj?.type]?.name||null):null,propertyId:type==='property'?obj?.id:null,returnTo:opts.returnTo||null};
- interiorColliders=[];interiorSeller=null;interiorAmbientPeople=[];for(const[,g]of chunks)g.visible=false;
+ interiorColliders=[];interiorSeller=null;interiorAmbientPeople=[];interiorHomeZones=[];interiorProductShelves=[];for(const[,g]of chunks)g.visible=false;
  if(interiorGroup)scene.remove(interiorGroup);interiorGroup=new THREE.Group();scene.add(interiorGroup);
  let width=18,depth=18,theme=null;
  if(type==='shop'){theme=placeTheme(obj?.type);[width,depth]=theme.size||[18,18]}
@@ -3140,7 +3225,9 @@ function enterInterior(type,obj,opts={}){
  const floorColor=type==='shop'?(theme?.floor||0x786f60):type==='property'?0x8d8172:0x7b6c5d,wallColor=type==='shop'?(theme?.wall||0xc8c0aa):type==='property'?0xd8d1c7:0xd7cfbf;
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(width,depth),new THREE.MeshStandardMaterial({color:floorColor,roughness:1}));floor.rotation.x=-Math.PI/2;interiorGroup.add(floor);
  const wallM=new THREE.MeshStandardMaterial({color:wallColor,roughness:.95});
- [[0,2.5,-depth/2,width,.25],[0,2.5,depth/2,width,.25],[-width/2,2.5,0,.25,depth],[width/2,2.5,0,.25,depth]].forEach(w=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],5,w[4]),wallM);m.position.set(w[0],w[1],w[2]);interiorGroup.add(m)});addInteriorExitDoor(width,depth);
+ [[0,2.5,-depth/2,width,.25],[0,2.5,depth/2,width,.25],[-width/2,2.5,0,.25,depth],[width/2,2.5,0,.25,depth]].forEach(w=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],5,w[4]),wallM);m.position.set(w[0],w[1],w[2]);interiorGroup.add(m)});
+ const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(width,depth),new THREE.MeshStandardMaterial({color:type==='property'?0xe9e4dc:0xdeddd8,roughness:1,side:THREE.DoubleSide}));ceiling.rotation.x=Math.PI/2;ceiling.position.y=4.92;interiorGroup.add(ceiling);
+ const ceilingLight=new THREE.PointLight(0xffe6c7,type==='property'?3.2:4.0,Math.max(width,depth)*1.1,2);ceilingLight.position.set(0,4.55,0);interiorGroup.add(ceilingLight);addInteriorExitDoor(width,depth);
  if(type==='shop')buildShopInterior(obj.type,width,depth);
  else if(type==='property')buildPropertyInterior(propertyFromCatalog(obj.id)||obj);
  else if(type==='home')buildHomeInterior();
@@ -3158,31 +3245,26 @@ function addInteriorBox(x,y,z,w,h,d,color=0x765438){
  const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.9}));m.position.set(x,y,z);interiorGroup.add(m);interiorColliders.push({minX:x-w/2-.08,maxX:x+w/2+.08,minZ:z-d/2-.08,maxZ:z+d/2+.08});return m
 }
 
+function propertyFurnitureList(p){if(!p)return[];const own=state.residenceFurniture?.[p.id]||[];const isFurnishedRental=!!p.furnished&&(p.tenure==='rent'||(!p.tenure&&(p.offer==='rent'||p.offer==='both')));const furnished=isFurnishedRental?['bed','sofa','table','wardrobe','fridge']:[];return[...new Set([...furnished,...own])]}
+function addHomeZone(id,label,x,z,icon='•'){interiorHomeZones.push({id,label,x,z,icon})}
 function buildPropertyInterior(p){
- const dims=propertyInteriorDims(p),t=PROPERTY_TYPES[p.type],rich=p.tier==='rich'||p.tier==='luxury',lux=p.tier==='luxury',poor=p.tier==='poor';
- const sign=makeSign(`${t.icon} ${p.area} m²`,'#d8f4ff');sign.position.set(0,3,-dims.depth/2+.2);interiorGroup.add(sign);
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(dims.width-1.3,dims.depth-1.3),new THREE.MeshStandardMaterial({color:lux?0x244356:rich?0x355667:poor?0x6d6657:0x575c67,roughness:1}));
- floor.rotation.x=-Math.PI/2;floor.position.set(0,.02,0);interiorGroup.add(floor);
- const backWin=new THREE.Mesh(new THREE.PlaneGeometry(Math.min(4.8,dims.width*.42),1.35),new THREE.MeshStandardMaterial({color:0xaadcf6,transparent:true,opacity:.45,metalness:.25,roughness:.1}));backWin.position.set(0,1.8,dims.depth/2-.05);interiorGroup.add(backWin);
- if(p.type==='studio'){
-   addInteriorBox(-2.4,.3,-1.4,2.4,.55,1.28,poor?0x6a6f78:0x597081);
-   addInteriorBox(2.1,.4,-1.3,1.45,.75,.95,poor?0x73533c:0x7f5b3f);
-   addInteriorBox(2.2,.42,2.0,1.2,.84,.72,0x4e6572)
- }else{
-   const part=new THREE.Mesh(new THREE.BoxGeometry(.16,2.6,dims.depth*.46),new THREE.MeshStandardMaterial({color:rich?0xd4d7da:0xc7c0b5}));part.position.set(0,1.3,-1);interiorGroup.add(part);interiorColliders.push({minX:-.13,maxX:.13,minZ:-dims.depth*.23-1,maxZ:dims.depth*.23-1});
-   addInteriorBox(-dims.width*.25,.32,-dims.depth*.18,p.type==='villa'?3.8:2.9,.58,1.3,rich?0x587184:0x566876);
-   addInteriorBox(dims.width*.24,.4,-dims.depth*.18,1.7,.75,1.0,rich?0x86654a:0x715137);
-   addInteriorBox(dims.width*.24,.48,.2,1.6,.95,.66,0x586977);
-   if(p.type==='house'||p.type==='villa'){
-     addInteriorBox(-dims.width*.27,.38,dims.depth*.20,2.6,.72,1.0,rich?0x6b5b83:0x53687a);
-     const plant=new THREE.Mesh(new THREE.SphereGeometry(.6,9,7),new THREE.MeshStandardMaterial({color:0x43815a}));plant.position.set(dims.width*.28,1,dims.depth*.22);interiorGroup.add(plant)
-   }
- }
- if(rich){const rug=new THREE.Mesh(new THREE.PlaneGeometry(Math.min(6,dims.width*.42),Math.min(4,dims.depth*.34)),new THREE.MeshStandardMaterial({color:lux?0x5c4d7a:0x765d7d,roughness:1}));rug.rotation.x=-Math.PI/2;rug.position.set(0,.03,1);interiorGroup.add(rug)}
- if(lux){const art=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.0),new THREE.MeshBasicMaterial({color:0x9ee8ff}));art.position.set(-dims.width*.28,2.2,-dims.depth/2+.06);interiorGroup.add(art)}
+ const dims=propertyInteriorDims(p),rec=portfolioRecord(p.id)||p,items=propertyFurnitureList(rec),owned=rec.tenure==='owned';
+ const sign=makeSign(`${PROPERTY_TYPES[p.type]?.icon||'🏠'} ${p.area} m² • ${owned?'NON MEUBLÉ À L’ACHAT':rec.furnished?'MEUBLÉ':'NON MEUBLÉ'}`,'#d8f4ff');sign.scale.set(.72,.72,.72);sign.position.set(0,3.45,-dims.depth/2+.24);interiorGroup.add(sign);
+ // warm flooring and two real room partitions, leaving door passages.
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(dims.width-1.1,dims.depth-1.1),new THREE.MeshStandardMaterial({color:0x9a846b,roughness:.95}));floor.rotation.x=-Math.PI/2;floor.position.y=.018;interiorGroup.add(floor);
+ const roomWallM=new THREE.MeshStandardMaterial({color:0xe0dad0,roughness:.96});
+ if(dims.width>10){for(const z of [-dims.depth*.30,dims.depth*.26]){const w=new THREE.Mesh(new THREE.BoxGeometry(.14,2.9,dims.depth*.20),roomWallM);w.position.set(0,1.45,z);interiorGroup.add(w)}}
+ // Fixed bathroom: shower, washbasin, mirror, WC. These are fixtures, not furniture.
+ const bx=-dims.width/2+2.1,bz=-dims.depth/2+2.15;
+ interiorDecoBox(bx,.12,bz,1.35,.18,1.35,0xe7edf0,false);interiorDecoBox(bx-.62,1.25,bz,.06,2.5,1.4,0xa7d7e8,false);interiorDecoBox(bx,.42,bz+1.45,1.05,.75,.52,0xe5e8e6,true);interiorDecoBox(bx,1.35,bz+1.69,.9,.72,.05,0x9bc4d4,false);interiorDecoBox(bx+1.3,.35,bz-.05,.72,.68,.86,0xe3e6e3,true);
+ addHomeZone('shower','Douche',bx,bz,'🚿');addHomeZone('sink','Lavabo / brossage des dents',bx,bz+1.5,'🪥');
+ // Fixed fitted kitchen with sink, oven and hob.
+ const kx=dims.width/2-2.0,kz=-dims.depth/2+1.0;interiorDecoBox(kx,.5,kz,3.0,1.0,.72,0x657078,true);interiorDecoBox(kx,1.04,kz,3.1,.08,.8,0xb9b7ae,false);interiorDecoBox(kx-.8,.63,kz+.39,.72,.58,.08,0x252a2d,false);interiorDecoBox(kx+.35,1.11,kz+.02,.75,.04,.50,0x1d2225,false);interiorDecoBox(kx+1.0,1.11,kz+.02,.75,.04,.50,0x1d2225,false);interiorDecoBox(kx-.05,1.09,kz+.04,.42,.02,.32,0x8fa7b2,false);
+ addHomeZone('kitchen','Cuisine • four & plaques',kx,kz+1.0,'🍳');addHomeZone('pantry','Placards alimentaires',kx-1.15,kz+1.0,'🥫');
+ const movable={bed:[-dims.width*.28,.31,1.5,2.5,.55,1.35,0x687d8c],sofa:[dims.width*.18,.4,2.5,2.8,.75,1.1,0x576d7f],table:[0,.42,.4,1.8,.78,1.1,0x7b5a3c],wardrobe:[dims.width/2-1.0,1.15,dims.depth*.22,1.25,2.3,.62,0x70543d],fridge:[dims.width/2-1.0,1.0,-dims.depth*.08,1.0,2.0,.9,0xd2dde1],freezer:[dims.width/2-2.2,.68,-dims.depth*.08,1.1,1.35,.9,0xd9e2e4],trashBin:[dims.width/2-3.0,.42,dims.depth*.20,.55,.84,.55,0x465057],lamp:[-1,1.0,3.0,.25,2,.25,0xe7cf7b],plant:[-dims.width*.34,.7,dims.depth*.24,.7,1.4,.7,0x4d7a54],chest:[-dims.width*.18,.38,dims.depth*.25,1.25,.75,.85,0x755337],safe:[-dims.width*.18,.68,dims.depth*.25,1.1,1.35,.9,0x59636c]};
+ for(const id of items){const a=movable[id];if(!a)continue;addInteriorBox(a[0],a[1],a[2],a[3],a[4],a[5],a[6]);if(id==='bed')addHomeZone('bed','Lit',a[0],a[2],'🛏️');if(id==='wardrobe')addHomeZone('wardrobe','Armoire',a[0],a[2],'👔');if(id==='fridge')addHomeZone('fridge','Réfrigérateur',a[0],a[2],'🧊');if(id==='freezer')addHomeZone('freezer','Congélateur',a[0],a[2],'❄️');if(id==='trashBin')addHomeZone('trash','Poubelle',a[0],a[2],'🗑️')}
+ if(owned&&items.length===0){const empty=makeSign('LOGEMENT VIDE • À MEUBLER','#ffe2a7');empty.scale.set(.55,.55,.55);empty.position.set(0,2.4,1.5);interiorGroup.add(empty)}
 }
-
-
 function interiorDecoBox(x,y,z,w,h,d,color=0x765438,collide=false){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.86}));m.position.set(x,y,z);interiorGroup.add(m);if(collide)interiorColliders.push({minX:x-w/2-.06,maxX:x+w/2+.06,minZ:z-d/2-.06,maxZ:z+d/2+.06});return m}
 function interiorTable(x,z,w=1.6,d=.9,color=0x6d5138){interiorDecoBox(x,.72,z,w,.12,d,color,true);for(const dx of [-w*.38,w*.38])for(const dz of [-d*.32,d*.32])interiorDecoBox(x+dx,.35,z+dz,.08,.68,.08,0x42362e,false)}
 function interiorChair(x,z,rot=0,color=0x596775){const g=new THREE.Group();const seat=new THREE.Mesh(new THREE.BoxGeometry(.62,.12,.62),new THREE.MeshStandardMaterial({color,roughness:.9}));seat.position.y=.55;g.add(seat);const back=new THREE.Mesh(new THREE.BoxGeometry(.62,.72,.10),new THREE.MeshStandardMaterial({color,roughness:.9}));back.position.set(0,.88,.27);g.add(back);g.position.set(x,0,z);g.rotation.y=rot;interiorGroup.add(g);return g}
@@ -3252,6 +3334,7 @@ function buildShopInterior(type,width=18,depth=18){
  }else{
   interiorCounter(0,back,5.5,0x4b3b31);for(const x of [-5.5,-1.8,1.8,5.5])interiorShelf(x,-1.0,1.3,2.0,.48,0x66513d);for(const x of [-4.2,0,4.2])interiorChair(x,3.0,Math.PI,0x65717a)
  }
+ if(FOOD_SHOP_TYPES.has(type)){const products=(SHOPS[type]?.stock||[]).filter(x=>FOOD_META[x.id]).slice(0,8),spots=[[-width*.34,-1.2],[-width*.34,1.3],[-width*.12,-1.2],[-width*.12,1.3],[width*.12,-1.2],[width*.12,1.3],[width*.34,-1.2],[width*.34,1.3]];products.forEach((pr,i)=>{const[x,z]=spots[i];const shelf=interiorShelf(x,z,1.55,1.35,.52,0x66513d);const tag=makeSign(`${pr.icon} ${pr.name}`,'#ffffff');tag.scale.set(.16,.16,.16);tag.position.set(x,1.55,z+.30);interiorGroup.add(tag);interiorProductShelves.push({id:pr.id,name:pr.name,x,z})})}
  buildShopSeller(type,depth);populateInteriorPeople(type,width,depth)
 }
 function buildApartmentInterior(){
@@ -3269,6 +3352,10 @@ function makeHomeProp(id){
  if(id==='wardrobe'){const m=new THREE.Mesh(new THREE.BoxGeometry(1.6,2.35,.7),new THREE.MeshStandardMaterial({color:0x8d6c4e}));m.position.y=1.18;g.add(m)}
  if(id==='chest'){const box=new THREE.Mesh(new THREE.BoxGeometry(1.25,.75,.82),new THREE.MeshStandardMaterial({color:0x6a4a30}));box.position.y=.38;g.add(box);const lid=new THREE.Mesh(new THREE.BoxGeometry(1.3,.16,.88),new THREE.MeshStandardMaterial({color:0x80583a}));lid.position.set(0,.82,0);g.add(lid)}
  if(id==='safe'){const box=new THREE.Mesh(new THREE.BoxGeometry(1.15,1.35,.95),new THREE.MeshStandardMaterial({color:0x59636c,metalness:.35,roughness:.55}));box.position.y=.68;g.add(box);const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,.08,10),new THREE.MeshStandardMaterial({color:0xd4dbe2,metalness:.7,roughness:.25}));wheel.rotation.x=Math.PI/2;wheel.position.set(.22,.75,.49);g.add(wheel)}
+ if(id==='bed'){const m=new THREE.Mesh(new THREE.BoxGeometry(2.4,.55,1.35),new THREE.MeshStandardMaterial({color:0x687d8c}));m.position.y=.3;g.add(m)}
+ if(id==='fridge'){const m=new THREE.Mesh(new THREE.BoxGeometry(1,2,.9),new THREE.MeshStandardMaterial({color:0xd2dde1}));m.position.y=1;g.add(m)}
+ if(id==='freezer'){const m=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.35,.9),new THREE.MeshStandardMaterial({color:0xd9e2e4}));m.position.y=.68;g.add(m)}
+ if(id==='trashBin'){const m=new THREE.Mesh(new THREE.BoxGeometry(.55,.84,.55),new THREE.MeshStandardMaterial({color:0x465057}));m.position.y=.42;g.add(m)}
  return g
 }
 
@@ -3299,7 +3386,7 @@ function buildHomeInterior(){
 function exitInterior(){leaveInterior()}
 function leaveInterior(){
  const returnTo=state.interior?.returnTo||null;
- if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}interiorSeller=null;interiorAmbientPeople=[];interiorColliders=[];interiorBounds={x:8.5,z:8.5};
+ if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}interiorSeller=null;interiorAmbientPeople=[];interiorHomeZones=[];interiorProductShelves=[];interiorColliders=[];interiorBounds={x:8.5,z:8.5};
  if(returnTo?.type==='shop'){
    state.interior=null;
    enterInterior('shop',{type:returnTo.shopType},{preserveReturn:true});
@@ -3321,6 +3408,14 @@ function settlePoliceSituation(){if(!state.wanted)return;const fine=Math.min(sta
 function bankTransfer(dir){const amount=50;if(dir==='deposit'){if(state.coins<amount)return toast('Pas assez de crédits sur toi.');state.coins-=amount;state.homeBank+=amount}else{if(state.homeBank<amount)return toast('Solde insuffisant.');state.homeBank-=amount;state.coins+=amount}save();openSheet('physicalShop')}
 function sendPostalParcel(){if(state.coins<5)return toast('Il faut 5 crédits.');state.coins-=5;state.reputation=(state.reputation||0)+1;recordBusinessTransaction(5,'postoffice');advanceGameMinutes(20);save();toast('📮 Colis envoyé • +1 réputation.');openSheet('physicalShop')}
 function studyAtLibrary(){state.studyHours=(state.studyHours||0)+2;advanceGameMinutes(120);state.hunger=clamp(state.hunger-3,0,100);state.thirst=clamp(state.thirst-4,0,100);save();toast('📚 Deux heures d’étude effectuées.');openSheet('physicalShop')}
+
+function cartForCurrentShop(){if(!state.shopCart||state.shopCart.shopType!==state.interior?.shopType)state.shopCart={shopType:state.interior?.shopType,items:[]};return state.shopCart}
+function cartQty(id){return(cartForCurrentShop().items.find(x=>x.id===id)||{qty:0}).qty}
+function addToCart(id){if(!FOOD_META[id])return;const c=cartForCurrentShop(),x=c.items.find(i=>i.id===id);x?x.qty++:c.items.push({id,qty:1});toast(`${CONSUMABLES[id]?.icon||'🛒'} Ajouté au caddie`);save();if(currentPanel==='physicalShop')openSheet('physicalShop')}
+function removeFromCart(id){const c=cartForCurrentShop(),x=c.items.find(i=>i.id===id);if(!x)return;x.qty--;if(x.qty<=0)c.items=c.items.filter(i=>i!==x);save();openSheet('physicalShop')}
+function cartTotal(){const c=cartForCurrentShop(),stock=SHOPS[c.shopType]?.stock||[],mult=localPriceMultiplier(),discount=Math.min(.15,(state.reputation||0)*.01);return c.items.reduce((a,i)=>{const p=stock.find(x=>x.id===i.id)?.price||CONSUMABLES[i.id]?.price||1;return a+Math.max(1,Math.round(Math.round(p*mult)*(1-discount)))*i.qty},0)}
+function checkoutCart(){const c=cartForCurrentShop(),qty=c.items.reduce((a,x)=>a+x.qty,0),total=cartTotal();if(!qty)return toast('Ton caddie est vide.');if(invCount()+qty>state.bagMax)return toast('Pas assez de place dans le sac pour toutes les courses.');if(state.coins<total)return toast(`Il manque ${total-state.coins} crédits.`);state.coins-=total;for(const x of c.items)addFoodLot(x.id,'bag',x.qty);recordBusinessTransaction(total,c.shopType);c.items=[];advanceGameMinutes(6);save();toast(`🧾 Courses payées : ${total} crédits.`);openSheet('physicalShop')}
+function groceryShopHTML(type,name,staff){const s=SHOPS[type],c=cartForCurrentShop(),total=cartTotal();return`${staff}<div class="card"><div class="sectionKicker">COURSES EN MAGASIN</div><h3>${s.icon} ${name}</h3><p class="sub">Prends les produits dans les rayons puis passe à la caisse. Tu peux aussi ajouter les articles depuis cette liste.</p>${s.stock.filter(x=>FOOD_META[x.id]).map(x=>`<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${FOOD_META[x.id].storage==='fridge'?'À conserver au frais':FOOD_META[x.id].storage==='freezer'?'À conserver congelé':'Conservation ambiante'} • ${Math.max(1,Math.round(x.price*localPriceMultiplier()))} cr.</small></div><button class="menuBtn cartAdd" data-id="${x.id}">+ Caddie</button></div>`).join('')}</div><div class="card"><h3>🛒 Caddie</h3>${c.items.length?c.items.map(x=>`<div class="item"><div class="itemMain"><b>${CONSUMABLES[x.id]?.name||x.id}</b><small>×${x.qty}</small></div><button class="tinyBtn cartRemove" data-id="${x.id}">−</button></div>`).join(''):'<p class="sub">Vide.</p>'}<button class="menuBtn primary checkoutCart" style="width:100%" ${c.items.length?'':'disabled'}>Passer en caisse • ${total} cr.</button></div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`}
 function physicalShopHTML(){
  const type=state.interior.shopType,name=state.interior?.shopName||SHOPS[type]?.name||'Établissement',staff=staffingCardHTML(type,name);
  if(!shopIsOpen(type))return`${staff}<div class="card"><div class="sectionKicker">FERMÉ</div><h3>${SHOPS[type]?.icon||'🏢'} ${name}</h3><p class="sub">Horaires habituels : ${shopHoursLabel(type)}.</p></div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
@@ -3328,28 +3423,30 @@ function physicalShopHTML(){
  if(type==='jobcenter')return `${staff}${employmentHTML()}${companyEconomyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
  if(['clinic','policeStation','fireStation','townhall','bank','postoffice','library'].includes(type))return `${serviceBuildingHTML(type)}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
  const s=SHOPS[type];if(type==='housing')return `${staff}${housingAgencyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ if(FOOD_SHOP_TYPES.has(type))return groceryShopHTML(type,name,staff);
  const valuables=state.inventory.filter(i=>STREET_ITEMS[i.id]&&i.qty>0),mult=localPriceMultiplier();
  const resale=type==='pawn'?`<div class="card"><h3>📦 Revente d’objets</h3>${valuables.length?valuables.map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty} • ${info.value} crédits pièce</small></div><button class="menuBtn sellLoot" data-id="${i.id}">Vendre</button></div>`}).join(''):'<p class="sub">Aucun objet revendable.</p>'}</div>`:'';
  return `${staff}<div class="card"><h3>${s.icon} ${name}</h3><p class="sub">${state.coins} crédits • ouvert ${shopHoursLabel(type)}${state.reputation?` • remise ${Math.min(15,state.reputation)}%`:''}</p></div><div class="card">${s.stock.map(x=>{const pp=Math.max(1,Math.round(x.price*mult));return `<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${pp}</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`}).join('')}</div>${resale}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`
 }
 function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),local=Math.max(1,Math.round(price*localPriceMultiplier())),finalPrice=Math.max(1,Math.round(local*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');if(COSMETIC_ITEMS[id]&&state.cosmeticsUnlocked.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;recordBusinessTransaction(finalPrice,state.interior?.shopType);
  const svc=SERVICE_EFFECTS[id];if(svc){if(svc.hp)state.hp=clamp(state.hp+svc.hp,0,state.maxHp);if(svc.hunger)state.hunger=clamp(state.hunger+svc.hunger,0,100);if(svc.thirst)state.thirst=clamp(state.thirst+svc.thirst,0,100);if(svc.hygiene)state.hygiene=clamp(state.hygiene+svc.hygiene,0,100);if(svc.reputation)state.reputation=Math.max(0,(state.reputation||0)+svc.reputation);save();updateHUD();toast(svc.toast||'Service effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop();return}
- if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(CONSUMABLES[id])addInv(id);if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(HOME_ITEMS[id])addHomeItem(id);if(COSMETIC_ITEMS[id]){state.cosmeticsUnlocked.push(id);state.avatarVersion=(state.avatarVersion||1)+1;const c=COSMETIC_ITEMS[id];if(c.kind==='accessory')state.avatar.accessory=c.value;if(c.kind==='top')state.avatar.top=c.value;if(c.kind==='shoes')state.avatar.shoes=c.value;if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload(),avatarVersion:state.avatarVersion})}
+ if(WEAPONS[id]){state.ownedWeapons.push(id);state.equipped=id;weaponRig.visible=true}if(id==='medkit')addInv('medkit');if(CONSUMABLES[id]){if(FOOD_META[id])addFoodLot(id,'bag',1);else addInv(id)};if(id==='armor')state.armor=clamp(state.armor+30,0,100);if(id==='bag')state.bagMax+=5;if(id==='stealth')state.stealth++;if(HOME_ITEMS[id])addHomeItem(id);if(COSMETIC_ITEMS[id]){state.cosmeticsUnlocked.push(id);state.avatarVersion=(state.avatarVersion||1)+1;const c=COSMETIC_ITEMS[id];if(c.kind==='accessory')state.avatar.accessory=c.value;if(c.kind==='top')state.avatar.top=c.value;if(c.kind==='shoes')state.avatar.shoes=c.value;if(mpSocket?.connected)mpSocket.emit('player:appearance',{avatar:avatarPayload(),avatarVersion:state.avatarVersion})}
  save();updateHUD();toast(COSMETIC_ITEMS[id]?'Style acheté et équipé':'Achat effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
 function sellLoot(id){const info=STREET_ITEMS[id];if(!info||!removeStack(state.inventory,id,1))return;state.coins+=info.value;recordBusinessTransaction(Math.max(1,Math.round(info.value*.15)),'pawn');save();toast(`${info.name} vendu : +${info.value}`);$('#sheetBody').innerHTML=physicalShopHTML();bindShop()}
 function bindShop(){
  $$('.enrollSchool').forEach(b=>b.onclick=()=>enrollSchool(b.dataset.id));const att=$('.attendSchool');if(att)att.onclick=attendSchoolDay;$$('.applyJob').forEach(b=>b.onclick=()=>applyJob(b.dataset.id));const qj=$('.quitJob');if(qj)qj.onclick=quitJob;
  $$('.inspectProperty').forEach(b=>b.onclick=()=>{const p=propertyFromCatalog(b.dataset.id);if(p){selectedProperty=p;openSheet('property')}});$$('.agencyMapProperty').forEach(b=>b.onclick=()=>{const rec=portfolioRecord(b.dataset.id);if(rec)openPropertyOnMap(rec)});$$('.agencySetResidence').forEach(b=>b.onclick=()=>setResidence(b.dataset.id,'physicalShop'));$$('.agencyEndRental').forEach(b=>b.onclick=()=>endRental(b.dataset.id,'physicalShop'));$$('.agencyToggleListing').forEach(b=>b.onclick=()=>togglePropertyListing(b.dataset.id,'physicalShop'));$$('.agencyAdjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta),'physicalShop'));
+ $$('.cartAdd').forEach(b=>b.onclick=()=>addToCart(b.dataset.id));$$('.cartRemove').forEach(b=>b.onclick=()=>removeFromCart(b.dataset.id));$('.checkoutCart')?.addEventListener('click',checkoutCart);
  $$('.buy').forEach(b=>b.onclick=()=>buy(b.dataset.id,Number(b.dataset.price)));$$('.sellLoot').forEach(b=>b.onclick=()=>sellLoot(b.dataset.id));$$('.sellArtifact').forEach(b=>b.onclick=()=>sellArtifact(b.dataset.id));$('.hospitalCare')?.addEventListener('click',hospitalCare);$('.policeSettle')?.addEventListener('click',settlePoliceSituation);$('.bankDeposit')?.addEventListener('click',()=>bankTransfer('deposit'));$('.bankWithdraw')?.addEventListener('click',()=>bankTransfer('withdraw'));$('.postalParcel')?.addEventListener('click',sendPostalParcel);$('.libraryStudy')?.addEventListener('click',studyAtLibrary);$('#leaveShop')?.addEventListener('click',()=>{closeSheet();leaveInterior()})
 }
 function schoolHTML(){const cur=state.education?.current,completed=state.education?.completed||[],name=state.interior?.shopName||'Établissement scolaire';return `<div class="card"><h3>🎓 ${name}</h3><p class="sub">Une journée de cours fait avancer le calendrier d’un jour. Les parcours longs ouvrent les emplois plus rares et qualifiés.</p></div>${cur?`<div class="card"><h3>${EDUCATION_PROGRAMS[cur.id].icon} ${EDUCATION_PROGRAMS[cur.id].name}</h3><p class="sub">Présence : ${cur.attended}/${EDUCATION_PROGRAMS[cur.id].days} jours</p><div class="progress"><i style="width:${cur.attended/EDUCATION_PROGRAMS[cur.id].days*100}%"></i></div><button class="menuBtn primary attendSchool" style="width:100%">📚 Suivre une journée de cours</button></div>`:''}${Object.values(EDUCATION_PROGRAMS).map(p=>`<div class="card"><div class="lifeStat"><div><b>${p.icon} ${p.name}</b><small>${p.desc} • ${p.days} jours • ${p.cost} crédits</small></div>${completed.includes(p.id)?'<span class="qualification done">DIPLÔMÉ</span>':cur?'<span class="qualification">FORMATION EN COURS</span>':`<button class="menuBtn enrollSchool" data-id="${p.id}">S’inscrire</button>`}</div></div>`).join('')}`}
 function enrollSchool(id){const p=EDUCATION_PROGRAMS[id];if(!p)return;if(state.education.current)return toast('Termine d’abord ta formation actuelle.');if(state.coins<p.cost)return toast(`Inscription : ${p.cost} crédits.`);state.coins-=p.cost;state.education.current={id,attended:0};save();toast(`🎓 Inscrit : ${p.name}`);openSheet('physicalShop')}
 function attendSchoolDay(){const cur=state.education.current;if(!cur)return;const p=EDUCATION_PROGRAMS[cur.id];cur.attended++;state.schoolDays=(state.schoolDays||0)+1;state.hunger=clamp(state.hunger-10,0,100);state.thirst=clamp(state.thirst-12,0,100);state.hygiene=clamp(state.hygiene-3,0,100);advanceDay(1);state.timeOfDay=17.5;if(cur.attended>=p.days){if(!state.education.completed.includes(cur.id))state.education.completed.push(cur.id);state.education.current=null;toast(`🎓 Diplôme obtenu : ${p.name}`)}else toast(`Cours ${cur.attended}/${p.days}`);save();openSheet('physicalShop')}
 function employmentHTML(){const j=jobDef(),vac=jobVacanciesForCity(),eco=cityEconomy();return `<div class="card"><div class="sectionKicker">MARCHÉ DU TRAVAIL</div><h3>💼 ${state.interior?.shopName||'Maison de l’Emploi'}</h3><p class="sub">${city().name} • chômage simulé ${(eco.unemployment*100).toFixed(1)} %. Les métiers et niveaux de salaire sont calibrés sur les grandes structures INSEE, puis adaptés à l’économie du jeu (1 crédit ≈ 20 € de revenu mensuel de référence).</p>${j?`<p class="sub">Emploi actuel : <b>${j.icon} ${j.name}</b> • ${j.salary} cr./mois • repère ${formatEuro(j.euroNet)} net/mois • ${jobShiftLabel(j)}</p><button class="menuBtn red quitJob" style="width:100%">Démissionner</button>`:'<p class="sub">Tu n’as actuellement aucun emploi.</p>'}</div><div class="card"><h3>Offres disponibles ce mois-ci</h3><p class="sub">Les offres changent selon la ville et le mois. Les médecins et autres métiers très qualifiés restent rares.</p></div>${vac.map(x=>{const ok=hasQualification(x.qualification),c=state.companies[x.company];return `<div class="card"><div class="lifeStat"><div><b>${x.icon} ${x.name}</b><small>${x.positions} poste(s) • ${x.salary} cr./mois • ≈ ${formatEuro(x.euroNet)} net<br>${PCS_LABELS[x.category]||x.category} • ${x.sector==='public'?'secteur public':c?.name||'privé'} • ${jobShiftLabel(x)}${x.qualification?` • ${EDUCATION_PROGRAMS[x.qualification].name}`:''}</small></div><button class="menuBtn applyJob" data-id="${x.id}" ${!ok||state.job?'disabled':''}>Postuler</button></div></div>`}).join('')}`}
-function applyJob(id){const j=JOB_DEFS[id];if(!j||state.job)return;if(!jobVacanciesForCity().some(x=>x.id===id))return toast('Cette offre n’est plus disponible.');if(!hasQualification(j.qualification))return toast('Diplôme requis.');state.job={id:j.id,sinceMonth:state.gameMonth,cityId:state.cityId};state.workMission=null;cityEconomy().jobsCreated=(cityEconomy().jobsCreated||0)+1;save();toast(`💼 Embauché : ${j.name}`);openSheet('physicalShop')}
-function quitJob(){if(!state.job)return;state.job=null;state.workMission=null;save();toast('Tu as quitté ton emploi.');openSheet('physicalShop')}
+function applyJob(id){const j=JOB_DEFS[id];if(!j||state.job)return;if(!jobVacanciesForCity().some(x=>x.id===id))return toast('Cette offre n’est plus disponible.');if(!hasQualification(j.qualification))return toast('Diplôme requis.');state.job={id:j.id,sinceMonth:state.gameMonth,cityId:state.cityId};state.workMission=null;issueWorkUniform(j.id);cityEconomy().jobsCreated=(cityEconomy().jobsCreated||0)+1;save();toast(`💼 Embauché : ${j.name} • uniforme ${hasResidence()?'rangé dans ton armoire':'remis dans ton sac'}`);openSheet('physicalShop')}
+function quitJob(){if(!state.job)return;const id=state.job.id;if(state.uniformWorn===id){state.uniformWorn=null;syncPlayerAppearance()}delete state.workUniforms?.[id];state.job=null;state.workMission=null;save();toast('Tu as quitté ton emploi et rendu ton uniforme.');openSheet('physicalShop')}
 function companyEconomyHTML(){const eco=cityEconomy();return `${societyDashboardHTML()}<div class="card"><h3>🏢 Principaux employeurs</h3>${Object.values(state.companies).filter(c=>c.npcWorkers>=24).sort((a,b)=>b.npcWorkers-a.npcWorkers).slice(0,8).map(c=>`<div class="lifeStat"><div><b>${c.sector==='public'?'🏛️':'🏢'} ${c.name}</b><small>${c.npcWorkers} emplois simulés</small></div><span class="jobBadge companyCash">${c.sector==='public'?'Public':c.cash+' cr.'}</span></div>`).join('')}</div>`}
-function workHTML(){const j=jobDef();if(!j)return `<div class="card"><h3>💼 Travail</h3><p class="sub">Trouve un emploi à la Maison de l’Emploi. Les offres varient selon la spécialité économique de chaque ville.</p></div>`;const m=state.workMission,onShift=playerJobIsOnShift(j);return `<div class="card"><div class="sectionKicker">${j.sector==='public'?'SERVICE PUBLIC':'EMPLOI'}</div><h3>${j.icon} ${j.name}</h3><p class="sub">Salaire ${j.salary} cr./mois • repère ${formatEuro(j.euroNet)} net/mois • horaires ${jobShiftLabel(j)}.</p>${m?`<p class="sub"><b>Mission :</b> ${m.text}</p><div class="progress"><i style="width:${Math.min(100,(m.progress||0)/(m.target||1)*100)}%"></i></div>`:`<button class="menuBtn primary startWork" style="width:100%" ${onShift?'':'disabled'}>▶️ ${onShift?'Commencer une mission':'Hors horaires de travail'}</button>`}</div>`}
+function workHTML(){const j=jobDef();if(!j)return `<div class="card"><h3>💼 Travail</h3><p class="sub">Trouve un emploi à la Maison de l’Emploi. Les offres varient selon la spécialité économique de chaque ville.</p></div>`;const m=state.workMission,onShift=playerJobIsOnShift(j);return `<div class="card"><div class="sectionKicker">${j.sector==='public'?'SERVICE PUBLIC':'EMPLOI'}</div><h3>${j.icon} ${j.name}</h3><p class="sub">Salaire ${j.salary} cr./mois • repère ${formatEuro(j.euroNet)} net/mois • horaires ${jobShiftLabel(j)}.</p>${m?`<p class="sub"><b>Mission :</b> ${m.text}</p><div class="progress"><i style="width:${Math.min(100,(m.progress||0)/(m.target||1)*100)}%"></i></div>`:`<button class="menuBtn primary startWork" style="width:100%" ${onShift?'':'disabled'}>▶️ ${onShift?'Commencer une mission':'Hors horaires de travail'}</button>`}<hr><p class="sub">👔 ${JOB_WORKWEAR[j.id]?.name||'Tenue professionnelle'} • ${workUniformRecord()?.location==='wardrobe'?'armoire':'sac'} • ${state.uniformWorn?'portée':'non portée'}</p><button class="menuBtn ${state.uniformWorn?'removeUniform':'wearUniform'}">${state.uniformWorn?'Remettre tenue civile':'Mettre l’uniforme'}</button></div>`}
 function chooseWorkTarget(types){const all=state.discoveredShops.filter(s=>s.cityId===state.cityId&&(!types||types.includes(s.type)));if(all.length)return choice(all);const pois=CIVIC_POIS.filter(p=>!types||types.includes(p.type));if(pois.length){const p=choice(pois);return{id:`poi:${state.cityId}:${p.type}:${p.cx}:${p.cz}`,type:p.type,name:p.name,x:p.x,z:p.z}}return null}
 function startWorkMission(){const j=jobDef();if(!j)return toast('Aucun emploi.');if(state.workMission)return toast('Mission déjà en cours.');if(!playerJobIsOnShift(j))return toast(`Ton service est prévu ${jobShiftLabel(j)}.`);let m={job:j.id,progress:0,target:1};const visit=(types,text,revenue=0)=>{const s=chooseWorkTarget(types);if(!s)return null;return{...m,kind:'visitShop',shopId:s.id,targetX:s.x,targetZ:s.z,targetName:s.name||SHOPS[s.type]?.name,text:typeof text==='function'?text(s):text,revenue}};
  if(j.mission==='delivery')m=visit(['corner','bakery','butcher','restaurant','cafe','pharmacy','florist','pawn','home','gear','postoffice'],s=>`Livre un colis à ${s.name||SHOPS[s.type]?.name}.`,75);
@@ -3380,35 +3477,20 @@ function rentProperty(p){
  if(portfolioRecord(p.id))return toast('Ce bien est déjà dans ton portefeuille.');
  if(!state.job)return toast('Un bailleur exige un emploi avant de signer le bail.');
  if(currentGrossSalary()<p.rent*3)return toast(`Salaire insuffisant : il faut au moins ${p.rent*3} crédits/mois.`);
- const cost=propertyCreditUse(p.rent);
- if(state.coins<cost){state.propertyCredit=(state.propertyCredit||0)+(p.rent-cost);return toast(`Il te manque ${cost-state.coins} crédits.`)}
- const oldRent=state.propertyPortfolio.find(x=>x.id===state.residenceId&&x.tenure==='rent');
- if(oldRent)state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==oldRent.id);
- state.coins-=cost;
- state.propertyPortfolio.push({...p,label:propertyLabel(p),tenure:'rent',marketRent:p.rent,listed:false,tenant:false,askingRent:p.rent});
- state.residenceId=p.id;state.missedRent=0;save();toast(`🔑 ${propertyLabel(p)} loué • ${p.rent}/mois`);openSheet('home')
+ const cost=propertyCreditUse(p.rent);if(state.coins<cost){state.propertyCredit=(state.propertyCredit||0)+(p.rent-cost);return toast(`Il te manque ${cost-state.coins} crédits.`)}
+ const oldRent=state.propertyPortfolio.find(x=>x.id===state.residenceId&&x.tenure==='rent');if(oldRent)state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==oldRent.id);
+ state.coins-=cost;state.propertyPortfolio.push({...p,label:propertyLabel(p),tenure:'rent',furnished:!!p.furnished,marketRent:p.rent,listed:false,tenant:false,askingRent:p.rent});
+ state.residenceId=p.id;state.missedRent=0;storeBagUniformsAtHome();save();toast(`🔑 ${propertyLabel(p)} loué ${p.furnished?'meublé':'non meublé'} • ${p.rent}/mois`);openSheet('home')
 }
 function buyProperty(p){
- if(portfolioRecord(p.id))return toast('Bien déjà acquis.');
- const cost=propertyCreditUse(p.buyPrice);
- if(state.coins<cost){state.propertyCredit=(state.propertyCredit||0)+(p.buyPrice-cost);return toast(`Il te manque ${cost-state.coins} crédits.`)}
- state.coins-=cost;
- const rec={...p,label:propertyLabel(p),tenure:'owned',marketRent:p.rent,listed:false,tenant:false,askingRent:p.rent};
- state.propertyPortfolio.push(rec);
- if(!state.residenceId)state.residenceId=p.id;
- save();toast(`🏠 ${propertyLabel(p)} acheté`);openSheet('home')
+ if(portfolioRecord(p.id))return toast('Bien déjà acquis.');const cost=propertyCreditUse(p.buyPrice);if(state.coins<cost){state.propertyCredit=(state.propertyCredit||0)+(p.buyPrice-cost);return toast(`Il te manque ${cost-state.coins} crédits.`)}
+ state.coins-=cost;const rec={...p,label:propertyLabel(p),tenure:'owned',furnished:false,marketRent:p.baseRent||p.rent,listed:false,tenant:false,askingRent:p.baseRent||p.rent};state.propertyPortfolio.push(rec);state.residenceFurniture[rec.id]=state.residenceFurniture[rec.id]||[];if(!state.residenceId)state.residenceId=p.id;storeBagUniformsAtHome();save();toast(`🏠 ${propertyLabel(p)} acheté non meublé`);openSheet('home')
 }
 function setResidence(id,refreshPanel='home'){
- const rec=portfolioRecord(id);if(!rec)return;
- if(rec.tenure==='owned'&&rec.listed){rec.listed=false;rec.tenant=false}
- const old=state.propertyPortfolio.find(x=>x.id===state.residenceId&&x.tenure==='rent'&&x.id!==id);
- if(old)state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==old.id);
- state.residenceId=id;state.missedRent=0;save();toast(`${rec.label} devient ta résidence.`);openSheet(refreshPanel)
+ const rec=portfolioRecord(id);if(!rec)return;if(rec.tenure==='owned'&&rec.listed){rec.listed=false;rec.tenant=false}const old=state.propertyPortfolio.find(x=>x.id===state.residenceId&&x.tenure==='rent'&&x.id!==id);if(old)state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==old.id);state.residenceId=id;state.missedRent=0;storeBagUniformsAtHome();save();toast(`${rec.label} devient ta résidence.`);openSheet(refreshPanel)
 }
 function endRental(id,refreshPanel='home'){
- const rec=portfolioRecord(id);if(!rec||rec.tenure!=='rent')return;
- state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==id);
- if(state.residenceId===id)state.residenceId=null;save();toast('Bail résilié.');openSheet(refreshPanel)
+ const rec=portfolioRecord(id);if(!rec||rec.tenure!=='rent')return;state.propertyPortfolio=state.propertyPortfolio.filter(x=>x.id!==id);if(state.residenceId===id){state.residenceId=null;for(const u of Object.values(state.workUniforms||{}))if(u.location==='wardrobe')u.location='bag';if(state.uniformWorn)state.uniformWorn=null}delete state.residenceFurniture[id];save();toast('Bail résilié. Les affaires professionnelles sont revenues dans le sac.');openSheet(refreshPanel)
 }
 function adjustAskingRent(id,delta,refreshPanel='home'){
  const rec=portfolioRecord(id);if(!rec||rec.tenure!=='owned')return;
@@ -3425,11 +3507,11 @@ function propertySheetHTML(p){
  const d=DISTRICTS.find(x=>x.id===p.districtId)||districtFor(p.cx,p.cz),rec=portfolioRecord(p.id),t=PROPERTY_TYPES[p.type];
  const coords=streetCoordsAt(p.x,p.z),inAgency=state.interior?.type==='shop'&&state.interior.shopType==='housing';
  const nav=`<div class="card propertyNav"><div><b>📍 ${coords}</b><small>Entrée du bien • ${d.name}</small></div><div class="grid2"><button class="menuBtn mapProperty" data-id="${p.id}">🗺️ Voir carte</button>${inAgency?`<button class="menuBtn primary visitProperty" data-id="${p.id}">🚪 Visiter</button>`:''}</div></div>`;
- if(rec)return `<div class="card"><h3>${t.icon} ${propertyLabel(p)}</h3><p class="sub">${d.name} • ${districtTierLabel(d)} • ${p.rooms} pièce(s)</p><p class="sub">Valeur ${p.buyPrice} • loyer marché ${p.rent}/mois</p></div>${nav}<div class="card"><button class="menuBtn green enterProperty" data-id="${p.id}" style="width:100%">🚪 Entrer dans le logement</button></div>`;
+ if(rec)return `<div class="card"><h3>${t.icon} ${propertyLabel(p)}</h3><p class="sub">${d.name} • ${districtTierLabel(d)} • ${p.rooms} pièce(s) • ${rec.tenure==='rent'?(rec.furnished?'meublé':'non meublé'):'propriété non meublée à l’achat'}</p><p class="sub">Valeur ${p.buyPrice} • loyer marché ${p.rent}/mois</p></div>${nav}<div class="card"><button class="menuBtn green enterProperty" data-id="${p.id}" style="width:100%">🚪 Entrer dans le logement</button></div>`;
  const eligible=state.job&&currentGrossSalary()>=p.rent*3;
- const rentRow=(p.offer==='rent'||p.offer==='both')?`<div class="marketRow"><div><b>Louer</b><small>${p.rent}/mois • revenu demandé ${p.rent*3}</small></div><button class="menuBtn rentProperty" data-id="${p.id}" ${eligible?'':'disabled'}>Louer</button></div>`:'';
+ const rentRow=(p.offer==='rent'||p.offer==='both')?`<div class="marketRow"><div><b>Louer</b><small>${p.rent}/mois • ${p.furnished?'meublé':'non meublé'} • revenu demandé ${p.rent*3}</small></div><button class="menuBtn rentProperty" data-id="${p.id}" ${eligible?'':'disabled'}>Louer</button></div>`:'';
  const buyRow=(p.offer==='sale'||p.offer==='both')?`<div class="marketRow"><div><b>Acheter</b><small>Paiement unique</small></div><button class="menuBtn buyProperty" data-id="${p.id}">${p.buyPrice}</button></div>`:'';
- return `<div class="card"><h3>${t.icon} ${propertyLabel(p)}</h3><p class="sub">${d.name} • <span class="${districtTierClass(d)}">${districtTierLabel(d)}</span></p><p class="sub">${p.rooms} pièce(s) • ${p.area} m²</p></div>${nav}<div class="card">${rentRow}${buyRow}${!eligible&&(p.offer==='rent'||p.offer==='both')?'<p class="sub">⚠️ Pour louer : emploi obligatoire et salaire brut ≥ 3× le loyer.</p>':''}</div>`
+ return `<div class="card"><h3>${t.icon} ${propertyLabel(p)}</h3><p class="sub">${d.name} • <span class="${districtTierClass(d)}">${districtTierLabel(d)}</span></p><p class="sub">${p.rooms} pièce(s) • ${p.area} m² • location ${p.furnished?'meublée':'non meublée'} • achat livré non meublé</p></div>${nav}<div class="card">${rentRow}${buyRow}${!eligible&&(p.offer==='rent'||p.offer==='both')?'<p class="sub">⚠️ Pour louer : emploi obligatoire et salaire brut ≥ 3× le loyer.</p>':''}</div>`
 }
 function housingAgencyHTML(){
  const outdoor=state.returnPos||state.pos,{cx,cz}={cx:Math.floor(outdoor.x/CHUNK),cz:Math.floor(outdoor.z/CHUNK)},curD=districtFor(cx,cz);
@@ -3445,7 +3527,7 @@ function housingAgencyHTML(){
  return `<div class="card"><h3>🔑 Agence Habitat</h3><p class="sub">Ici tu peux chercher un logement <b>et gérer tes biens</b> : résidence principale, mise en location, loyer demandé et annonces.</p><p class="sub">Agence : ${curD.name} • revenu mensuel ${currentGrossSalary()} crédits.</p></div>
  <div class="card"><div class="sectionKicker">MON PORTEFEUILLE IMMOBILIER</div><h3>🏘️ Mes biens à ${city().name}</h3><p class="sub">${mine.length} bien(s) ici${otherCount?` • ${otherCount} autre(s) bien(s) dans les autres villes`:''}</p></div>${mineHtml}
  <div class="card"><div class="sectionKicker">MARCHÉ</div><h3>Biens disponibles</h3><p class="sub">Dossiers connus par l’agence et visites disponibles.</p></div>
- ${list.length?list.map(p=>{const d=DISTRICTS.find(x=>x.id===p.districtId)||districtFor(p.cx,p.cz),offer=p.offer==='rent'?`Loyer ${p.rent}/mois`:p.offer==='sale'?`Achat ${p.buyPrice}`:`${p.rent}/mois ou ${p.buyPrice}`;return `<div class="card"><div class="marketRow"><div><b>${PROPERTY_TYPES[p.type].icon} ${propertyLabel(p)}</b><small>${d.name} • ${offer}<br>📍 ${streetCoordsAt(p.x,p.z)}</small></div><button class="menuBtn inspectProperty" data-id="${p.id}">Dossier</button></div></div>`}).join(''):'<div class="card"><p class="sub">Aucune annonce connue pour le moment. Explore davantage la ville.</p></div>'}`
+ ${list.length?list.map(p=>{const d=DISTRICTS.find(x=>x.id===p.districtId)||districtFor(p.cx,p.cz),offer=p.offer==='rent'?`Loyer ${p.rent}/mois`:p.offer==='sale'?`Achat ${p.buyPrice}`:`${p.rent}/mois ou ${p.buyPrice}`;return `<div class="card"><div class="marketRow"><div><b>${PROPERTY_TYPES[p.type].icon} ${propertyLabel(p)}</b><small>${d.name} • ${offer} • ${p.furnished?'meublé disponible':'non meublé'}<br>📍 ${streetCoordsAt(p.x,p.z)}</small></div><button class="menuBtn inspectProperty" data-id="${p.id}">Dossier</button></div></div>`}).join(''):'<div class="card"><p class="sub">Aucune annonce connue pour le moment. Explore davantage la ville.</p></div>'}`
 }
 function housingName(){
  return ['Sans logement','Studio loué','Appartement propriétaire','Maison sur terrain'][state.housingStage||0]
@@ -3472,10 +3554,8 @@ function sleepRough(){
  if(state.residenceId)return toast('Tu as déjà un logement.');
  state.hp=clamp(state.hp+22,0,state.maxHp);state.hygiene=clamp(state.hygiene-12,0,100);state.hunger=clamp(state.hunger-7,0,100);state.thirst=clamp(state.thirst-10,0,100);advanceDay(1);state.timeOfDay=7.2;save();toast('Tu as dormi dehors.');openSheet('home')
 }
-function showerAtHome(){
- if(!state.residenceId)return toast('Tu n’as pas de douche.');
- state.hygiene=100;save();toast('🚿 Propreté restaurée.');openSheet('home')
-}
+function showerAtHome(){if(!atOwnResidence())return toast('Utilise la douche de ta résidence.');state.hygiene=100;advanceGameMinutes(12);save();toast('🚿 Douche terminée • hygiène 100.');openSheet('home')}
+function brushTeethAtHome(){if(!atOwnResidence())return toast('Utilise le lavabo de ta résidence.');state.dentalHygiene=100;state.hygiene=clamp(state.hygiene+3,0,100);advanceGameMinutes(4);save();toast('🪥 Dents brossées.');openSheet('home')}
 function housingPanelHTML(){
  const s=state.housingStage||0;
  return `<div class="card"><h3>🏘️ Parcours logement</h3>
@@ -3502,11 +3582,7 @@ function upgradeHome(){
  const next=(state.homeLevel||1)+1,cost=HOME_UPGRADE_COST[next];if(!cost)return toast('Maison déjà au niveau maximum');if(state.coins<cost)return toast('Pas assez de crédits');
  state.coins-=cost;state.homeLevel=next;save();toast(`Maison améliorée au niveau ${next}`);for(const[k]of[...chunks])unload(k);ensureChunks(true);openSheet('home')
 }
-function restAtHome(){
- if(!state.residenceId)return toast('Tu n’as pas de logement.');
- state.hp=state.maxHp;state.wanted=Math.max(0,state.wanted-2);state.timeOfDay=7.5;
- state.hunger=clamp(state.hunger-8,0,100);state.thirst=clamp(state.thirst-10,0,100);state.restCount=(state.restCount||0)+1;advanceDay(1);save();toast('Tu as dormi.');openSheet('home')
-}
+function restAtHome(){if(!atOwnResidence())return toast('Il faut être dans ta résidence.');const rec=portfolioRecord(state.residenceId);if(!propertyFurnitureList(rec).includes('bed'))return toast('Il faut installer un lit.');state.hp=clamp(state.hp+35,0,state.maxHp);state.wanted=Math.max(0,state.wanted-1);state.hunger=clamp(state.hunger-6,0,100);state.thirst=clamp(state.thirst-8,0,100);state.restCount=(state.restCount||0)+1;advanceGameMinutes(480);save();toast('🛏️ 8 h de repos • +35 PV.');openSheet('home')}
 function depositCoins(amount=50){if(!state.residenceId)return toast('Aucun endroit sûr.');if(state.coins<amount)return toast('Pas assez de crédits sur toi');state.coins-=amount;state.homeBank+=amount;save();openSheet('home')}
 function withdrawCoins(amount=50){if(state.homeBank<amount)return toast('Pas assez dans le coffre');state.homeBank-=amount;state.coins+=amount;save();openSheet('home')}
 function depositValuable(id){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(!removeStack(state.inventory,id,1))return;state.homeStorage[id]=(state.homeStorage[id]||0)+1;save();openSheet('home')}
@@ -3514,6 +3590,15 @@ function withdrawValuable(id){if((state.homeStorage[id]||0)<=0)return;if(invCoun
 function depositMedkit(){if(!(hasPlaced('safe')||hasPlaced('chest')))return toast('Place d’abord un coffre');if(!removeStack(state.inventory,'medkit',1))return toast('Aucun medkit à déposer');state.homeStorage.medkit=(state.homeStorage.medkit||0)+1;save();openSheet('home')}
 function withdrawMedkit(){if((state.homeStorage.medkit||0)<=0)return toast('Aucun medkit stocké');if(invCount()>=state.bagMax)return toast('Sac plein');state.homeStorage.medkit--;addInv('medkit',1);save();openSheet('home')}
 
+
+function residenceFurnitureOwn(id=state.residenceId){if(!id)return[];if(!state.residenceFurniture[id])state.residenceFurniture[id]=[];return state.residenceFurniture[id]}
+function rebuildCurrentPropertyInterior(){if(!atOwnResidence())return;const id=state.residenceId,p=propertyFromCatalog(id)||portfolioRecord(id);if(!p)return;const ret=state.returnPos;enterInterior('property',p,{preserveReturn:true});state.returnPos=ret}
+function placeResidenceFurniture(id){if(!atOwnResidence())return toast('Rentre chez toi pour installer un meuble.');if(!HOME_ITEMS[id]||!removeStack(state.homeStock,id,1))return toast('Meuble non disponible.');const arr=residenceFurnitureOwn();if(!arr.includes(id))arr.push(id);else{addHomeItem(id,1);return toast('Ce meuble est déjà installé.')}save();rebuildCurrentPropertyInterior();if(id==='wardrobe')storeBagUniformsAtHome();toast(`${HOME_ITEMS[id].icon} ${HOME_ITEMS[id].name} installé.`);openSheet('home')}
+function removeResidenceFurniture(id){if(!atOwnResidence())return;const arr=residenceFurnitureOwn(),i=arr.indexOf(id);if(i<0)return;arr.splice(i,1);if(id==='wardrobe'){for(const u of Object.values(state.workUniforms||{}))if(u.location==='wardrobe')u.location='bag'}addHomeItem(id,1);save();rebuildCurrentPropertyInterior();openSheet('home')}
+function foodLotRow(lot){const c=CONSUMABLES[lot.id]||{name:lot.id,icon:'🍴'},bad=(lot.freshness??1)<=0;return`<div class="item ${bad?'spoiledFood':''}"><div class="itemIcon">${c.icon}</div><div class="itemMain"><b>${c.name}</b><small>${foodFreshLabel(lot)} • ${foodDluLabel(lot)} • ${foodStorageLabel(lot.location)}${FOOD_META[lot.id]?.storage?` • conseillé : ${foodStorageLabel(FOOD_META[lot.id].storage)}`:''}</small></div>${bad?`<button class="tinyBtn discardFood" data-uid="${lot.uid}">🗑️</button>`:''}</div>`}
+function foodStorageHTML(){refreshFoodSpoilage();const rec=portfolioRecord(state.residenceId),items=propertyFurnitureList(rec),sections=[['bag','🎒 Sac'],['pantry','🥫 Placards'],['fridge','🧊 Réfrigérateur'],['freezer','❄️ Congélateur']];return sections.map(([loc,label])=>{const lots=foodLotsAt(loc);const available=loc==='bag'||loc==='pantry'||items.includes(loc);return`<div class="card"><h3>${label}</h3>${!available?'<p class="sub">Équipement non installé.</p>':lots.length?lots.map(l=>`${foodLotRow(l)}<div class="foodMoves">${['bag','pantry','fridge','freezer'].filter(x=>x!==loc).map(x=>`<button class="tinyBtn moveFood" data-uid="${l.uid}" data-to="${x}">${foodStorageLabel(x)}</button>`).join('')}</div>`).join(''):'<p class="sub">Vide.</p>'}</div>`}).join('')}
+function homeHTML(){const rec=portfolioRecord(state.residenceId);if(!rec)return`<div class="card"><h3>🏠 Aucun logement</h3><p class="sub">Sans résidence, ton uniforme professionnel reste dans ton sac. Loue ou achète un bien via une agence immobilière.</p><button class="menuBtn" id="sleepRough">Dormir dehors</button></div>`;const items=propertyFurnitureList(rec),own=residenceFurnitureOwn(),u=workUniformRecord(),atHome=atOwnResidence();return`<div class="card"><div class="sectionKicker">RÉSIDENCE</div><h3>${rec.label}</h3><p class="sub">${rec.tenure==='owned'?'Propriété achetée <b>non meublée</b>.':`Location ${rec.furnished?'<b>meublée</b>':'non meublée'}.`} ${atHome?'Tu es actuellement chez toi.':'Rentre dans le logement pour utiliser les équipements.'}</p><div class="grid2"><button class="menuBtn showerHome" ${atHome?'':'disabled'}>🚿 Douche</button><button class="menuBtn brushTeeth" ${atHome?'':'disabled'}>🪥 Dents</button><button class="menuBtn restHome" ${atHome&&items.includes('bed')?'':'disabled'}>🛏️ Repos</button><button class="menuBtn">🦷 ${Math.round(state.dentalHygiene??70)}%</button></div></div>${u?`<div class="card"><h3>👔 Uniforme professionnel</h3><p class="sub">${JOB_WORKWEAR[u.jobId]?.name||'Uniforme'} • ${u.location==='bag'?'dans le sac':'dans l’armoire'}${state.uniformWorn?' • porté actuellement':''}</p><button class="menuBtn ${state.uniformWorn?'removeUniform':'wearUniform'}">${state.uniformWorn?'Remettre tenue civile':'Mettre l’uniforme'}</button></div>`:''}<div class="card"><h3>🪑 Ameublement</h3><p class="sub">Installé : ${items.map(id=>HOME_ITEMS[id]?.icon||'').join(' ')||'aucun meuble'}</p>${state.homeStock.length?state.homeStock.map(st=>`<div class="item"><div class="itemMain"><b>${HOME_ITEMS[st.id]?.icon||'📦'} ${HOME_ITEMS[st.id]?.name||st.id}</b><small>×${st.qty}</small></div><button class="menuBtn placeResidenceFurniture" data-id="${st.id}" ${atHome?'':'disabled'}>Installer</button></div>`).join(''):'<p class="sub">Aucun meuble en stock. Maison & Co vend lits, réfrigérateurs, armoires, etc.</p>'}${own.map(id=>`<button class="tinyBtn removeResidenceFurniture" data-id="${id}" ${atHome?'':'disabled'}>Retirer ${HOME_ITEMS[id]?.name||id}</button>`).join('')}</div><div class="card"><h3>🍳 Cuisine</h3><p class="sub">Four, plaques et évier sont des équipements fixes du logement. Les recettes utilisent les aliments non gâtés de ton sac ou de tes rangements.</p>${COOKING_RECIPES.map(r=>`<div class="item"><div class="itemIcon">${r.icon}</div><div class="itemMain"><b>${r.name}</b><small>${Object.entries(r.needs).map(([id,q])=>`${CONSUMABLES[id]?.name} ×${q}`).join(' + ')}</small></div><button class="menuBtn cookRecipe" data-id="${r.id}" ${atHome?'':'disabled'}>Cuisiner</button></div>`).join('')}</div>${foodStorageHTML()}`}
+function bindHomeLife(){$('.showerHome')?.addEventListener('click',showerAtHome);$('.brushTeeth')?.addEventListener('click',brushTeethAtHome);$('.restHome')?.addEventListener('click',restAtHome);$('.wearUniform')?.addEventListener('click',wearWorkUniform);$('.removeUniform')?.addEventListener('click',removeWorkUniform);$$('.placeResidenceFurniture').forEach(b=>b.onclick=()=>placeResidenceFurniture(b.dataset.id));$$('.removeResidenceFurniture').forEach(b=>b.onclick=()=>removeResidenceFurniture(b.dataset.id));$$('.cookRecipe').forEach(b=>b.onclick=()=>cookRecipe(b.dataset.id));$$('.moveFood').forEach(b=>b.onclick=()=>moveFoodLot(b.dataset.uid,b.dataset.to));$$('.discardFood').forEach(b=>b.onclick=()=>discardFood(b.dataset.uid,'home'))}
 function startCombat(n){activeEnemyEntity=n;activeEnemy={name:n.name||'Rôdeur',level:Math.max(1,state.level+choice([-1,0,0,1])),hp:38+state.level*15,maxHp:38+state.level*15,damage:5+state.level*3,reward:22+state.level*14};$('#combat').classList.remove('hidden');renderCombat()}
 function renderCombat(){if(!activeEnemy)return;$('#enemyName').textContent=activeEnemy.name;$('#enemyLvl').textContent=`Niv. ${activeEnemy.level}`;$('#enemyBar').style.width=`${Math.max(0,activeEnemy.hp/activeEnemy.maxHp*100)}%`}
 function animateAttack(){if(!weaponRig)return;weaponRig.rotation.x=-.8;weaponRig.position.z=-.15;setTimeout(()=>{weaponRig.rotation.x=0;weaponRig.position.z=0},120)}
@@ -3859,7 +3944,7 @@ function openSheet(panel){
  if(panel==='train'){t.textContent='Gare & trains';b.innerHTML=trainStationHTML()}
  bindSheet(panel)
 }
-function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.5</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.6</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
  <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>🚆</span><b>Région</b><small>Villes & trains</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
 function socialHTML(){
  const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
@@ -3892,9 +3977,11 @@ function switchCity(id,viaTrain=false){
  for(const[k]of[...chunks])unload(k);applyCityAtmosphere();initBusFleet();refreshCityLandmark();ensureChunks(true);save();closeSheet();for(const rid of [...remotePlayers.keys()])removeRemoteAvatar(rid);if(mpSocket?.connected){setMpStatus(true,1,'Changement de ville…');mpSocket.emit('player:join',{name:mpNickname(),city:state.cityId,x:state.pos.x,z:state.pos.z,yaw:state.yaw,avatar:avatarPayload(),avatarVersion:state.avatarVersion||1});if(voiceEnabled)setTimeout(()=>mpSocket?.emit('voice:state',{enabled:true}),80)}toast(`${viaTrain?'🚆 Arrivée à':'Bienvenue à'} ${city().name}`)
 }
 function bagHTML(){
- const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join('');
- const inv=state.inventory.length?state.inventory.map(i=>{const info=itemInfo(i.id);const use=CONSUMABLES[i.id]?`<button class="menuBtn useConsumable" data-id="${i.id}">Utiliser</button>`:i.id==='medkit'?'<button class="menuBtn useMed">Utiliser</button>':'';return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty}${info.value?` • valeur ${info.value}`:''}</small></div>${use}</div>`}).join(''):'<p class="sub">Sac vide.</p>';
- return `<div class="card bagSummary"><div><b>${invCount()}/${state.bagMax}</b><small>objets</small></div><div><b>${Math.round(state.hunger)}</b><small>faim</small></div><div><b>${Math.round(state.thirst)}</b><small>soif</small></div><div><b>${Math.round(state.hygiene)}</b><small>hygiène</small></div></div><div class="card"><h3>Équipement</h3>${ws}</div><div class="card"><h3>Inventaire</h3>${inv}</div>`
+ refreshFoodSpoilage();const ws=state.ownedWeapons.map(id=>WEAPONS[id]).map(w=>`<div class="item"><div class="itemIcon">${w.icon}</div><div class="itemMain"><b>${w.name}</b><small>${w.damage} dégâts</small></div><button class="menuBtn equip" data-w="${w.id}">${state.equipped===w.id?'Équipé':'Équiper'}</button></div>`).join('');
+ const inv=state.inventory.map(i=>{const info=itemInfo(i.id);const use=CONSUMABLES[i.id]?`<button class="menuBtn useConsumable" data-id="${i.id}">Utiliser</button>`:i.id==='medkit'?'<button class="menuBtn useMed">Utiliser</button>':'';return`<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty}</small></div>${use}</div>`}).join('');
+ const food=foodLotsAt('bag').map(l=>`<div class="item ${(l.freshness??1)<=0?'spoiledFood':''}"><div class="itemIcon">${CONSUMABLES[l.id]?.icon}</div><div class="itemMain"><b>${CONSUMABLES[l.id]?.name}</b><small>${foodFreshLabel(l)} • ${foodDluLabel(l)} • ${FOOD_META[l.id]?.storage==='fridge'?'à garder au frais':FOOD_META[l.id]?.storage==='freezer'?'à congeler':'température ambiante'}</small></div>${(l.freshness??1)>0?`<button class="menuBtn useConsumable" data-id="${l.id}">Consommer</button>`:`<button class="tinyBtn discardFoodBag" data-uid="${l.uid}">🗑️</button>`}</div>`).join('');
+ const uniforms=Object.values(state.workUniforms||{}).filter(u=>u.location==='bag').map(u=>`<div class="item"><div class="itemIcon">👔</div><div class="itemMain"><b>${JOB_WORKWEAR[u.jobId]?.name||'Uniforme'}</b><small>Dans ton sac • tu peux te changer ici</small></div><button class="menuBtn ${state.uniformWorn===u.jobId?'removeUniform':'wearUniform'}">${state.uniformWorn===u.jobId?'Retirer':'Mettre'}</button></div>`).join('');
+ return`<div class="card bagSummary"><div><b>${invCount()}/${state.bagMax}</b><small>objets</small></div><div><b>${Math.round(state.hunger)}</b><small>faim</small></div><div><b>${Math.round(state.thirst)}</b><small>soif</small></div><div><b>${Math.round(state.hygiene)}</b><small>hygiène</small></div></div><div class="card"><h3>Équipement</h3>${ws}</div><div class="card"><h3>Uniformes</h3>${uniforms||'<p class="sub">Aucun uniforme dans le sac.</p>'}</div><div class="card"><h3>Courses & nourriture</h3>${food||'<p class="sub">Aucun aliment dans le sac.</p>'}</div><div class="card"><h3>Autres objets</h3>${inv||'<p class="sub">Aucun autre objet.</p>'}</div>`
 }
 function questsHTML(){return ''}
 function districtHTML(){
@@ -3906,18 +3993,18 @@ function districtHTML(){
  <p class="sub">Économie ${Math.round(cityEconomy().businessIndex*100)}% • chômage ville ${(cityEconomy().unemployment*100).toFixed(1)}% • prix ×${cityEconomy().priceIndex.toFixed(2)}</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.5</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.6</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
 function bindSheet(panel){
  if(panel==='menu'){$$('.menuTile').forEach(b=>b.onclick=()=>openSheet(b.dataset.open));$('#menuAvatar')?.addEventListener('click',()=>openSheet('avatar'))}
  if(panel==='world')$('#openWorldMap')?.addEventListener('click',()=>{closeSheet();showWorldMap()});
- if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed);$$('.useConsumable').forEach(b=>b.onclick=()=>useConsumable(b.dataset.id))}
+ if(panel==='bag'){$$('.equip').forEach(b=>b.onclick=()=>{state.equipped=b.dataset.w;weaponRig.visible=b.dataset.w!=='fists';save();openSheet('bag')});$$('.useMed').forEach(b=>b.onclick=useMed);$$('.useConsumable').forEach(b=>b.onclick=()=>useConsumable(b.dataset.id));$$('.discardFoodBag').forEach(b=>b.onclick=()=>discardFood(b.dataset.uid,'bag'));$('.wearUniform')?.addEventListener('click',wearWorkUniform);$('.removeUniform')?.addEventListener('click',removeWorkUniform)}
  if(panel==='agenda')bindAgenda();
  if(panel==='social'){$('#voiceToggle')?.addEventListener('click',()=>voiceEnabled?disableVoice():enableVoice());$('#openChatSocial')?.addEventListener('click',()=>{closeSheet();$('#chatPanel').classList.remove('hidden')});$$('.interactRemote').forEach(b=>b.onclick=()=>openPlayerInteraction(b.dataset.id))}
  if(panel==='player')bindPlayerInteraction();
- if(panel==='home'){const rough=$('#sleepRough');if(rough)rough.onclick=sleepRough;$$('.setResidence').forEach(b=>b.onclick=()=>setResidence(b.dataset.id));$$('.endRental').forEach(b=>b.onclick=()=>endRental(b.dataset.id));$$('.toggleListing').forEach(b=>b.onclick=()=>togglePropertyListing(b.dataset.id));$$('.adjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta)))}
+ if(panel==='home'){bindHomeLife();const rough=$('#sleepRough');if(rough)rough.onclick=sleepRough;$$('.setResidence').forEach(b=>b.onclick=()=>setResidence(b.dataset.id));$$('.endRental').forEach(b=>b.onclick=()=>endRental(b.dataset.id));$$('.toggleListing').forEach(b=>b.onclick=()=>togglePropertyListing(b.dataset.id));$$('.adjustRent').forEach(b=>b.onclick=()=>adjustAskingRent(b.dataset.id,Number(b.dataset.delta)))}
  if(panel==='districts'){const x=$('#secureDistrict');if(x)x.onclick=secureDistrict}
  if(panel==='avatar')bindAvatarCreator();
  if(panel==='settings'){
@@ -3930,7 +4017,7 @@ function bindSheet(panel){
  }
  if(panel==='npc'){}
  if(panel==='physicalShop')bindShop();
- if(panel==='work'){const sw=$('.startWork');if(sw)sw.onclick=startWorkMission}
+ if(panel==='work'){const sw=$('.startWork');if(sw)sw.onclick=startWorkMission;$('.wearUniform')?.addEventListener('click',wearWorkUniform);$('.removeUniform')?.addEventListener('click',removeWorkUniform)}
  if(panel==='train')$$('.takeTrain').forEach(b=>b.onclick=()=>startTrainJourney(b.dataset.city));
  if(panel==='bus'){$$('.boardBusDestination').forEach(btn=>btn.onclick=()=>boardBusDirect(btn.dataset.bus,btn.dataset.stop));$$('.waitBus').forEach(b=>b.onclick=()=>planBusTrip(b.dataset.line,b.dataset.stop));$('#startBusJourney')?.addEventListener('click',()=>startBusJourney($('#busJourneyDestination')?.value));$('#cancelBusWait')?.addEventListener('click',()=>{busWaitRequest=null;busJourneyPlan=null;closeSheet();toast('Attente du bus annulée.')});$('#openBusNetworkMap')?.addEventListener('click',()=>{closeSheet();showFullBusMap()})}
  if(panel==='property'){
