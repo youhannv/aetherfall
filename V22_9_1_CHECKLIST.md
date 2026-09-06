@@ -1,4 +1,4 @@
-# StreetQuest V22.9.1 — Correctif stabilité
+# StreetQuest V22.9.2 — Correctif stabilité
 
 - Corrige l’oscillation des véhicules de secours aux virages.
 - Watchdog anti-blocage pour VSAV / SAMU / police sans téléportation.

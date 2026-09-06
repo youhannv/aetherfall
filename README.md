@@ -1,8 +1,8 @@
-# StreetQuest3D V22.9 — Secours physiques, SAMU, patrouilles & StreetPhone allégé
+# StreetQuest3D V22.9.2 — Secours physiques, SAMU, patrouilles & StreetPhone allégé
 
 Cette version poursuit la simulation de société de V22.8 et conserve la sauvegarde `sq3d-v22`.
 
-## Nouveautés V22.9
+## Nouveautés V22.9.2
 
 - Les véhicules de police, pompiers et SAMU sont de vrais objets 3D persistants dans la scène, avec trajectoire routière.
 - Les véhicules d'urgence partent de leur commissariat/caserne/hôpital local. Les renforts interurbains entrent par la route depuis une ville voisine après leur temps de transit.
@@ -31,4 +31,4 @@ Une partie des moyens peut déjà être occupée par une intervention simulée. 
 
 ## Installation
 
-Remplacer tout le contenu du dépôt GitHub par ce dossier. Le cache PWA est `streetquest3d-v22.9-emergency1`.
+Remplacer tout le contenu du dépôt GitHub par ce dossier. Le cache PWA est `streetquest3d-v22.9.2-rescue-scene1`.

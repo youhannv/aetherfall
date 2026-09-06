@@ -1,6 +1,6 @@
 {
-  "name": "StreetQuest V22.9",
-  "short_name": "V22.9",
+  "name": "StreetQuest V22.9.2",
+  "short_name": "V22.9.2",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -18,5 +18,5 @@
       "type": "image/png"
     }
   ],
-  "version": "22.9.1"
+  "version": "22.9.2"
 }

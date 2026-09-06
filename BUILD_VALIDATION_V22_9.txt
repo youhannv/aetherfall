@@ -20,7 +20,7 @@ PASS — attente / renfort interurbain lorsque les moyens locaux sont indisponib
 PASS — numéro privé de test non affiché dans StreetPhone ni dans la documentation utilisateur
 PASS — badge POLICE retiré du HTML/HUD
 PASS — Carte et Agenda retirés de la barre inférieure, toujours présents dans StreetPhone
-PASS — versions client/serveur alignées sur 22.9.0
+PASS — versions client/serveur alignées sur 22.9.2
 PASS — cache PWA aligné sur streetquest3d-v22.9-emergency1
 
 Limite du test : le conteneur de validation ne dispose pas d'un environnement WebGL/Safari iOS fonctionnel et ne peut pas charger le CDN Three.js depuis Internet. Le rendu GPU et les gestes tactiles doivent donc encore être validés sur l'iPhone réel après déploiement.

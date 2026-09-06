@@ -1,0 +1,11 @@
+StreetQuest3D V22.9.2 — BUILD VALIDATION
+PASS — game.js syntax (Node --check)
+PASS — all JavaScript files syntax
+PASS — JSON parse
+PASS — 638 top-level functions / 638 unique
+PASS — 81 HTML ids / 81 unique
+PASS — emergency confirmation panel wired
+PASS — VSAV/SAMU utility geometry functions present
+PASS — parked emergency vehicles included in physical traffic checks
+PASS — zip integrity test
+Cache: streetquest3d-v22.9.2-rescue-scene1
