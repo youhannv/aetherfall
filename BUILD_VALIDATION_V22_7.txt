@@ -1,0 +1,19 @@
+StreetQuest3D V22.7 — BUILD VALIDATION
+
+Validation statique effectuée avant packaging :
+- game.js : node --check OK
+- sw.js : node --check OK
+- server/server.js : node --check OK
+- multiplayer-config.js : node --check OK
+- Tous les JSON : parsing OK
+- IDs statiques index.html : aucun doublon
+- 557 fonctions JavaScript nommées / 557 noms uniques
+- 0 fonction V22.6 supprimée
+- Fonctions santé/secours/pharmacie/restaurant requises : présentes
+- 5 villes : hôpital disponible dans chacune
+- Cabinets médicaux disponibles et exclus de la destination ambulance quand un vrai hôpital existe
+- Boulangerie/boucherie exclues du libre-service
+- Gros libellés de métiers PNJ intérieurs retirés
+- Cohérence version/cache : V22.7 / streetquest3d-v22.7-healthcare1
+
+Limite : cette validation ne remplace pas un test graphique/tactile complet sur Safari iOS/WebGL réel.
