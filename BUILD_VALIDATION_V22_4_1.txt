@@ -1,0 +1,30 @@
+StreetQuest V22.4.1 — validation renforcée
+Date: 2026-09-06
+
+CORRECTIFS TROUVÉS PENDANT LA VÉRIFICATION
+1. Placement commerces/services civiques : addShop() calculait l'origine du chunk depuis la position provisoire d'une parcelle tournée. Certaines parcelles pouvaient franchir numériquement une limite de chunk, ce qui déplaçait un service (école, agence, caserne, etc.) dans le chunk voisin. Corrigé : origine dérivée du chunk réel (clé city:cx:cz) + nouvelle tentative sur les autres parcelles de l'îlot.
+2. Fiscalité mensuelle : avec salaire + revenus locatifs élevés, l'impôt combiné pouvait être partiellement neutralisé par un clamp sur le salaire puis l'ajout brut des loyers. Corrigé : imposition sur le revenu combiné, puis répartition correcte de la taxe entre salaire et loyers.
+3. Robustesse sauvegarde : un ancien identifiant d'emploi invalide est désormais neutralisé proprement au lieu de pouvoir provoquer une erreur mensuelle.
+
+VALIDATIONS EFFECTUÉES
+- Intégrité de l'archive source V22.4 : OK.
+- Syntaxe Node/JavaScript : game.js, sw.js, multiplayer-config.js, server/server.js : OK.
+- JSON : manifest.json, version.json, server/package.json : OK.
+- HTML : aucun ID statique dupliqué ; toutes les références locales existent : OK.
+- CSS : accolades, parenthèses et crochets équilibrés : OK.
+- Service Worker : toutes les ressources locales référencées existent : OK.
+- Manifest PWA : icônes 192x192 et 512x512 conformes : OK.
+- Version cohérente client / cache / serveur : 22.4.1 / streetquest3d-v22.4.1-verified1 : OK.
+- Fonctions top-level en double : aucune.
+- Comparaison de régression avec V22.3 : aucune fonction critique historique supprimée (chooseWorkTargetShop remplacée volontairement par le nouveau système d'emploi) : OK.
+- Démarrage dans un environnement DOM/Three.js simulé : OK.
+- Changement entre les 5 villes + réseau de transport + écrans emploi/économie/services : OK.
+- 23 métiers jouables : présents.
+- 30 nouveaux POI de société (police, pompiers, mairies, banques, postes, bibliothèques) : présents.
+- Test forcé de tous les POI civiques dans les 5 villes : tous générés physiquement dans leur chunk prévu : OK.
+- Test forcé de tous les commerces/équipements planifiés de tous les chunks urbains des 5 villes : OK.
+- Test financier salaire + loyer + impôt combiné : résultat attendu obtenu : OK.
+- Vérification du ZIP final avec unzip -t : à effectuer après empaquetage (voir build final).
+
+LIMITATION
+Ces contrôles couvrent la syntaxe, les références, une partie importante de la logique, la génération de monde et plusieurs scénarios runtime simulés. Ils ne peuvent pas mathématiquement garantir l'absence absolue de tout bug, ni reproduire à l'identique Safari/WebGL/GPU/tactile d'un iPhone réel. Un test final sur appareil reste nécessaire pour les problèmes spécifiques à iOS, au GPU, au réseau ou au multijoueur réel.

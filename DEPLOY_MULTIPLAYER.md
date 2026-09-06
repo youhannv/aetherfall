@@ -1,7 +1,9 @@
-# Déployer StreetQuest V22.4 en multijoueur
+# Déployer StreetQuest V22.5 en multijoueur
 
-Le client reste à la racine du dépôt GitHub Pages. Remplacer tous les fichiers du jeu par ceux de V22.4.
+Le client V22.5 reste à la racine du dépôt GitHub Pages. Le serveur Socket.IO reste dans `server/`.
 
-Le serveur Socket.IO reste dans `server/`. Sa version est maintenant `22.4.0` et l’endpoint `/debug` annonce `22.4`.
+- Version client : 22.5
+- Version serveur : 22.5
+- Cache PWA : `streetquest3d-v22.5-places1`
 
-Après le déploiement du serveur, conserver l’URL publique dans `multiplayer-config.js` si elle est différente de la valeur actuelle.
+Remplacer les fichiers du client et redéployer le serveur seulement si tu héberges aussi `server/`.

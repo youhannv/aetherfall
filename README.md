@@ -1,28 +1,16 @@
-# StreetQuest V22.4 — Société vivante, emplois & services publics
+# StreetQuest V22.5 — Lieux vivants
 
-V22.4 conserve la région continue, les 5 villes, les trains, les réseaux de bus/tram, la carte mobile et la gestion immobilière de V22.3.
+V22.5 part de la V22.4.1 vérifiée et conserve les 5 villes, la région continue à pied, les trains, bus/trams, l’immobilier, les emplois et l’économie locale.
 
 ## Nouveautés
 
-- Marché du travail élargi : 23 métiers jouables, qualifications, horaires de service et offres différentes selon la ville et le mois.
-- Répartition des métiers des PNJ calibrée sur la structure des catégories socioprofessionnelles de l’Insee 2024 : agriculteurs 1,3 %, artisans/commerçants/chefs d’entreprise 6,8 %, cadres 23,0 %, professions intermédiaires 25,2 %, employés 24,8 %, ouvriers 18,0 % (avant spécialisation locale par ville).
-- Salaires de jeu calibrés à partir des ordres de grandeur Insee 2023 du salaire net mensuel en EQTP. Conversion de gameplay : environ 20 € de revenu mensuel de référence = 1 crédit mensuel.
-- Médecin volontairement rare et accessible seulement après un long cursus médical ; les emplois courants (commerce, entretien, logistique, ouvriers, administration, soins, etc.) sont beaucoup plus fréquents.
-- Spécialisation économique des villes : Paris bureaux/finance/public, Belle-Rive tourisme/commerce, Saint-Roch industrie/logistique, Valmont agriculture/artisanat, Montfleur éducation/tech/santé.
-- PNJ avec métier, employeur, foyer, habitudes, mode de déplacement et emploi du temps. Leur présence et leur comportement changent selon travail, trajet, pause déjeuner, loisirs, nuit et week-end.
-- Économie locale par ville : chômage simulé, indice des prix, activité des entreprises, chiffre d’affaires, budget public et transactions mensuelles.
-- Horaires d’ouverture des commerces et services ; urgences, commissariats et casernes restent accessibles 24 h/24.
-- Nouveaux équipements publics dans chacune des 5 villes : commissariat/brigade, caserne de pompiers, mairie, banque, poste et bibliothèque. Les hôpitaux/centres de santé, écoles et Maisons de l’Emploi restent présents.
-- Services utilisables : soins d’urgence, régularisation au commissariat, dépôt/retrait bancaire, envoi de colis, étude à la bibliothèque, tableau de bord économique à la mairie.
-- Les nouveaux services ont leurs icônes sur la carte.
+- Extérieurs différenciés par activité : hôpital/urgences, commissariat, caserne, mairie, banque, poste, bibliothèque, école, Maison de l’Emploi, agence immobilière, boulangerie, boucherie, pharmacie, café, restaurant, fleuriste, coiffeur, atelier, vêtements, etc.
+- Intérieurs spécifiques avec mobilier cohérent : lits et accueil hospitalier, bureaux de police, vestiaires de caserne, guichets, rayonnages, tables de restaurant, présentoirs de boulangerie/boucherie, postes de coiffure, salles de cours, etc.
+- PNJ d’ambiance dans les lieux : salariés, patients, élèves/étudiants, clients et usagers selon le type d’établissement et ses horaires.
+- Effectif simulé affiché dans la fiche de chaque établissement, avec des ordres de grandeur adaptés au type de structure.
+- Carte plus lisible : suppression des cercles autour des lettres/icônes de POI, remplacés par un contour sombre du texte.
+- Conservation des correctifs V22.4.1 sur la génération des services civiques et les finances mensuelles.
 
-## Sources de calibration
+## Déploiement GitHub Pages
 
-Les chiffres servent de repères pour équilibrer un jeu et ne constituent pas une microsimulation exacte de la population française.
-
-- Insee, *Professions et secteurs d’activité*, données 2024, publié le 26/06/2025.
-- Insee, *Salaires dans le secteur privé selon le sexe et la catégorie socioprofessionnelle*, données 2023.
-
-## Déploiement
-
-Remplacer tout le contenu du dépôt GitHub Pages par ce dossier. Le cache PWA est `streetquest3d-v22.4-society1`.
+Remplacer tout le contenu du dépôt par ce dossier. Le cache PWA est `streetquest3d-v22.5-places1`. La sauvegarde V22 est conservée.

@@ -1,0 +1,34 @@
+StreetQuest V22.5 — validation renforcée
+Date: 2026-09-06
+
+BASE
+- V22.4.1 VERIFIED conservée intégralement.
+- Aucune fonction top-level de la V22.4.1 supprimée.
+
+NOUVEAUTÉS V22.5 TESTÉES
+- 23 thèmes de lieux/commerces/services publics présents.
+- Extérieurs thématiques instanciés pour les 23 types : OK.
+- Intérieurs thématiques instanciés pour les 23 types : OK.
+- Effectifs simulés par établissement : OK.
+- PNJ d'ambiance salariés/usagers/patients/élèves : OK.
+- Hôpital, commissariat et caserne gardent du personnel visible hors horaires commerciaux : OK.
+- Carte : marqueurs POI sans cercle, avec contour texte sombre : OK.
+- worldLayoutVersion 225 : OK.
+- Cache PWA streetquest3d-v22.5-places1 : OK.
+
+VALIDATIONS AUTOMATIQUES
+- game.js Node --check : OK.
+- sw.js Node --check : OK.
+- server/server.js Node --check : OK.
+- manifest.json, version.json, server/package.json : OK.
+- Fonctions top-level en double : aucune (474 fonctions nommées analysées).
+- Régression V22.4.1 : 0 fonction historique manquante.
+- Runtime DOM/Three.js simulé : OK.
+- Changement des 5 villes + réseaux de transport + économie/services : OK.
+- Génération forcée des services civiques dans les 5 villes : OK.
+- Ouverture simulée des 23 types d'intérieurs : OK.
+- Génération simulée des 23 façades thématiques : OK.
+- ZIP : intégrité testée avec unzip -t : OK.
+
+LIMITATION
+Ces tests couvrent la syntaxe, les références, la génération, les écrans et un runtime Three.js simulé. Ils ne peuvent pas reproduire à l'identique Safari/WebGL/GPU/tactile sur iPhone. Un smoke-test final sur l'iPhone après déploiement reste recommandé.

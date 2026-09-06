@@ -487,6 +487,39 @@ SHOPS.bank={name:'Banque',icon:'🏦',stock:[]};
 SHOPS.postoffice={name:'La Poste',icon:'📮',stock:[]};
 SHOPS.library={name:'Bibliothèque',icon:'📚',stock:[]};
 
+
+// V22.5 — identité visuelle et population de chaque établissement.
+// Les fourchettes "staff" représentent l'effectif simulé total ; visibleStaff/visiblePublic
+// restent volontairement modestes pour préserver les performances sur iPhone.
+const PLACE_THEMES={
+ corner:{facade:0x6b7961,accent:0xd9b66f,trim:0x263a2b,sign:'#f5e0a8',floor:0x6a6657,wall:0xd5cfbd,size:[17,16],staff:[3,7],visibleStaff:[2,3],visiblePublic:[2,4],staffRoles:['Employé de commerce','Caissier'],publicRoles:['Client']},
+ bakery:{facade:0xd7c29d,accent:0x9a6332,trim:0x4c2f1f,sign:'#ffe5a8',floor:0xb89569,wall:0xf0dfc4,size:[17,16],staff:[4,9],visibleStaff:[2,3],visiblePublic:[2,5],staffRoles:['Boulanger','Vendeur en boulangerie'],publicRoles:['Client']},
+ butcher:{facade:0xd8c7b8,accent:0x8f3038,trim:0x4d2528,sign:'#ffd9dc',floor:0x9b8171,wall:0xeadbd0,size:[17,16],staff:[4,8],visibleStaff:[2,3],visiblePublic:[2,4],staffRoles:['Boucher','Vendeur en boucherie'],publicRoles:['Client']},
+ restaurant:{facade:0xc49d83,accent:0x7b3b2f,trim:0x392822,sign:'#ffe0c4',floor:0x755743,wall:0xd9c7b4,size:[19,18],staff:[8,18],visibleStaff:[3,4],visiblePublic:[4,7],staffRoles:['Serveur','Cuisinier','Responsable de salle'],publicRoles:['Client']},
+ cafe:{facade:0xb99a7d,accent:0x874338,trim:0x3d2923,sign:'#ffe2c3',floor:0x6d5645,wall:0xdcc8b3,size:[18,17],staff:[4,10],visibleStaff:[2,3],visiblePublic:[3,6],staffRoles:['Barista','Serveur'],publicRoles:['Client']},
+ pharmacy:{facade:0xd8ddd8,accent:0x3f8b63,trim:0x2b5e46,sign:'#c8ffd9',floor:0x87948e,wall:0xe7ece8,size:[17,16],staff:[5,11],visibleStaff:[2,3],visiblePublic:[2,4],staffRoles:['Pharmacien','Préparateur'],publicRoles:['Client']},
+ florist:{facade:0xc7d0b0,accent:0x5d8c57,trim:0x355537,sign:'#e8ffd9',floor:0x796d55,wall:0xdfe5ce,size:[16,15],staff:[2,5],visibleStaff:[1,2],visiblePublic:[1,3],staffRoles:['Fleuriste'],publicRoles:['Client']},
+ hairdresser:{facade:0xc8b4c5,accent:0x8a527d,trim:0x4d3249,sign:'#ffe0f8',floor:0x70666f,wall:0xe5dbe4,size:[17,16],staff:[3,8],visibleStaff:[2,3],visiblePublic:[1,3],staffRoles:['Coiffeur','Coloriste'],publicRoles:['Client']},
+ gear:{facade:0x778692,accent:0x4d687b,trim:0x293943,sign:'#d9efff',floor:0x53595d,wall:0xbfc7cb,size:[19,17],staff:[7,16],visibleStaff:[3,4],visiblePublic:[1,2],staffRoles:['Mécanicien','Technicien'],publicRoles:['Client']},
+ rare:{facade:0x625c73,accent:0xb79b63,trim:0x2e2a37,sign:'#ffe3a2',floor:0x4e4756,wall:0xc9c2d1,size:[17,16],staff:[2,5],visibleStaff:[1,2],visiblePublic:[1,3],staffRoles:['Conseiller prestige'],publicRoles:['Client']},
+ pawn:{facade:0x70817c,accent:0xc28a58,trim:0x374844,sign:'#ffe0bd',floor:0x5e625b,wall:0xd2d2c8,size:[17,16],staff:[3,7],visibleStaff:[2,3],visiblePublic:[1,3],staffRoles:['Employé seconde main','Responsable revente'],publicRoles:['Client']},
+ home:{facade:0xa38d72,accent:0xd2aa73,trim:0x5c4936,sign:'#ffe0ae',floor:0x786a59,wall:0xdfd5c6,size:[18,17],staff:[4,9],visibleStaff:[2,3],visiblePublic:[2,4],staffRoles:['Conseiller ameublement','Magasinier'],publicRoles:['Client']},
+ housing:{facade:0xa7b5b7,accent:0x5d8aa2,trim:0x354f5b,sign:'#d7f2ff',floor:0x65737b,wall:0xdde4e6,size:[18,17],staff:[5,13],visibleStaff:[2,4],visiblePublic:[1,3],staffRoles:['Conseiller immobilier','Gestionnaire locatif'],publicRoles:['Client']},
+ clothes:{facade:0xbda8b4,accent:0x965f7a,trim:0x4d3342,sign:'#ffe0ef',floor:0x675f66,wall:0xe3d8df,size:[18,17],staff:[4,11],visibleStaff:[2,3],visiblePublic:[2,5],staffRoles:['Vendeur prêt-à-porter','Responsable boutique'],publicRoles:['Client']},
+ school:{facade:0xc6b78f,accent:0x476b96,trim:0x334a64,sign:'#d7e9ff',floor:0x727a72,wall:0xe2decf,size:[24,20],staff:[38,78],visibleStaff:[3,5],visiblePublic:[5,9],staffRoles:['Enseignant','Agent scolaire','Personnel administratif'],publicRoles:['Élève','Étudiant']},
+ jobcenter:{facade:0xb9b39b,accent:0xb28b47,trim:0x5b5138,sign:'#fff0bd',floor:0x6d7066,wall:0xdedbcf,size:[21,18],staff:[18,38],visibleStaff:[3,5],visiblePublic:[3,6],staffRoles:['Conseiller emploi','Agent d’accueil'],publicRoles:['Demandeur d’emploi','Visiteur']},
+ clinic:{facade:0xe2e8e8,accent:0xc8484e,trim:0x526d70,sign:'#ffd7da',floor:0x77888a,wall:0xe9eeee,size:[25,21],staff:[85,180],visibleStaff:[5,8],visiblePublic:[5,9],staffRoles:['Médecin','Infirmier','Aide-soignant','Agent hospitalier'],publicRoles:['Patient','Accompagnant']},
+ policeStation:{facade:0xaebbc5,accent:0x315a84,trim:0x243d57,sign:'#d8ebff',floor:0x5c6974,wall:0xdbe2e8,size:[22,19],staff:[42,92],visibleStaff:[5,7],visiblePublic:[2,4],staffRoles:['Policier','Agent d’accueil','Officier de police'],publicRoles:['Usager']},
+ fireStation:{facade:0xb67a67,accent:0xb43a32,trim:0x532d2a,sign:'#ffe0db',floor:0x5c5d58,wall:0xd7d0c7,size:[25,20],staff:[28,58],visibleStaff:[5,8],visiblePublic:[0,2],staffRoles:['Sapeur-pompier','Chef d’agrès','Opérateur CTA'],publicRoles:['Visiteur']},
+ townhall:{facade:0xd0c5aa,accent:0x8b7952,trim:0x625943,sign:'#fff0c5',floor:0x817766,wall:0xe8e0cf,size:[23,19],staff:[62,145],visibleStaff:[4,7],visiblePublic:[4,8],staffRoles:['Agent municipal','Agent d’état civil','Cadre territorial'],publicRoles:['Administré','Visiteur']},
+ bank:{facade:0xb8c1bd,accent:0x3f756e,trim:0x314f4c,sign:'#d4fff4',floor:0x65706d,wall:0xdce4e1,size:[20,18],staff:[18,46],visibleStaff:[3,5],visiblePublic:[2,5],staffRoles:['Conseiller bancaire','Chargé d’accueil'],publicRoles:['Client']},
+ postoffice:{facade:0xc9c2ab,accent:0xe1b62f,trim:0x4a5262,sign:'#fff0a8',floor:0x6f6c63,wall:0xe6dfcc,size:[20,18],staff:[18,42],visibleStaff:[3,5],visiblePublic:[3,6],staffRoles:['Agent postal','Chargé de clientèle'],publicRoles:['Usager']},
+ library:{facade:0x9f9287,accent:0x6f6aa6,trim:0x433f61,sign:'#e6e2ff',floor:0x675e55,wall:0xddd5ca,size:[23,20],staff:[12,30],visibleStaff:[2,4],visiblePublic:[5,9],staffRoles:['Bibliothécaire','Médiateur culturel'],publicRoles:['Lecteur','Étudiant']}
+};
+function placeTheme(type){return PLACE_THEMES[type]||{facade:0x9aa2a7,accent:0x657985,trim:0x34434d,sign:'#e6f3ff',floor:0x686d70,wall:0xdadada,size:[18,18],staff:[3,8],visibleStaff:[2,3],visiblePublic:[1,3],staffRoles:['Employé'],publicRoles:['Visiteur']}}
+function establishmentStaffCount(type,name=''){const t=placeTheme(type),r=rngFor(`staff:${state.cityId}:${type}:${name}`),base=t.staff[0]+Math.floor(r()*(t.staff[1]-t.staff[0]+1)),cityScale=state.cityId==='paris'?1.12:state.cityId==='valmont'?.88:state.cityId==='belle_rive'?.94:1;return Math.max(1,Math.round(base*cityScale))}
+function staffingCardHTML(type,name){const t=placeTheme(type),n=establishmentStaffCount(type,name),roles=(t.staffRoles||[]).slice(0,4).join(' • ');return `<div class="card"><div class="sectionKicker">ÉTABLISSEMENT VIVANT</div><div class="lifeStat"><div><b>👥 Effectif : ${n} salarié${n>1?'s':''}</b><small>${roles||'Personnel polyvalent'} • ${shopIsOpen(type)?'activité en cours':'établissement fermé au public'}</small></div><span class="qualification ${shopIsOpen(type)?'done':''}">${shopHoursLabel(type)}</span></div></div>`}
+
 const HOME_ITEMS={
  wallKit:{id:'wallKit',name:'Cloison',icon:'🧱'},
  chest:{id:'chest',name:'Coffre simple',icon:'📦'},
@@ -519,7 +552,7 @@ const base={
  stealth:0,scanner:0,collected:[],artifacts:[],kills:0,pickpockets:0,coinsEarned:0,stolenCoins:0,
  npcMissions:0,containersOpened:0,ownedDistricts:[],seenDistricts:[],completedQuests:[],
  activeNpcMission:null,timeOfDay:9.5,weather:'clear',interior:null,returnPos:null,policeCaught:0,
- landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:224,trainTrips:0,visitedCities:['paris'],
+ landOwned:false,housingStage:0,homeLevel:1,homeBank:0,homeStorage:{medkit:0},homeStock:[],homePlaced:[],reputation:0,restCount:0,artifactBag:[],discoveredShops:[],hunger:70,thirst:70,hygiene:60,worldLayoutVersion:225,trainTrips:0,visitedCities:['paris'],
  gameDay:1,gameMonth:1,agendaCustom:[],knownNpcOccupations:[],soundEnabled:true,avatarVersion:1,propertyCatalog:[],propertyPortfolio:[],residenceId:null,propertyCredit:0,monthlyLedger:'',missedRent:0,education:{current:null,completed:[]},job:null,workMission:null,companies:freshCompanies(),cityEconomies:freshCityEconomies(),cityTreasury:4800,taxPaid:0,salaryHistory:[],workCompleted:0,schoolDays:0,studyHours:0,avatar:{...AVATAR_DEFAULT},avatarCreated:false,cosmeticsUnlocked:[]
 };
 let state=loadState();
@@ -543,7 +576,7 @@ function loadState(){
    if((raw.worldLayoutVersion||0)<215){loaded.propertyCatalog=[];loaded.discoveredShops=[]}
    if((raw.worldLayoutVersion||0)<220){loaded.pos={...base.pos};loaded.interior=null;loaded.returnPos=null;loaded.discoveredShops=[];loaded.seenDistricts=[]}
    if(loaded.job?.id==='police')loaded.job={...loaded.job,id:'policeOfficer'};if(loaded.job&&!JOB_DEFS[loaded.job.id])loaded.job=null;
-   loaded.worldLayoutVersion=224;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
+   loaded.worldLayoutVersion=225;loaded.trainTrips=raw.trainTrips||0;loaded.visitedCities=raw.visitedCities||[loaded.cityId||'paris'];
    return loaded
  }catch{return structuredClone(base)}
 }
@@ -592,7 +625,7 @@ function checkQuests(){
 }
 
 let scene,camera,renderer,clock,textures={},chunks=new Map(),colliders=[],interiorColliders=[],pickups=[],shops=[],apartments=[],properties=[],containers=[],npcs=[],enemies=[],police=[],cars=[],hidingZones=[],homePlots=[],trafficLights=[],alleys=[],entranceZones=[],pedNetworks=new Map(),clouds=[],starSystem=null,ambientGlowSystem=null,streetLamps=[],lampLightPool=[],lastLampLightTick=0,busStops=[],busVehicles=[],trainStations=[];
-let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,mapBusMode=false,mapWorldMode=false,currentBusStopId=null,currentBoardBusId=null,busWaitRequest=null,busRide=null,busJourneyPlan=null,busTicketValidUntil=0,busLastArrivalToast='',busLastUiTick=0,busCameraMode='window',busViewYaw=0,busViewPitch=-.04,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
+let activeEnemy=null,activeEnemyEntity=null,moveStick={x:0,y:0},lookStick={x:0,y:0},weaponRig=null,interiorGroup=null,interiorSeller=null,interiorAmbientPeople=[],lastChunkTick=0,lastMapTick=0,lastHudTick=0,lastWeatherTick=0,lastShadowChunkKey='',selectedNPC=null,targetMarker=null,tailTheft=null,policeSeeing=false,hiddenTimer=0,lastCarHit=0,rainSystem=null,raycaster=null,tapStart=null,currentInteractFn=null,lastViewportHeight=window.innerHeight,keys={},lastPromptSig='',lastToastMessage='',lastToastAt=0,playerTrail=[],selectedProperty=null,bigMapZoom=.42,mapCenterOverride=null,mapFocusPropertyId=null,mapBusMode=false,mapWorldMode=false,currentBusStopId=null,currentBoardBusId=null,busWaitRequest=null,busRide=null,busJourneyPlan=null,busTicketValidUntil=0,busLastArrivalToast='',busLastUiTick=0,busCameraMode='window',busViewYaw=0,busViewPitch=-.04,interiorBounds={x:8.5,z:8.5},mpSocket=null,remotePlayers=new Map(),mpLastSend=0,mpLastX=0,mpLastZ=0,mpLastYaw=0,mpLastProfileSync=0,mpStatusMessage='Hors ligne',mpRoomCount=0,currentPanel=null,conversationNPC=null,selectedRemotePlayerId=null,voiceEnabled=false,localVoiceStream=null,voicePeers=new Map(),mutedPlayers=new Set(),uiAudioCtx=null;
 
 
 function mpServerUrl(){return (window.STREETQUEST_DEFAULT_SERVER||localStorage.getItem('sq-mp-url')||'https://streetquest-multiplayer.onrender.com').replace(/\/$/,'')}
@@ -638,7 +671,7 @@ function buildRemoteAvatarMesh(p){
  }else if(a.accessory==='backpack'){
    const bp=new THREE.Mesh(new THREE.BoxGeometry(.42*buildScale,.52,.18),new THREE.MeshStandardMaterial({color:0x303944,roughness:.9}));bp.position.set(0,1.02,.27);g.add(bp)
  }
- g.add(makeRemoteName(p.name||'Joueur'));return g
+ if(p.name&&String(p.name).trim())g.add(makeRemoteName(String(p.name)));return g
 }
 
 function avatarSignature(a){const n=normalizedAvatar(a||{});return [n.skin,n.hair,n.hairStyle,n.top,n.pants,n.shoes,n.accessory,n.build].join('|')}
@@ -1309,7 +1342,13 @@ function createChunk(cx,cz){
    try{
      plan=buildCityBlockPlan(cx,cz,d,r,startChunk);shopIndex=plannedShop?chooseCommercialParcel(plan):-1;addUrbanPlaza(g,key,x0,z0,plan.feature,r);
      const usedShopIndices=[];
-     if(plannedShop&&shopIndex>=0){const p=plan.parcels[shopIndex];if(addShop(g,key,x0+p.x,z0+p.z,r,plannedShop,p))usedShopIndices.push(shopIndex)}
+     if(plannedShop&&shopIndex>=0){
+       // V22.4.1: a rotated parcel can occasionally be blocked by an alley/entrance.
+       // Retry the other authored parcels so a planned civic service or anchor shop is not silently lost.
+       let plannedPlaced=false;const candidates=[shopIndex,...chooseCommercialParcelIndices(plan,plan.parcels.length-1,[shopIndex])];
+       for(const idx of candidates){const p=plan.parcels[idx];if(addShop(g,key,x0+p.x,z0+p.z,r,plannedShop,p)){usedShopIndices.push(idx);plannedPlaced=true;break}}
+       if(!plannedPlaced&&CIVIC_SERVICE_TYPES.has(plannedShop))console.error('Required civic service placement failed',key,plannedShop)
+     }
      const extraShopTypes=extraShopTypesForChunk(cx,cz,d,plannedShop||null);
      const extraShopIndices=chooseCommercialParcelIndices(plan,extraShopTypes.length,usedShopIndices);
      extraShopIndices.forEach((idx,n)=>{const p=plan.parcels[idx];if(addShop(g,key,x0+p.x,z0+p.z,r,extraShopTypes[n],p))usedShopIndices.push(idx)});
@@ -2081,25 +2120,74 @@ function makeFacadeSign(text,color='#9fe9ff'){
 }
 
 
+
+function exteriorBox(group,x,y,z,w,h,d,color,rough=.82,metal=.04){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal}));m.position.set(x,y,z);group.add(m);return m}
+function exteriorPlane(group,x,y,z,w,h,color,opacity=1){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({color,roughness:.32,metalness:.08,transparent:opacity<1,opacity,side:THREE.DoubleSide}));m.position.set(x,y,z);m.rotation.y=Math.PI;group.add(m);return m}
+function exteriorPlant(group,x,z,scale=1){const pot=exteriorBox(group,x,.25,-4.90,0.55*scale,.50*scale,.55*scale,0x4c4036,.95);const leaf=new THREE.Mesh(new THREE.SphereGeometry(.37*scale,8,6),new THREE.MeshStandardMaterial({color:0x4c7b4c,roughness:.96}));leaf.position.set(x,.72*scale,-4.90);group.add(leaf);return pot}
+function facadeCross(group,x,y,z,color){exteriorBox(group,x,y,z,.28,1.45,.12,color,.55,.05);exteriorBox(group,x,y,z,1.45,.28,.13,color,.55,.05)}
+function exteriorDoor(group,x=2.7,color=0x49362b,w=1.12,h=2.42){const d=exteriorPlane(group,x,h/2+.03,-4.685,w,h,color,1);return d}
+function exteriorGlass(group,x,y,w,h,tint=0xcce9f4,opacity=.45){return exteriorPlane(group,x,y,-4.665,w,h,tint,opacity)}
+function exteriorSign(group,text,color,y=4.25,scale=1){const sign=makeFacadeSign(text,color);sign.position.set(0,y,-4.74);sign.scale.multiplyScalar(scale);group.add(sign);return sign}
+function decoratePlaceExterior(group,type,shopH,displayName){
+ const t=placeTheme(type),front=-4.84,icon=SHOPS[type]?.icon||'🏢';
+ // Every place keeps a clearly visible pedestrian door.
+ const commonDoor=()=>{exteriorBox(group,2.72,1.35,-4.58,1.35,2.75,.18,t.trim,.65,.12);exteriorDoor(group,2.72,t.trim,1.05,2.35)};
+ if(type==='clinic'){
+  exteriorGlass(group,-1.6,1.65,3.2,2.75,0xbde4ee,.50);exteriorGlass(group,1.55,1.65,2.1,2.75,0xbde4ee,.50);exteriorBox(group,0,3.25,front,8.8,.30,1.10,t.accent,.70);commonDoor();facadeCross(group,-3.65,4.35,-4.77,t.accent);exteriorSign(group,`URGENCES • ${displayName}`,t.sign,4.35,1.12)
+ }else if(type==='fireStation'){
+  for(const x of [-2.25,.95]){exteriorBox(group,x,1.60,-4.62,2.70,3.10,.20,0x7e302c,.72,.10);for(let y=.45;y<2.8;y+=.48)exteriorBox(group,x,y,-4.76,2.55,.06,.05,0xe3d9ce,.82)}commonDoor();exteriorBox(group,-3.95,4.45,-4.72,.42,.42,.18,0xe6d8c9,.6);facadeCross(group,-3.95,4.45,-4.82,0xd93f36);exteriorSign(group,`SAPEURS-POMPIERS • ${displayName}`,t.sign,4.35,1.10)
+ }else if(type==='policeStation'){
+  exteriorGlass(group,-1.6,1.6,3.4,2.6,0xb9d9ee,.42);commonDoor();exteriorBox(group,0,3.45,front,8.2,.38,.80,t.accent,.58,.10);exteriorBox(group,3.65,3.95,-4.79,.28,.28,.20,0x4ba8ff,.28,.2);exteriorSign(group,`POLICE • ${displayName}`,t.sign,4.32,1.08)
+ }else if(type==='townhall'){
+  commonDoor();for(const x of [-3.5,-1.7,1.7,3.5])exteriorBox(group,x,1.65,-4.72,.34,3.25,.34,0xe7deca,.90);exteriorBox(group,0,3.36,-4.70,8.6,.34,.48,t.accent,.82);exteriorSign(group,`MAIRIE • ${displayName}`,t.sign,4.30,1.08)
+ }else if(type==='bank'){
+  exteriorGlass(group,-1.65,1.6,3.2,2.65,0xb8d8d7,.45);commonDoor();for(const x of [-4.1,4.1])exteriorBox(group,x,1.6,-4.72,.38,3.1,.38,0xd9d7cd,.85);exteriorSign(group,`BANQUE • ${displayName}`,t.sign,4.28,1.05)
+ }else if(type==='postoffice'){
+  exteriorGlass(group,-1.7,1.6,3.4,2.6,0xcbdbe7,.40);commonDoor();exteriorBox(group,0,3.52,front,8.8,.52,1.0,t.accent,.72);exteriorSign(group,`LA POSTE • ${displayName}`,t.sign,4.35,1.02)
+ }else if(type==='library'){
+  exteriorGlass(group,-2.3,1.65,2.5,2.85,0xa9d0d7,.42);exteriorGlass(group,.25,1.65,2.2,2.85,0xa9d0d7,.42);commonDoor();exteriorSign(group,`MÉDIATHÈQUE • ${displayName}`,t.sign,4.30,1.05)
+ }else if(type==='school'){
+  exteriorGlass(group,-2.4,1.75,2.0,2.5,0xb8d6e9,.34);exteriorGlass(group,.1,1.75,1.7,2.5,0xb8d6e9,.34);exteriorBox(group,2.65,1.45,-4.59,2.25,2.95,.20,t.trim,.70);exteriorGlass(group,2.65,1.45,1.75,2.55,0xcbe7f6,.38);exteriorSign(group,`ÉCOLE • ${displayName}`,t.sign,4.25,1.05)
+ }else if(type==='jobcenter'){
+  exteriorGlass(group,-1.7,1.6,3.3,2.7,0xbcdbe5,.40);commonDoor();exteriorBox(group,-3.85,2.0,-4.76,.35,2.7,.12,t.accent,.70);exteriorSign(group,`EMPLOI • ${displayName}`,t.sign,4.28,1.05)
+ }else if(type==='gear'){
+  exteriorBox(group,-1.6,1.65,-4.62,4.2,3.15,.20,0x424a50,.70,.14);for(let y=.45;y<2.95;y+=.5)exteriorBox(group,-1.6,y,-4.76,3.95,.06,.05,0x88939b,.85);commonDoor();exteriorSign(group,`ATELIER • ${displayName}`,t.sign,4.30,1.03)
+ }else{
+  exteriorBox(group,0,1.82,-4.56,6.9,3.45,.16,t.trim,.62,.15);exteriorGlass(group,-.55,1.82,5.0,2.85,0xffe4bd,.45);commonDoor();
+  const awning=exteriorBox(group,0,3.58,front,7.2,.22,1.05,t.accent,.78);exteriorSign(group,`${icon} ${displayName}`,t.sign,4.28,1.0);
+  if(type==='bakery'){for(const x of [-3.15,-1.95,-.75,.45])exteriorBox(group,x,1.03,-4.77,.70,.08,.07,0xd8b878,.85);}
+  if(type==='butcher'){for(let x=-3.0;x<=.8;x+=.95)exteriorBox(group,x,3.58,-5.02,.45,.08,.32,(Math.round(x*10)%2)?0xf1e8df:0x8f3038,.82)}
+  if(type==='pharmacy'){facadeCross(group,-3.85,4.18,-4.78,0x44c67a)}
+  if(type==='florist'){for(const x of [-4.1,-3.3,-2.5,3.65])exteriorPlant(group,x,-4.9,.82)}
+  if(type==='hairdresser'){for(let y=.75;y<3.0;y+=.45)exteriorBox(group,-4.0,y,-4.78,.22,.36,.15,(Math.round(y*10)%2)?0xd75353:0x5b89c9,.55)}
+  if(type==='restaurant'||type==='cafe'){for(const x of [-3.5,3.7]){exteriorBox(group,x,.50,-5.15,1.20,.08,.72,0x6e4e36,.86);exteriorBox(group,x,.26,-5.15,.08,.52,.08,0x3f342b,.9)}}
+  if(type==='clothes'){for(const x of [-2.3,.0])exteriorBox(group,x,1.05,-4.76,.28,1.55,.18,0xcdb9ad,.85)}
+  if(type==='rare'){exteriorBox(group,-3.85,2.0,-4.78,.18,2.8,.14,0xd0b36c,.48,.18)}
+  if(type==='home'){exteriorBox(group,-3.8,.7,-4.92,1.0,1.0,.70,0x8b694c,.9)}
+  if(type==='housing'){exteriorBox(group,-3.85,1.55,-4.78,.16,2.35,.12,0x6aa6c4,.55)}
+  if(type==='corner'){exteriorPlant(group,-4.1,-4.9,.72)}
+ }
+ // Small greenery is kept on most façades without hiding emergency garage bays.
+ if(!['fireStation','townhall'].includes(type)){exteriorPlant(group,-4.25,-4.90,.72);if(!['clinic','school'].includes(type))exteriorPlant(group,4.25,-4.90,.72)}
+}
+
 function addShop(g,key,x,z,r,forcedType=null,parcel=null){
- const pool=Object.keys(SHOPS).filter(t=>!CIVIC_SERVICE_TYPES.has(t)),type=forcedType||choice(pool),shop=SHOPS[type];const bx0=Math.floor(x/CHUNK)*CHUNK,bz0=Math.floor(z/CHUNK)*CHUNK;
- const civicPoi=CIVIC_POIS.find(p=>p.type===type&&p.cx===Math.floor(x/CHUNK)&&p.cz===Math.floor(z/CHUNK)),displayName=civicPoi?.name||shop.name,civic=CIVIC_SERVICE_TYPES.has(type);
- const resolved=resolveBuildingSpot(key,x,z,10.7,10.7,bx0,bz0);if(!resolved){console.warn('No safe shop parcel',key,type);return false}x=resolved.x;z=resolved.z;
+ const pool=Object.keys(SHOPS).filter(t=>!CIVIC_SERVICE_TYPES.has(t)),type=forcedType||choice(pool),shop=SHOPS[type];
+ // V22.4.1: the block plan may rotate a parcel slightly beyond the numeric chunk edge.
+ // Always derive the authoritative chunk origin from the chunk key, not from the provisional parcel position.
+ const kp=String(key).split(':'),keyCx=Number(kp[kp.length-2]),keyCz=Number(kp[kp.length-1]);
+ const bx0=(Number.isFinite(keyCx)?keyCx:Math.floor(x/CHUNK))*CHUNK,bz0=(Number.isFinite(keyCz)?keyCz:Math.floor(z/CHUNK))*CHUNK;
+ const civicPoi=CIVIC_POIS.find(p=>p.type===type&&p.cx===keyCx&&p.cz===keyCz),displayName=civicPoi?.name||shop.name,civic=CIVIC_SERVICE_TYPES.has(type);
+ const resolved=resolveBuildingSpot(key,x,z,10.7,10.7,bx0,bz0);if(!resolved)return false;x=resolved.x;z=resolved.z;
  const entrance=chooseAccessibleEntrance(key,x,z,10,9,bx0,bz0,parcel?.face||null);if(!entrance)return false;
  const group=new THREE.Group();
- const paris=state.cityId==='paris',shopColor={corner:0x5f3b32,bakery:0x7b5a3d,butcher:0x6f3936,restaurant:0x6a4034,cafe:0x7a4337,pharmacy:0x436a57,florist:0x4f6a47,hairdresser:0x6c4865,gear:0x3e5061,rare:0x51466b,pawn:0x405d62,home:0x5e5148,housing:0x6d674e,clothes:0x694858,school:0x4d5d74,jobcenter:0x6f6146,clinic:0x4e6c64,policeStation:0x344f72,fireStation:0x8a3b32,townhall:0x736a58,bank:0x4a626b,postoffice:0x6d5151,library:0x526078}[type]||0x53606a;
- const bodyMat=paris?makeSolidFacadeMaterial(g,districtFor(Math.floor(x/CHUNK),Math.floor(z/CHUNK))):new THREE.MeshStandardMaterial({color:shopColor,roughness:.66,metalness:.05});
+ const paris=state.cityId==='paris',theme=placeTheme(type);
+ const bodyMat=new THREE.MeshStandardMaterial({color:theme.facade,roughness:.72,metalness:.04});
  const shopH=civic?(paris?17.0+r()*4.5:10.8+r()*2.2):(paris?15.2+r()*5.0:7.2);
  const body=new THREE.Mesh(new THREE.BoxGeometry(10,shopH,9),bodyMat);body.position.y=shopH/2;body.castShadow=false;body.receiveShadow=true;body.userData.sqShadowCaster=true;group.add(body);
  const roof=new THREE.Mesh(new THREE.BoxGeometry(10.1,.80,9.1),new THREE.MeshStandardMaterial({color:0x343940,roughness:.88}));roof.position.y=shopH+.40;roof.castShadow=false;roof.userData.sqShadowCaster=true;group.add(roof);
  if(paris){for(const yy of [4.15,10.0]){if(yy>=shopH-.8)continue;const band=new THREE.Mesh(new THREE.BoxGeometry(10.16,.12,9.16),new THREE.MeshStandardMaterial({color:0xb5a995,roughness:.92}));band.position.y=yy;group.add(band)}}
- const frame=new THREE.Mesh(new THREE.BoxGeometry(6.7,3.4,.16),new THREE.MeshStandardMaterial({color:0x171717,metalness:.25,roughness:.62}));frame.position.set(0,1.82,-4.56);group.add(frame);
- const glass=new THREE.Mesh(new THREE.PlaneGeometry(6.0,2.85),new THREE.MeshStandardMaterial({color:0xffe7bd,emissive:0x7a4318,emissiveIntensity:.35,transparent:true,opacity:.50,metalness:.08,roughness:.18,side:THREE.DoubleSide}));glass.position.set(0,1.82,-4.66);glass.rotation.y=Math.PI;group.add(glass);
- const shopDoor=new THREE.Mesh(new THREE.PlaneGeometry(1.12,2.42),new THREE.MeshStandardMaterial({color:0x49362b,roughness:.82,side:THREE.DoubleSide}));shopDoor.position.set(2.42,1.24,-4.685);shopDoor.rotation.y=Math.PI;group.add(shopDoor);
- const awningColor=type==='corner'?0x8f2f2f:type==='bakery'?0x8b5b2d:type==='butcher'?0x8a3030:type==='restaurant'?0x7f3c30:type==='cafe'?0x7c2d2d:type==='pharmacy'?0x2f7355:type==='florist'?0x3b7a44:type==='hairdresser'?0x864c78:type==='gear'?0x3e5d72:type==='housing'?0x7d5e3f:type==='pawn'?0x5b6d62:type==='clothes'?0x8b3d55:0x6a4c38;
- const awning=new THREE.Mesh(new THREE.BoxGeometry(7.1,.20,1.05),new THREE.MeshStandardMaterial({color:awningColor,roughness:.78}));awning.position.set(0,3.55,-4.84);group.add(awning);
- const sign=makeFacadeSign(`${shop.icon} ${displayName}`,'#fff1cf');sign.position.set(0,4.26,-4.55);group.add(sign);
- for(const sx of [-4.25,4.25]){const planter=new THREE.Mesh(new THREE.BoxGeometry(.66,.45,.64),new THREE.MeshStandardMaterial({color:0x4a433b,roughness:.95}));planter.position.set(sx,.23,-4.92);group.add(planter);const plant=new THREE.Mesh(new THREE.SphereGeometry(.40,9,7),new THREE.MeshStandardMaterial({color:0x527649,roughness:.96}));plant.position.set(sx,.72,-4.92);group.add(plant)}
+ decoratePlaceExterior(group,type,shopH,displayName);
  group.rotation.y=entrance.face==='south'?0:entrance.face==='north'?Math.PI:entrance.face==='west'?Math.PI/2:-Math.PI/2;group.position.set(x,0,z);g.add(group);
  const side=entrance.face==='west'||entrance.face==='east';const worldW=side?9:10,worldD=side?10:9;colliders.push({key,minX:x-worldW/2-.34,maxX:x+worldW/2+.34,minZ:z-worldD/2-.34,maxZ:z+worldD/2+.34,type:'shop'});
  shops.push({key,x,z,type,displayName,group,door:{x:entrance.outX,z:entrance.outZ},entranceFace:entrance.face});registerEntranceZone(key,entrance,`${key}:shop:${type}`);
@@ -2341,13 +2429,18 @@ function processMonthlyFinances(){
   if(rec.tenant){if(ratio>1.42&&Math.random()<.30){rec.tenant=false;events.push(`locataire parti : ${rec.label||'bien'}`)}else rentalIncome+=rec.askingRent||market}
  }
  if(state.job){
-  const j=JOB_DEFS[state.job.id],gross=j.salary;let paid=0;
-  if(j.sector==='public'){paid=Math.min(gross,eco.publicBudget||0);eco.publicBudget=Math.max(0,(eco.publicBudget||0)-paid);state.cityTreasury=eco.publicBudget;if(paid<gross)events.push('⚠️ salaire public partiellement payé')}
-  else{const c=state.companies[j.company];paid=Math.min(gross,c?.cash||0);if(c)c.cash-=paid;if(paid<gross)events.push(`⚠️ ${c?.name||'employeur'} manque de trésorerie`)}
-  const tax=progressiveTax(paid+rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;eco.publicBudget=(eco.publicBudget||0)+tax;state.cityTreasury=eco.publicBudget;
-  const net=Math.max(0,paid-tax);state.homeBank+=net;income+=net;state.salaryHistory.push({month:state.gameMonth,gross:paid,tax,net,job:j.name,euroReference:j.euroNet});state.salaryHistory=state.salaryHistory.slice(-12);events.push(`salaire net +${net}`)
- }else if(rentalIncome){const tax=progressiveTax(rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;eco.publicBudget=(eco.publicBudget||0)+tax;state.homeBank+=rentalIncome-tax;income+=rentalIncome-tax}
- if(state.job&&rentalIncome){state.homeBank+=rentalIncome;income+=rentalIncome}
+  const j=JOB_DEFS[state.job.id];
+  if(!j){state.job=null;events.push('⚠️ ancien emploi incompatible : contrat clôturé')}
+  else{
+   const gross=j.salary;let paid=0;
+   if(j.sector==='public'){paid=Math.min(gross,eco.publicBudget||0);eco.publicBudget=Math.max(0,(eco.publicBudget||0)-paid);state.cityTreasury=eco.publicBudget;if(paid<gross)events.push('⚠️ salaire public partiellement payé')}
+   else{const c=state.companies[j.company];paid=Math.min(gross,c?.cash||0);if(c)c.cash-=paid;if(paid<gross)events.push(`⚠️ ${c?.name||'employeur'} manque de trésorerie`)}
+   const taxable=paid+rentalIncome,tax=progressiveTax(taxable);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;eco.publicBudget=(eco.publicBudget||0)+tax;state.cityTreasury=eco.publicBudget;
+   // Charge the combined tax against salary first, then rental income. This avoids losing tax when rental income is high.
+   const salaryTax=Math.min(paid,tax),rentTax=Math.max(0,tax-salaryTax),salaryNet=Math.max(0,paid-salaryTax),rentNet=Math.max(0,rentalIncome-rentTax),netTotal=salaryNet+rentNet;
+   state.homeBank+=netTotal;income+=netTotal;state.salaryHistory.push({month:state.gameMonth,gross:paid,tax:salaryTax,net:salaryNet,job:j.name,euroReference:j.euroNet});state.salaryHistory=state.salaryHistory.slice(-12);events.push(`salaire net +${salaryNet}`);if(rentalIncome)events.push(`loyers nets +${rentNet}`)
+  }
+ }else if(rentalIncome){const tax=progressiveTax(rentalIncome);taxes+=tax;state.taxPaid=(state.taxPaid||0)+tax;eco.publicBudget=(eco.publicBudget||0)+tax;state.cityTreasury=eco.publicBudget;const net=Math.max(0,rentalIncome-tax);state.homeBank+=net;income+=net;events.push(`loyers nets +${net}`)}
  state.monthlyLedger=`Mois ${state.gameMonth} : +${income} / -${expense} • impôts ${taxes} • chômage local ${(eco.unemployment*100).toFixed(1)} %${events.length?' • '+events.join(' • '):''}`;
  toast(`📅 ${state.monthlyLedger}`);save()
 }
@@ -2739,7 +2832,7 @@ function animate(){
  const fx=Math.sin(state.yaw),fz=-Math.cos(state.yaw),rx=Math.cos(state.yaw),rz=Math.sin(state.yaw);
  const moveSpeed=4.8*needsSpeedMultiplier();if(!busRide){movePlayer((fx*forward+rx*strafe)*moveSpeed*dt,(fz*forward+rz*strafe)*moveSpeed*dt);updatePlayerTrail()}
  if(busRide){busViewYaw+=lookStick.x*1.65*dt;busViewPitch=clamp(busViewPitch-lookStick.y*1.10*dt,-.42,.40)}else{state.yaw+=lookStick.x*1.8*dt;state.pitch=clamp(state.pitch-lookStick.y*1.2*dt,-.58,.52);if(Math.abs(lookStick.y)<.02)state.pitch*=Math.max(.0,1-dt*2.1)}
- updateNeeds(dt);updateWorkMission();if(!state.interior){updatePeople(dt,t);updateCars(dt,t);updateBusVehicles(dt);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateCamera(t);updateWorldLight(dt);try{updateParisLampLights(t)}catch(err){console.error('Lamp-light frame error',err)}updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>180){drawMap();lastMapTick=t}if(t-lastHudTick>100){updateHUD();lastHudTick=t}renderer.render(scene,camera);try{multiplayerTick(t,dt)}catch(err){console.error('Multiplayer frame error',err)}
+ updateNeeds(dt);updateWorkMission();if(state.interior)updateInteriorAmbientPeople(t);if(!state.interior){updatePeople(dt,t);updateCars(dt,t);updateBusVehicles(dt);animatePickups(dt,t);if(t-lastChunkTick>650){try{ensureChunks()}catch(err){console.error('Chunk refresh',err)}lastChunkTick=t}}updateCamera(t);updateWorldLight(dt);try{updateParisLampLights(t)}catch(err){console.error('Lamp-light frame error',err)}updateAtmosphere(dt);checkInteraction();if(t-lastMapTick>180){drawMap();lastMapTick=t}if(t-lastHudTick>100){updateHUD();lastHudTick=t}renderer.render(scene,camera);try{multiplayerTick(t,dt)}catch(err){console.error('Multiplayer frame error',err)}
 }
 
 
@@ -3007,16 +3100,14 @@ function hideDialogue(){$('#dialogue').classList.add('hidden');endNpcConversatio
 
 
 const SHOP_STAFF={
- corner:{name:'Maya',role:'vendeuse'},gear:{name:'Karim',role:'mécanicien'},rare:{name:'Léo',role:'vendeur'},pawn:{name:'Nora',role:'responsable revente'},
- home:{name:'Clara',role:'conseillère'},housing:{name:'Sophie',role:'conseillère immobilière'},clothes:{name:'Inès',role:'vendeuse'},
- school:{name:'Mme Martin',role:'accueil'},jobcenter:{name:'Yanis',role:'conseiller emploi'},clinic:{name:'Camille',role:'agent d’accueil hospitalier'},
- policeStation:{name:'Agent Laurent',role:'accueil du commissariat'},fireStation:{name:'Sergent Diallo',role:'sapeur-pompier'},townhall:{name:'Élodie',role:'agent municipal'},bank:{name:'Nicolas',role:'conseiller bancaire'},postoffice:{name:'Amel',role:'chargée de clientèle'},library:{name:'Claire',role:'bibliothécaire'}
+ corner:{name:'Maya',role:'responsable de caisse'},bakery:{name:'Lucie',role:'vendeuse en boulangerie'},butcher:{name:'Thomas',role:'boucher'},restaurant:{name:'Samir',role:'responsable de salle'},cafe:{name:'Lina',role:'barista'},pharmacy:{name:'Driss',role:'pharmacien'},florist:{name:'Eva',role:'fleuriste'},hairdresser:{name:'Mehdi',role:'coiffeur'},
+ gear:{name:'Karim',role:'mécanicien'},rare:{name:'Léo',role:'conseiller prestige'},pawn:{name:'Nora',role:'responsable revente'},home:{name:'Clara',role:'conseillère ameublement'},housing:{name:'Sophie',role:'conseillère immobilière'},clothes:{name:'Inès',role:'vendeuse'},
+ school:{name:'Mme Martin',role:'agent d’accueil scolaire'},jobcenter:{name:'Yanis',role:'conseiller emploi'},clinic:{name:'Camille',role:'agent d’accueil hospitalier'},policeStation:{name:'Agent Laurent',role:'accueil du commissariat'},fireStation:{name:'Sergent Diallo',role:'sapeur-pompier'},townhall:{name:'Élodie',role:'agent municipal'},bank:{name:'Nicolas',role:'conseiller bancaire'},postoffice:{name:'Amel',role:'chargée de clientèle'},library:{name:'Claire',role:'bibliothécaire'}
 };
-function buildShopSeller(type){
- const s=SHOP_STAFF[type]||{name:'Alex',role:'vendeur'};const palette={housing:'#6d8061',pawn:'#426e7a',corner:'#396c5a',clothes:'#785478',gear:'#586778',clinic:'#52796d',school:'#536e93',jobcenter:'#806f4b',policeStation:'#315477',fireStation:'#8b4037',townhall:'#716856',bank:'#48626d',postoffice:'#745356',library:'#56677d'};
+function buildShopSeller(type,depth=18){
+ const st=SHOP_STAFF[type]||{name:'Alex',role:'employé'},t=placeTheme(type);const palette={housing:'#5a7887',pawn:'#5f766d',corner:'#4c765d',bakery:'#b47745',butcher:'#8e4147',restaurant:'#7f473d',cafe:'#855142',pharmacy:'#4b8b67',florist:'#5f8b5e',hairdresser:'#875f82',clothes:'#8b5e76',gear:'#586778',rare:'#756a91',clinic:'#4f8f87',school:'#536e93',jobcenter:'#806f4b',policeStation:'#315477',fireStation:'#a14339',townhall:'#716856',bank:'#486f69',postoffice:'#8b7040',library:'#66618e'};
  const avatar={...AVATAR_DEFAULT,top:palette[type]||'#526b7d',pants:'#252d35',hair:'#32251f',hairStyle:type==='clothes'?'long':'short',build:'standard'};
- const g=buildRemoteAvatarMesh({name:s.name,avatar});g.position.set(0,0,-7.25);g.rotation.y=Math.PI; // V20: seller faces +Z, i.e. the counter/customer side.
- interiorGroup.add(g);interiorSeller={group:g,name:s.name,role:s.role,type}
+ const g=buildRemoteAvatarMesh({name:st.name,avatar});g.position.set(0,0,-depth/2+1.75);g.rotation.y=Math.PI;interiorGroup.add(g);interiorSeller={group:g,name:st.name,role:st.role,type}
 }
 function syncInteriorPresence(interior){
  if(mpSocket?.connected)mpSocket.emit('player:presence',{interior:!!interior,x:state.returnPos?.x??state.pos.x,z:state.returnPos?.z??state.pos.z})
@@ -3040,17 +3131,17 @@ function addInteriorExitDoor(width,depth){
 function enterInterior(type,obj,opts={}){
  if(!opts.preserveReturn&&!state.interior)state.returnPos={...state.pos};
  state.interior={type,shopType:obj?.type||null,shopName:type==='shop'?(obj?.displayName||obj?.name||SHOPS[obj?.type]?.name||null):null,propertyId:type==='property'?obj?.id:null,returnTo:opts.returnTo||null};
- interiorColliders=[];interiorSeller=null;for(const[,g]of chunks)g.visible=false;
+ interiorColliders=[];interiorSeller=null;interiorAmbientPeople=[];for(const[,g]of chunks)g.visible=false;
  if(interiorGroup)scene.remove(interiorGroup);interiorGroup=new THREE.Group();scene.add(interiorGroup);
-
- let width=18,depth=18;
+ let width=18,depth=18,theme=null;
+ if(type==='shop'){theme=placeTheme(obj?.type);[width,depth]=theme.size||[18,18]}
  if(type==='property'){const p=propertyFromCatalog(obj.id)||obj;const dims=propertyInteriorDims(p);width=dims.width;depth=dims.depth}
  interiorBounds={x:width/2-.5,z:depth/2-.5};
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(width,depth),new THREE.MeshStandardMaterial({color:type==='shop'?0x786f60:type==='property'?0x8d8172:0x7b6c5d,roughness:1}));floor.rotation.x=-Math.PI/2;interiorGroup.add(floor);
- const wallM=new THREE.MeshStandardMaterial({color:type==='shop'?0xc8c0aa:type==='property'?0xd8d1c7:0xd7cfbf});
+ const floorColor=type==='shop'?(theme?.floor||0x786f60):type==='property'?0x8d8172:0x7b6c5d,wallColor=type==='shop'?(theme?.wall||0xc8c0aa):type==='property'?0xd8d1c7:0xd7cfbf;
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(width,depth),new THREE.MeshStandardMaterial({color:floorColor,roughness:1}));floor.rotation.x=-Math.PI/2;interiorGroup.add(floor);
+ const wallM=new THREE.MeshStandardMaterial({color:wallColor,roughness:.95});
  [[0,2.5,-depth/2,width,.25],[0,2.5,depth/2,width,.25],[-width/2,2.5,0,.25,depth],[width/2,2.5,0,.25,depth]].forEach(w=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w[3],5,w[4]),wallM);m.position.set(w[0],w[1],w[2]);interiorGroup.add(m)});addInteriorExitDoor(width,depth);
-
- if(type==='shop')buildShopInterior(obj.type);
+ if(type==='shop')buildShopInterior(obj.type,width,depth);
  else if(type==='property')buildPropertyInterior(propertyFromCatalog(obj.id)||obj);
  else if(type==='home')buildHomeInterior();
  else buildApartmentInterior();
@@ -3091,18 +3182,77 @@ function buildPropertyInterior(p){
  if(lux){const art=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.0),new THREE.MeshBasicMaterial({color:0x9ee8ff}));art.position.set(-dims.width*.28,2.2,-dims.depth/2+.06);interiorGroup.add(art)}
 }
 
-function buildShopInterior(type){
- const service=CIVIC_SERVICE_TYPES.has(type);const shelfM=new THREE.MeshStandardMaterial({color:0x574536,roughness:.92});
- const rug=new THREE.Mesh(new THREE.PlaneGeometry(13.8,12.6),new THREE.MeshStandardMaterial({color:service?0x56616a:0x665747,roughness:1}));rug.rotation.x=-Math.PI/2;rug.position.y=.018;interiorGroup.add(rug);
- if(!service){for(let i=-1;i<=1;i++){const s=new THREE.Mesh(new THREE.BoxGeometry(1.65,1.85,4.7),shelfM);s.position.set(i*4.2,1,0);interiorGroup.add(s);interiorColliders.push({minX:i*4.2-.88,maxX:i*4.2+.88,minZ:-2.4,maxZ:2.4})}}
- else{for(const x of [-4,4]){const seat=new THREE.Mesh(new THREE.BoxGeometry(2.0,.55,.75),new THREE.MeshStandardMaterial({color:0x697781,roughness:.9}));seat.position.set(x,.32,1.2);interiorGroup.add(seat);interiorColliders.push({minX:x-1.05,maxX:x+1.05,minZ:.75,maxZ:1.65})}}
- const counter=new THREE.Mesh(new THREE.BoxGeometry(5.4,1.22,1.25),new THREE.MeshStandardMaterial({color:0x3f3228,roughness:.82}));counter.position.set(0,.61,-6);interiorGroup.add(counter);interiorColliders.push({minX:-2.75,maxX:2.75,minZ:-6.68,maxZ:-5.32});
- const top=new THREE.Mesh(new THREE.BoxGeometry(5.7,.10,1.4),new THREE.MeshStandardMaterial({color:0xc5a477,roughness:.56}));top.position.set(0,1.25,-6);interiorGroup.add(top);
- const sign=makeSign(`${SHOPS[type].icon} ${state.interior?.shopName||SHOPS[type].name}`,'#ffe3ae');sign.position.set(0,3,-8.5);interiorGroup.add(sign);
- const warm=new THREE.PointLight(0xffcc8a,service?5.5:6.2,18,2);warm.position.set(0,4.1,-2.0);interiorGroup.add(warm);
- buildShopSeller(type);
- // V20: visible customers face the counter. Local avatar front is -Z, so yaw 0 from the customer side is correct.
- const customerCount=service?1:2;for(let i=0;i<customerCount;i++){const av={...AVATAR_DEFAULT,top:i? '#745341':'#405f72',pants:'#2a3036',hair:i?'#5b4231':'#28231f',hairStyle:i?'long':'short'};const c=buildRemoteAvatarMesh({name:'',avatar:av});c.position.set((i?1:-1)*1.6,0,-4.25-i*.15);c.rotation.y=0;interiorGroup.add(c)}
+
+function interiorDecoBox(x,y,z,w,h,d,color=0x765438,collide=false){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.86}));m.position.set(x,y,z);interiorGroup.add(m);if(collide)interiorColliders.push({minX:x-w/2-.06,maxX:x+w/2+.06,minZ:z-d/2-.06,maxZ:z+d/2+.06});return m}
+function interiorTable(x,z,w=1.6,d=.9,color=0x6d5138){interiorDecoBox(x,.72,z,w,.12,d,color,true);for(const dx of [-w*.38,w*.38])for(const dz of [-d*.32,d*.32])interiorDecoBox(x+dx,.35,z+dz,.08,.68,.08,0x42362e,false)}
+function interiorChair(x,z,rot=0,color=0x596775){const g=new THREE.Group();const seat=new THREE.Mesh(new THREE.BoxGeometry(.62,.12,.62),new THREE.MeshStandardMaterial({color,roughness:.9}));seat.position.y=.55;g.add(seat);const back=new THREE.Mesh(new THREE.BoxGeometry(.62,.72,.10),new THREE.MeshStandardMaterial({color,roughness:.9}));back.position.set(0,.88,.27);g.add(back);g.position.set(x,0,z);g.rotation.y=rot;interiorGroup.add(g);return g}
+function interiorShelf(x,z,w=1.4,h=2.0,d=.45,color=0x6d5138){return interiorDecoBox(x,h/2,z,w,h,d,color,true)}
+function interiorCounter(x,z,w=5.2,color=0x493a2f){const b=interiorDecoBox(x,.58,z,w,1.16,1.05,color,true);interiorDecoBox(x,1.18,z,w+.18,.10,1.18,0xc1a47d,false);return b}
+function interiorRoleAvatar(role,i=0){let top='#576e7c',pants='#29313a',hair=i%2?'#5a4131':'#29231f',hairStyle=i%3===0?'long':'short';const r=role.toLowerCase();if(r.includes('médecin')){top='#e9edef';pants='#59646d'}else if(r.includes('infirm')){top='#4f9d95';pants='#375b62'}else if(r.includes('aide-soignant')||r.includes('hospital')){top='#7299b2';pants='#405365'}else if(r.includes('patient')){top=i%2?'#8a7566':'#6c7d8f';pants='#444b52'}else if(r.includes('polic')||r.includes('officier')){top='#315477';pants='#1f344a'}else if(r.includes('pompier')||r.includes('agrès')||r.includes('cta')){top='#a34238';pants='#28343c'}else if(r.includes('enseign')){top='#6b7da0';pants='#3d4854'}else if(r.includes('élève')||r.includes('étudiant')){top=i%2?'#806e9a':'#507791';pants='#303842'}else if(r.includes('bibli')){top='#6e6897';pants='#3e3d52'}else if(r.includes('ban')){top='#4d756f';pants='#303b3b'}else if(r.includes('postal')){top='#d2a93d';pants='#3f4b5c'}else if(r.includes('boucher')){top='#e1ded7';pants='#65373b'}else if(r.includes('boulanger')){top='#e6d7bf';pants='#6d4b31'}else if(r.includes('pharmac')){top='#e7ece9';pants='#3f765b'}else if(r.includes('fleur')){top='#62885c';pants='#4a4f43'}else if(r.includes('coiff')){top='#7c5d79';pants='#373039'}else if(r.includes('mécan')||r.includes('techn')){top='#536b7b';pants='#30363b'}else if(r.includes('serveur')||r.includes('barista')){top='#5a4037';pants='#23292f'}else if(r.includes('agent municipal')||r.includes('état civil')||r.includes('territorial')){top='#77705c';pants='#42443f'};
+ return {...AVATAR_DEFAULT,top,pants,hair,hairStyle,build:'standard'}
+}
+function addInteriorAmbientPerson(role,x,z,rot=0,label=false){const g=buildRemoteAvatarMesh({name:label?role:'',avatar:interiorRoleAvatar(role,interiorAmbientPeople.length)});g.position.set(x,0,z);g.rotation.y=rot;interiorGroup.add(g);interiorAmbientPeople.push({group:g,baseY:0,phase:interiorAmbientPeople.length*.8,role});return g}
+function visibleCount(range,seed){const r=rngFor(seed),a=range?.[0]||0,b=range?.[1]||a;return a+Math.floor(r()*(Math.max(0,b-a)+1))}
+function populateInteriorPeople(type,width,depth){
+ const t=placeTheme(type),name=state.interior?.shopName||SHOPS[type]?.name||type,open=shopIsOpen(type),essential=['clinic','policeStation','fireStation'].includes(type),seed=`inside:${state.cityId}:${type}:${name}:${absoluteGameDay()}`;
+ const staffN=(open||essential)?visibleCount(t.visibleStaff,seed+':s'):0,publicN=open?visibleCount(t.visiblePublic,seed+':p'):(essential?Math.min(2,visibleCount(t.visiblePublic,seed+':night')):0),staffRoles=t.staffRoles||['Employé'],publicRoles=t.publicRoles||['Visiteur'];
+ const staffSpots=[[-width*.34,-depth*.25],[width*.32,-depth*.25],[-width*.30,-depth*.02],[width*.30,-depth*.02],[0,-depth*.15],[-width*.38,depth*.10],[width*.38,depth*.10],[0,depth*.05]];
+ const publicSpots=[[-width*.30,depth*.18],[width*.30,depth*.18],[-width*.15,depth*.27],[width*.15,depth*.27],[0,depth*.32],[-width*.37,depth*.31],[width*.37,depth*.31],[-width*.05,.5],[width*.08,2.2]];
+ for(let i=0;i<staffN&&i<staffSpots.length;i++){const role=staffRoles[i%staffRoles.length],[x,z]=staffSpots[i];addInteriorAmbientPerson(role,x,z,Math.PI,i<Math.min(3,staffN))}
+ for(let i=0;i<publicN&&i<publicSpots.length;i++){const role=publicRoles[i%publicRoles.length],[x,z]=publicSpots[i];addInteriorAmbientPerson(role,x,z,0,(type==='clinic'||type==='school')&&i<2)}
+}
+function updateInteriorAmbientPeople(t){if(!state.interior||!interiorAmbientPeople.length)return;for(const p of interiorAmbientPeople){if(!p.group?.parent)continue;p.group.position.y=p.baseY+Math.sin(t*.002+p.phase)*.006;p.group.rotation.z=Math.sin(t*.0014+p.phase)*.008}}
+
+function buildShopInterior(type,width=18,depth=18){
+ const t=placeTheme(type),back=-depth/2+2.0,front=depth/2-4.1;
+ const rug=new THREE.Mesh(new THREE.PlaneGeometry(width-2.0,depth-2.0),new THREE.MeshStandardMaterial({color:t.floor,roughness:1}));rug.rotation.x=-Math.PI/2;rug.position.y=.018;interiorGroup.add(rug);
+ const title=makeSign(`${SHOPS[type]?.icon||'🏢'} ${state.interior?.shopName||SHOPS[type]?.name||'Établissement'}`,t.sign);title.scale.set(Math.min(7.0,width*.34),1.25,1);title.position.set(0,3.25,-depth/2+.28);interiorGroup.add(title);
+ const light=new THREE.PointLight(type==='clinic'||type==='pharmacy'?0xe6fbff:0xffd6a0,5.0,Math.max(width,depth)*1.25,2);light.position.set(0,4.2,-1);interiorGroup.add(light);
+
+ if(type==='clinic'){
+  interiorCounter(0,back,6.2,0x587377);for(const x of [-7,-4.7,4.7,7])interiorChair(x,2.4,Math.PI,0x6f8487);interiorDecoBox(-7,1.2,-1.0,2.8,2.4,.16,0xe5eeee,false);interiorDecoBox(7,1.2,-1.0,2.8,2.4,.16,0xe5eeee,false);for(const x of [-5.8,5.8]){interiorDecoBox(x,.42,-4.0,2.2,.75,1.0,0xcbd9db,true);interiorDecoBox(x,.86,-4.0,1.55,.10,.86,0xeef5f5,false)}
+ }else if(type==='policeStation'){
+  interiorCounter(0,back,6.4,0x344b61);for(const x of [-5.5,0,5.5]){interiorTable(x,-2.2,2.5,1.1,0x566777);interiorChair(x,-1.25,Math.PI,0x425466)}interiorDecoBox(-width*.38,1.25,1.0,.18,2.5,5.5,0x536574,true);interiorDecoBox(width*.38,1.25,1.0,.18,2.5,5.5,0x536574,true)
+ }else if(type==='fireStation'){
+  interiorCounter(0,back,5.8,0x553c32);for(const x of [-7,-5.7,-4.4,4.4,5.7,7])interiorDecoBox(x,1.15,-1.5,.95,2.3,.62,0x7b3330,true);for(const x of [-5.7,0,5.7]){interiorTable(x,2.5,2.6,1.1,0x66513f);interiorChair(x,3.35,0,0x46535d)}interiorDecoBox(0,.12,5.5,10,.18,3.0,0x4b4f51,false)
+ }else if(type==='school'){
+  interiorCounter(0,back,5.0,0x5e4b36);for(let row=0;row<3;row++)for(let col=-3;col<=3;col+=2){const x=col*1.7,z=-1+row*2.2;interiorTable(x,z,1.3,.72,0x806341);interiorChair(x,z+.75,0,0x52677c)}interiorDecoBox(0,2.0,-depth/2+.38,8.0,2.0,.10,0x315243,false)
+ }else if(type==='jobcenter'){
+  interiorCounter(0,back,5.4,0x63583d);for(const x of [-6,-2,2,6]){interiorTable(x,-1.6,2.3,1.0,0x665b49);interiorChair(x,-.75,Math.PI,0x5a6872)}for(const x of [-5.5,-1.8,1.8,5.5])interiorChair(x,3.3,Math.PI,0x6b756d)
+ }else if(type==='townhall'){
+  interiorCounter(0,back,7.0,0x655745);for(const x of [-6,-2,2,6]){interiorTable(x,-1.8,2.3,1.0,0x75644b);interiorChair(x,-.9,Math.PI,0x6a6f6d)}for(const x of [-5.2,-2.6,0,2.6,5.2])interiorChair(x,3.1,Math.PI,0x73746d)
+ }else if(type==='bank'){
+  interiorCounter(0,back,7.0,0x3e5d59);for(const x of [-5.5,-2.0,2.0,5.5]){interiorTable(x,-1.5,2.0,.9,0x5f6862);interiorChair(x,-.7,Math.PI,0x4f625e)}interiorDecoBox(-width*.38,1.2,-3.2,.28,2.4,3.3,0x6b7773,true);interiorDecoBox(width*.38,1.2,-3.2,.28,2.4,3.3,0x6b7773,true);interiorDecoBox(0,1.2,-depth/2+.42,2.5,2.5,.18,0x667174,false)
+ }else if(type==='postoffice'){
+  interiorCounter(0,back,7.2,0x5f5d54);for(const x of [-7,-5.2,5.2,7])interiorShelf(x,-2.0,1.3,2.2,.55,0x8a7854);for(const x of [-5.0,-1.7,1.7,5.0])interiorChair(x,3.0,Math.PI,0x656e6b);interiorDecoBox(0,.7,.8,3.5,1.3,1.5,0xd2b247,true)
+ }else if(type==='library'){
+  interiorCounter(0,back,5.5,0x57473b);for(const x of [-7,-4.5,4.5,7])interiorShelf(x,-1.0,1.4,2.8,.55,0x6e513d);for(const z of [-1.5,2.4]){interiorTable(0,z,5.0,1.25,0x73573e);for(const x of [-1.8,0,1.8])interiorChair(x,z+.9,0,0x5d6b75)}
+ }else if(type==='bakery'){
+  interiorCounter(0,back,6.8,0x7c5437);for(const x of [-6,-4.4,4.4,6])interiorShelf(x,-2.2,1.2,2.2,.48,0x9c734e);for(const x of [-4.8,-2.8,-.8,1.2]){interiorDecoBox(x,1.15,back+.62,.65,.18,.42,0xd4b06b,false);interiorDecoBox(x,1.42,back+.62,.52,.12,.32,0xc48f45,false)}interiorDecoBox(6.2,1.1,1.2,2.0,2.2,1.2,0x596066,true)
+ }else if(type==='butcher'){
+  interiorCounter(0,back,7.0,0x61383a);interiorDecoBox(0,.78,-1.2,8.0,1.4,1.3,0xcbd2d4,true);for(const [i,x] of [-2.7,-.9,.9,2.7].entries())interiorDecoBox(x,1.48,-1.2,1.35,.14,.75,i%2?0x9a4c50:0xb86565,false)
+ }else if(type==='restaurant'||type==='cafe'){
+  interiorCounter(0,back,5.8,type==='cafe'?0x5e4236:0x604137);for(const z of [-1.7,2.0])for(const x of [-5.4,-1.8,1.8,5.4]){interiorTable(x,z,1.45,.85,0x70513a);interiorChair(x,z+.72,0,0x604d42)}
+ }else if(type==='pharmacy'){
+  interiorCounter(0,back,6.2,0x4f7561);for(const x of [-6,-4,4,6])interiorShelf(x,-1.0,1.25,2.3,.50,0xdce6df);for(const z of [-1.8,.3,2.4])interiorDecoBox(0,.70,z,5.0,1.25,.8,0xd8e0db,true)
+ }else if(type==='florist'){
+  interiorCounter(0,back,5.0,0x5b6f50);for(const [x,z] of [[-5,-1],[-3,1],[3,-1],[5,1],[-5,3],[5,3]]){interiorDecoBox(x,.24,z,.65,.48,.65,0x75523c,false);const l=new THREE.Mesh(new THREE.SphereGeometry(.48,8,6),new THREE.MeshStandardMaterial({color:(x+z)%2?0x5b8b53:0x7d9d57,roughness:.96}));l.position.set(x,.85,z);interiorGroup.add(l)}
+ }else if(type==='hairdresser'){
+  interiorCounter(0,back,4.8,0x5e4657);for(const x of [-5.4,-1.8,1.8,5.4]){interiorChair(x,-.5,Math.PI,0x55545a);interiorDecoBox(x,1.7,-2.05,1.3,1.55,.10,0xb7c5c9,false)}for(const x of [-4.6,0,4.6])interiorChair(x,3.0,Math.PI,0x716873)
+ }else if(type==='gear'){
+  interiorCounter(0,back,5.5,0x46545e);for(const x of [-6,-3,3,6])interiorDecoBox(x,.85,-1.0,2.0,1.6,1.2,0x4e555b,true);for(const x of [-6,6])interiorShelf(x,3.1,1.5,2.5,.55,0x656b70)
+ }else if(type==='clothes'){
+  interiorCounter(0,back,5.2,0x59424f);for(const [i,x] of [-6,-3,0,3,6].entries()){interiorDecoBox(x,1.2,-1.3,.12,2.4,.12,0x44484b,false);interiorDecoBox(x,1.75,-1.3,1.3,.10,.22,i%2?0x92647d:0x5e7791,false)}for(const x of [-5,-1.7,1.7,5])interiorChair(x,3.0,Math.PI,0x6e5f69)
+ }else if(type==='housing'){
+  interiorCounter(0,back,5.8,0x48616d);for(const x of [-5.5,-1.8,1.8,5.5]){interiorTable(x,-1.3,2.2,1.0,0x63727a);interiorChair(x,-.45,Math.PI,0x59666c)}for(const x of [-4.5,0,4.5])interiorChair(x,3.1,Math.PI,0x6b7477)
+ }else if(type==='home'){
+  interiorCounter(0,back,5.0,0x725a44);interiorDecoBox(-5,.40,-1.0,2.8,.75,1.2,0x597080,true);interiorTable(0,-1.0,2.0,1.3,0x7a583a);interiorDecoBox(4.8,1.0,-1.0,1.8,2.0,.75,0x8b6a4e,true);for(const x of [-4.5,0,4.5])interiorChair(x,3.1,Math.PI,0x64707a)
+ }else if(type==='pawn'||type==='rare'){
+  interiorCounter(0,back,5.6,type==='rare'?0x5b4f66:0x4d5f59);for(const x of [-6,-3,3,6])interiorShelf(x,-1.1,1.4,2.3,.5,type==='rare'?0x655a72:0x6d6558);for(const x of [-4.5,0,4.5])interiorDecoBox(x,.82,2.0,2.0,1.5,.8,0x5f6667,true)
+ }else{
+  interiorCounter(0,back,5.5,0x4b3b31);for(const x of [-5.5,-1.8,1.8,5.5])interiorShelf(x,-1.0,1.3,2.0,.48,0x66513d);for(const x of [-4.2,0,4.2])interiorChair(x,3.0,Math.PI,0x65717a)
+ }
+ buildShopSeller(type,depth);populateInteriorPeople(type,width,depth)
 }
 function buildApartmentInterior(){
  const couch=new THREE.Mesh(new THREE.BoxGeometry(3,.8,1.1),new THREE.MeshStandardMaterial({color:0x5a6675}));couch.position.set(-3,.5,-3);interiorGroup.add(couch);
@@ -3149,7 +3299,7 @@ function buildHomeInterior(){
 function exitInterior(){leaveInterior()}
 function leaveInterior(){
  const returnTo=state.interior?.returnTo||null;
- if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}interiorSeller=null;interiorColliders=[];interiorBounds={x:8.5,z:8.5};
+ if(interiorGroup){scene.remove(interiorGroup);interiorGroup=null}interiorSeller=null;interiorAmbientPeople=[];interiorColliders=[];interiorBounds={x:8.5,z:8.5};
  if(returnTo?.type==='shop'){
    state.interior=null;
    enterInterior('shop',{type:returnTo.shopType},{preserveReturn:true});
@@ -3164,7 +3314,7 @@ const SHOP_HOURS={
 };
 function shopHoursLabel(type){const h=SHOP_HOURS[type]||[8,20];if(h[0]===0&&h[1]===24)return'24 h/24';const f=v=>`${String(Math.floor(v)).padStart(2,'0')}:${v%1?'30':'00'}`;return`${f(h[0])}–${f(h[1])}`}
 function shopIsOpen(type,h=state.timeOfDay){const hrs=SHOP_HOURS[type]||[8,20],day=(absoluteGameDay()-1)%7;if(['clinic','policeStation','fireStation'].includes(type))return true;if(day===6&&['school','jobcenter','townhall','bank','postoffice'].includes(type))return false;return hourInRange(h,hrs[0],hrs[1])}
-function serviceBuildingHTML(type){const name=state.interior?.shopName||SHOPS[type].name,eco=cityEconomy();if(type==='clinic')return`<div class="card"><div class="sectionKicker">SERVICE PUBLIC DE SANTÉ</div><h3>🏥 ${name}</h3><p class="sub">Urgences ouvertes 24 h/24. L’établissement emploie médecins, infirmiers, aides-soignants, agents administratifs et techniques.</p><button class="menuBtn primary hospitalCare" style="width:100%">🩺 Consultation d’urgence • 12 cr.</button></div>`;if(type==='policeStation')return`<div class="card"><div class="sectionKicker">SÉCURITÉ PUBLIQUE</div><h3>👮 ${name}</h3><p class="sub">Accueil 24 h/24 • patrouilles et police-secours. Niveau de recherche actuel : <b>${state.wanted||0}</b>.</p>${state.wanted?`<button class="menuBtn policeSettle" style="width:100%">Se présenter et régler la situation</button>`:'<span class="qualification done">Aucune recherche en cours</span>'}</div>`;if(type==='fireStation')return`<div class="card"><div class="sectionKicker">SECOURS</div><h3>🚒 ${name}</h3><p class="sub">Caserne opérationnelle 24 h/24 : incendie, secours à personne et accidents. Le métier de sapeur-pompier est accessible après la formation dédiée.</p></div>`;if(type==='townhall')return`${societyDashboardHTML()}<div class="card"><h3>🏛️ ${name}</h3><p class="sub">État civil, services municipaux, voirie et administration de la ville.</p></div>`;if(type==='bank')return`<div class="card"><div class="sectionKicker">BANQUE</div><h3>🏦 ${name}</h3><p class="sub">Compte : <b>${state.homeBank}</b> crédits • portefeuille : ${state.coins}.</p><div class="grid2"><button class="menuBtn bankDeposit">Déposer 50</button><button class="menuBtn bankWithdraw">Retirer 50</button></div></div>`;if(type==='postoffice')return`<div class="card"><div class="sectionKicker">SERVICE POSTAL</div><h3>📮 ${name}</h3><p class="sub">Courrier, colis et services de proximité.</p><button class="menuBtn postalParcel" style="width:100%">📦 Envoyer un colis • 5 cr.</button></div>`;if(type==='library')return`<div class="card"><div class="sectionKicker">CULTURE & ÉTUDE</div><h3>📚 ${name}</h3><p class="sub">Bibliothèque publique. Étudier ici fait avancer l’heure sans faire passer une journée entière.</p><button class="menuBtn libraryStudy" style="width:100%">📖 Étudier 2 heures</button></div>`;return''}
+function serviceBuildingHTML(type){const name=state.interior?.shopName||SHOPS[type].name,staff=staffingCardHTML(type,name);if(type==='clinic')return`${staff}<div class="card"><div class="sectionKicker">SERVICE PUBLIC DE SANTÉ</div><h3>🏥 ${name}</h3><p class="sub">Urgences ouvertes 24 h/24. Médecins, infirmiers, aides-soignants, agents hospitaliers et patients sont maintenant représentés physiquement dans l’établissement.</p><button class="menuBtn primary hospitalCare" style="width:100%">🩺 Consultation d’urgence • 12 cr.</button></div>`;if(type==='policeStation')return`${staff}<div class="card"><div class="sectionKicker">SÉCURITÉ PUBLIQUE</div><h3>👮 ${name}</h3><p class="sub">Accueil 24 h/24 • patrouilles, police-secours et personnel administratif.</p><p class="sub">Niveau de recherche actuel : <b>${state.wanted||0}</b>.</p>${state.wanted?`<button class="menuBtn policeSettle" style="width:100%">Se présenter et régler la situation</button>`:'<span class="qualification done">Aucune recherche en cours</span>'}</div>`;if(type==='fireStation')return`${staff}<div class="card"><div class="sectionKicker">SECOURS</div><h3>🚒 ${name}</h3><p class="sub">Caserne opérationnelle 24 h/24 : gardes, départs incendie, secours à personne et centre de commandement local.</p></div>`;if(type==='townhall')return`${staff}${societyDashboardHTML()}<div class="card"><h3>🏛️ ${name}</h3><p class="sub">État civil, accueil des habitants, services municipaux, voirie et administration.</p></div>`;if(type==='bank')return`${staff}<div class="card"><div class="sectionKicker">BANQUE</div><h3>🏦 ${name}</h3><p class="sub">Conseillers, chargés d’accueil et clientèle sont visibles dans l’agence.</p><p class="sub">Compte : <b>${state.homeBank}</b> crédits • portefeuille : ${state.coins}.</p><div class="grid2"><button class="menuBtn bankDeposit">Déposer 50</button><button class="menuBtn bankWithdraw">Retirer 50</button></div></div>`;if(type==='postoffice')return`${staff}<div class="card"><div class="sectionKicker">SERVICE POSTAL</div><h3>📮 ${name}</h3><p class="sub">Guichets, tri local, courrier, colis et services de proximité.</p><button class="menuBtn postalParcel" style="width:100%">📦 Envoyer un colis • 5 cr.</button></div>`;if(type==='library')return`${staff}<div class="card"><div class="sectionKicker">CULTURE & ÉTUDE</div><h3>📚 ${name}</h3><p class="sub">Bibliothécaires, lecteurs et étudiants occupent réellement les espaces de lecture.</p><button class="menuBtn libraryStudy" style="width:100%">📖 Étudier 2 heures</button></div>`;return staff}
 function societyDashboardHTML(){const eco=cityEconomy(),p=laborProfile(),vac=jobVacanciesForCity();return`<div class="card"><div class="sectionKicker">ÉCONOMIE DE ${city().name.toUpperCase()}</div><h3>🏙️ Tableau de bord local</h3><p class="sub">Chômage simulé : <b>${(eco.unemployment*100).toFixed(1)} %</b> • activité des entreprises : <b>${Math.round(eco.businessIndex*100)} %</b> • indice des prix : <b>${eco.priceIndex.toFixed(2)}</b><br>Budget public : <b>${Math.round(eco.publicBudget||0)}</b> cr. • transactions du mois : ${eco.transactions||0}</p><p class="sub">Repère national INSEE 2024 : ${societyLaborSummary()}.</p><p class="sub">${vac.length} types de postes actuellement visibles à la Maison de l’Emploi.</p></div>`}
 function hospitalCare(){const price=12;if(state.coins<price)return toast(`Consultation : ${price} crédits.`);state.coins-=price;state.hp=state.maxHp;state.hygiene=clamp(state.hygiene+8,0,100);recordBusinessTransaction(price,'clinic');save();toast('🏥 Soins effectués.');openSheet('physicalShop')}
 function settlePoliceSituation(){if(!state.wanted)return;const fine=Math.min(state.coins,Math.max(15,20+state.wanted*18));state.coins-=fine;state.wanted=0;save();toast(`👮 Situation régularisée • ${fine} crédits.`);openSheet('physicalShop')}
@@ -3172,16 +3322,15 @@ function bankTransfer(dir){const amount=50;if(dir==='deposit'){if(state.coins<am
 function sendPostalParcel(){if(state.coins<5)return toast('Il faut 5 crédits.');state.coins-=5;state.reputation=(state.reputation||0)+1;recordBusinessTransaction(5,'postoffice');advanceGameMinutes(20);save();toast('📮 Colis envoyé • +1 réputation.');openSheet('physicalShop')}
 function studyAtLibrary(){state.studyHours=(state.studyHours||0)+2;advanceGameMinutes(120);state.hunger=clamp(state.hunger-3,0,100);state.thirst=clamp(state.thirst-4,0,100);save();toast('📚 Deux heures d’étude effectuées.');openSheet('physicalShop')}
 function physicalShopHTML(){
- const type=state.interior.shopType,name=state.interior?.shopName||SHOPS[type]?.name||'Établissement';
- if(!shopIsOpen(type))return`<div class="card"><div class="sectionKicker">FERMÉ</div><h3>${SHOPS[type]?.icon||'🏢'} ${name}</h3><p class="sub">Horaires habituels : ${shopHoursLabel(type)}.</p></div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
- if(type==='school')return `${schoolHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
- if(type==='jobcenter')return `${employmentHTML()}${companyEconomyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ const type=state.interior.shopType,name=state.interior?.shopName||SHOPS[type]?.name||'Établissement',staff=staffingCardHTML(type,name);
+ if(!shopIsOpen(type))return`${staff}<div class="card"><div class="sectionKicker">FERMÉ</div><h3>${SHOPS[type]?.icon||'🏢'} ${name}</h3><p class="sub">Horaires habituels : ${shopHoursLabel(type)}.</p></div><button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ if(type==='school')return `${staff}${schoolHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ if(type==='jobcenter')return `${staff}${employmentHTML()}${companyEconomyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
  if(['clinic','policeStation','fireStation','townhall','bank','postoffice','library'].includes(type))return `${serviceBuildingHTML(type)}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
- const s=SHOPS[type];if(type==='housing')return `${housingAgencyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
+ const s=SHOPS[type];if(type==='housing')return `${staff}${housingAgencyHTML()}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`;
  const valuables=state.inventory.filter(i=>STREET_ITEMS[i.id]&&i.qty>0),mult=localPriceMultiplier();
  const resale=type==='pawn'?`<div class="card"><h3>📦 Revente d’objets</h3>${valuables.length?valuables.map(i=>{const info=itemInfo(i.id);return `<div class="item"><div class="itemIcon">${info.icon}</div><div class="itemMain"><b>${info.name}</b><small>×${i.qty} • ${info.value} crédits pièce</small></div><button class="menuBtn sellLoot" data-id="${i.id}">Vendre</button></div>`}).join(''):'<p class="sub">Aucun objet revendable.</p>'}</div>`:'';
- return `<div class="card"><h3>${s.icon} ${name}</h3><p class="sub">${state.coins} crédits • ouvert ${shopHoursLabel(type)}${state.reputation?` • remise ${Math.min(15,state.reputation)}%`:''}</p></div>
- <div class="card">${s.stock.map(x=>{const pp=Math.max(1,Math.round(x.price*mult));return `<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${pp}</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`}).join('')}</div>${resale}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`
+ return `${staff}<div class="card"><h3>${s.icon} ${name}</h3><p class="sub">${state.coins} crédits • ouvert ${shopHoursLabel(type)}${state.reputation?` • remise ${Math.min(15,state.reputation)}%`:''}</p></div><div class="card">${s.stock.map(x=>{const pp=Math.max(1,Math.round(x.price*mult));return `<div class="item"><div class="itemIcon">${x.icon}</div><div class="itemMain"><b>${x.name}</b><small>${x.desc} • ${pp}</small></div><button class="menuBtn buy" data-id="${x.id}" data-price="${x.price}">Acheter</button></div>`}).join('')}</div>${resale}<button class="menuBtn red" id="leaveShop" style="width:100%">🚪 Sortir</button>`
 }
 function buy(id,price){const discount=Math.min(.15,(state.reputation||0)*.01),local=Math.max(1,Math.round(price*localPriceMultiplier())),finalPrice=Math.max(1,Math.round(local*(1-discount)));if(state.coins<finalPrice)return toast('Pas assez de crédits');if(WEAPONS[id]&&state.ownedWeapons.includes(id))return toast('Déjà acheté');if(COSMETIC_ITEMS[id]&&state.cosmeticsUnlocked.includes(id))return toast('Déjà acheté');state.coins-=finalPrice;recordBusinessTransaction(finalPrice,state.interior?.shopType);
  const svc=SERVICE_EFFECTS[id];if(svc){if(svc.hp)state.hp=clamp(state.hp+svc.hp,0,state.maxHp);if(svc.hunger)state.hunger=clamp(state.hunger+svc.hunger,0,100);if(svc.thirst)state.thirst=clamp(state.thirst+svc.thirst,0,100);if(svc.hygiene)state.hygiene=clamp(state.hygiene+svc.hygiene,0,100);if(svc.reputation)state.reputation=Math.max(0,(state.reputation||0)+svc.reputation);save();updateHUD();toast(svc.toast||'Service effectué');$('#sheetBody').innerHTML=physicalShopHTML();bindShop();return}
@@ -3408,9 +3557,9 @@ function mapShopStyle(type){
  }[type]||{code:'C',color:'#63e2b0',label:'Commerce'}
 }
 function drawMapMarker(q,x,y,code,color,detail=false){
- q.save();q.fillStyle='rgba(5,12,20,.92)';q.strokeStyle=color;q.lineWidth=detail?2.4:1.7;
- const r=detail?8:5.5;q.beginPath();q.arc(x,y,r,0,Math.PI*2);q.fill();q.stroke();
- q.fillStyle=color;q.font=`800 ${detail?10:8}px system-ui`;q.textAlign='center';q.textBaseline='middle';q.fillText(code,x,y+.5);q.restore()
+ q.save();q.textAlign='center';q.textBaseline='middle';q.font=`900 ${detail?13:10}px system-ui`;
+ // V22.5: letters/icons float directly on the map, with a dark outline instead of a circle.
+ q.lineJoin='round';q.miterLimit=2;q.strokeStyle='rgba(3,10,17,.96)';q.lineWidth=detail?4.2:3.0;q.strokeText(code,x,y+.4);q.fillStyle=color;q.fillText(code,x,y+.4);q.restore()
 }
 
 
@@ -3710,7 +3859,7 @@ function openSheet(panel){
  if(panel==='train'){t.textContent='Gare & trains';b.innerHTML=trainStationHTML()}
  bindSheet(panel)
 }
-function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.4</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
+function menuHTML(){return `<div class="menuHero"><div><div class="sectionKicker">STREETQUEST V22.5</div><h3>${mpNickname()}</h3><p>${city().name} • ${streetCoords()} • ${formatGameTime()}</p></div><button class="avatarMiniBtn" id="menuAvatar">🎨</button></div>
  <div class="menuGrid"><button class="menuTile" data-open="avatar"><span>👤</span><b>Personnage</b><small>Apparence</small></button><button class="menuTile" data-open="home"><span>🏠</span><b>Logement</b><small>Maison & biens</small></button><button class="menuTile" data-open="work"><span>💼</span><b>Travail</b><small>Emploi actuel</small></button><button class="menuTile" data-open="districts"><span>🏙️</span><b>Quartier</b><small>Infos locales</small></button><button class="menuTile" data-open="world"><span>🚆</span><b>Région</b><small>Villes & trains</small></button><button class="menuTile" data-open="settings"><span>⚙️</span><b>Réglages</b><small>Audio & réseau</small></button></div>`}
 function socialHTML(){
  const players=[...remotePlayers.entries()].map(([id,r])=>({id,...r,d:Math.hypot(state.pos.x-r.group.position.x,state.pos.z-r.group.position.z)})).sort((a,b)=>a.d-b.d);
@@ -3757,7 +3906,7 @@ function districtHTML(){
  <p class="sub">Économie ${Math.round(cityEconomy().businessIndex*100)}% • chômage ville ${(cityEconomy().unemployment*100).toFixed(1)}% • prix ×${cityEconomy().priceIndex.toFixed(2)}</p>
  <button class="menuBtn green" id="secureDistrict" style="width:100%" ${state.ownedDistricts.includes(id)?'disabled':''}>🏳️ ${state.ownedDistricts.includes(id)?'Quartier sécurisé':'Sécuriser ce quartier'}</button></div>`
 }
-function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.4</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
+function settingsHTML(){return `<div class="card"><div class="sectionKicker">VERSION</div><h3>StreetQuest V22.5</h3><button class="menuBtn full" id="forceUpdate">↻ Vérifier les mises à jour</button></div>
  ${multiplayerSettingsHTML()}
  <div class="card"><h3>Audio</h3><div class="settingRow"><div><b>Sons d’interface</b><small>Petits retours sonores, séparés du vocal.</small></div><button id="toggleSound" class="menuBtn">${state.soundEnabled?'Activés':'Coupés'}</button></div></div>
  <div class="card"><h3>Partie</h3><button class="menuBtn red" id="resetGame">Nouvelle partie</button></div>`}
