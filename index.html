@@ -39,11 +39,11 @@
 
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V22.8">
+<meta name="apple-mobile-web-app-title" content="StreetQuest 3D V22.9">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="stylesheet" href="style.css">
-<title>StreetQuest 3D V22.8</title>
+<title>StreetQuest 3D V22.9</title>
 </head>
 <body>
 <div id="app">
@@ -76,7 +76,6 @@
    <button id="mapExpandBtn" class="mapExpandBtn" aria-label="Agrandir la carte">↗</button>
    <div id="gpsChip" class="gpsChip">X +0 • Y +0</div>
   </div>
-  <div id="policeChip" class="policeChip hidden">👮 Police</div>
   <button id="emergencyExitBtn" class="emergencyExit hidden">↩ SORTIR</button>
 
   <div id="followerCard" class="followerCard hidden">
@@ -146,11 +145,9 @@
   </div>
  </div>
 
- <nav class="bottomNav v17Bottom">
-  <button id="navMap" class="nav">🗺️<small>Carte</small></button>
+ <nav class="bottomNav v17Bottom compactPhoneNav">
   <button data-panel="bag" class="nav">🎒<small>Sac</small></button>
   <button data-panel="phone" class="nav phoneNav">📱<small>Téléphone</small></button>
-  <button data-panel="agenda" class="nav">📅<small>Agenda</small></button>
   <button data-panel="social" class="nav">👥<small>Social</small></button>
  </nav>
 

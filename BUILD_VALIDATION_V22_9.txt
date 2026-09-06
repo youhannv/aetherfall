@@ -1,0 +1,26 @@
+StreetQuest3D V22.9 — VALIDATION DU BUILD
+==========================================
+
+Contrôles exécutés avant création du ZIP :
+
+PASS — game.js : syntaxe ECMAScript validée avec node --check
+PASS — sw.js : syntaxe validée
+PASS — multiplayer-config.js : syntaxe validée
+PASS — server/server.js : syntaxe validée
+PASS — manifest.json, version.json et server/package.json : JSON valides
+PASS — 625 déclarations de fonctions / 625 noms uniques : aucune déclaration de fonction dupliquée
+PASS — 81 IDs HTML / 81 uniques : aucun ID statique dupliqué
+PASS — comparaison V22.8 -> V22.9 : 0 fonction existante supprimée, 43 fonctions de secours ajoutées
+PASS — 5 casernes de pompiers et 5 commissariats définis, avec capacité finie par ville
+PASS — SAMU, pompiers et police utilisent des véhicules 3D physiques et les intervenants à pied ont une collision dynamique
+PASS — véhicules prioritaires : franchissement du rouge seulement si intersection libre + vitesse réduite
+PASS — dépassement prioritaire : voie opposée utilisée uniquement si elle est contrôlée libre
+PASS — patrouilles police sans gyrophares hors intervention
+PASS — attente / renfort interurbain lorsque les moyens locaux sont indisponibles
+PASS — numéro privé de test non affiché dans StreetPhone ni dans la documentation utilisateur
+PASS — badge POLICE retiré du HTML/HUD
+PASS — Carte et Agenda retirés de la barre inférieure, toujours présents dans StreetPhone
+PASS — versions client/serveur alignées sur 22.9.0
+PASS — cache PWA aligné sur streetquest3d-v22.9-emergency1
+
+Limite du test : le conteneur de validation ne dispose pas d'un environnement WebGL/Safari iOS fonctionnel et ne peut pas charger le CDN Three.js depuis Internet. Le rendu GPU et les gestes tactiles doivent donc encore être validés sur l'iPhone réel après déploiement.

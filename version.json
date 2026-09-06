@@ -1,6 +1,6 @@
 {
-  "version": "22.8.0",
-  "cache": "streetquest3d-v22.8-phone1",
-  "label": "StreetQuest V22.8 — StreetPhone, annuaire, transports & secours physiques",
-  "build": "phone-emergency-dispatch1"
+  "version": "22.9.0",
+  "cache": "streetquest3d-v22.9-emergency1",
+  "label": "StreetQuest V22.9 — Secours physiques, SAMU, patrouilles & StreetPhone allégé",
+  "build": "physical-emergency-services1"
 }
