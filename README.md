@@ -1,4 +1,4 @@
-# StreetQuest3D V22.7 — Santé, secours & restauration réaliste
+# StreetQuest3D V22.8 — StreetPhone, annuaire, transports & secours physiques
 
 Cette version conserve la base V22.6 : 5 villes reliées par une région continue, trains, bus/trams, immobilier, emplois, économie locale, services publics, lieux vivants, uniformes, logements, cuisine, DLU et conservation des aliments.
 
@@ -53,4 +53,8 @@ Cette version conserve la base V22.6 : 5 villes reliées par une région continu
 - Un aliment avarié peut être jeté ou volontairement consommé à risque.
 
 ## Déploiement
-Remplacer tout le contenu du dépôt GitHub par ce dossier. Le cache PWA est `streetquest3d-v22.7-healthcare1`. La sauvegarde V22 est migrée sans être effacée.
+Remplacer tout le contenu du dépôt GitHub par ce dossier. Le cache PWA est `streetquest3d-v22.8-phone1`. La sauvegarde V22 est migrée sans être effacée.
+
+
+## V22.8
+Le StreetPhone regroupe carte, agenda, guide, annuaire local, contacts, appels 17/18 et transports. Les secours 17 et 18 partent physiquement du service le plus proche et suivent la route jusqu’au joueur ; les véhicules d’urgence ne téléportent pas sur place.

@@ -1,5 +1,6 @@
 {
-  "version": "22.7",
-  "cache": "streetquest3d-v22.7-healthcare1",
-  "label": "StreetQuest V22.7 — Santé, secours, prescriptions & restauration"
+  "version": "22.8.0",
+  "cache": "streetquest3d-v22.8-phone1",
+  "label": "StreetQuest V22.8 — StreetPhone, annuaire, transports & secours physiques",
+  "build": "phone-emergency-dispatch1"
 }

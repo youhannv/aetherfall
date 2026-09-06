@@ -1,6 +1,6 @@
 {
-  "name": "StreetQuest V22.7",
-  "short_name": "V22.7",
+  "name": "StreetQuest V22.8",
+  "short_name": "V22.8",
   "start_url": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -17,5 +17,6 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "version": "22.8.0"
 }

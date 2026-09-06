@@ -1,4 +1,4 @@
-const C='streetquest3d-v22.7-healthcare1';
+const C='streetquest3d-v22.8-phone1';
 const CORE=['./','./index.html','./style.css','./game.js','./manifest.json','./icon-192.png','./icon-512.png','./version.json','./multiplayer-config.js'];
 
 self.addEventListener('install',e=>{

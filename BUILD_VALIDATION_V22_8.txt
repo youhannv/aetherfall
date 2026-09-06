@@ -1,0 +1,20 @@
+StreetQuest V22.8 — validation du build
+========================================
+
+Contrôles statiques exécutés avant création du ZIP :
+- game.js : syntaxe JavaScript valide (node --check)
+- sw.js : syntaxe valide
+- server/server.js : syntaxe valide
+- manifest.json, version.json, server/package.json : JSON valides
+- 582 fonctions déclarées / 582 noms uniques : aucune fonction déclarée deux fois
+- 0 fonction de la V22.7 supprimée
+- 83 IDs HTML / aucun ID dupliqué
+- 5 commissariats et 5 casernes de pompiers définis dans les réseaux des 5 villes
+- StreetPhone présent : Carte, Agenda, Guide, Annuaire, Contacts, Téléphone 17/18, Transports
+- Appel 17 : véhicule physique depuis le commissariat le plus proche + gyrophares + intervention anti-bandits
+- Appel 18 : véhicule physique depuis la caserne la plus proche + gyrophares + trajet vers le joueur puis l'hôpital
+- Annuaire : horaires, état ouvert/fermé, distance, bouton de localisation sur la carte
+- Carte : marqueur ★ pour une destination choisie depuis le téléphone
+- Versions alignées : 22.8.0 / cache streetquest3d-v22.8-phone1
+
+Limite de validation : Safari/WebGL iOS doit toujours être testé sur l'iPhone réel après déploiement.
